@@ -13,18 +13,39 @@ using System.Runtime.CompilerServices;
 
 namespace LV.ClickPLCHandler
 {
-    public interface IClickHandler { }
+    public interface IClickPLCHandler
+    {
+        Boolean IsOpen { get; }
 
-    public class ClickPLCHandler
+        Boolean Close();
+        TimerCounter GetCounterCtrl(String counterName, String setPointName = null, String resetName = null, Boolean canWriteReset = false);
+        RegisterInt16Control GetRegisterInt16Control(String registerName);
+        RegisterInt16ControlRO GetRegisterInt16ControlRO(String registerName);
+        RelayControlRO GetRelayControlRO(String relayName);
+        RelayControl GetRelayControlRW(String relayName);
+        TimerCounter GetTimerCtrl(String timerName, String setPointName = null, String resetName = null, Boolean canWriteReset = false);
+        Boolean Init(ClickHandlerConfiguration cnfg);
+        Boolean Init(String configJsonString);
+        Boolean Open();
+        Boolean ReadDiscreteIO(String name, out SwitchSt status);
+        Boolean ReadDiscreteIO(String name, out SwitchState state);
+        Boolean ReadDiscreteIOs(String name, Int32 numberOfIosToRead, out SwitchSt[] status);
+        Boolean ReadRegister(String name, out UInt16 value);
+        Boolean WriteDiscreteControl(String name, SwitchCtrl sw);
+        Boolean WriteDiscreteIOs(String startName, SwitchCtrl[] ctrls);
+        Boolean WriteRegister(String name, UInt16 value);
+    }
+
+    public class ClickPLCHandler : IClickPLCHandler
     {
         internal const string TimerPrefix = "T";
         internal const string CounterPrefix = "CT";
         internal const string TimerCounterPrefix = "TD";
         internal const string CounterCounterPrefix = "CTD";
 
-        private Dictionary<IOType, int> _sartWriteAddresses = 
-            new Dictionary<IOType, int>()
-            {
+        private Dictionary<IOType, int> _sartWriteAddresses =
+            new Dictionary<IOType, int>() {
+
                 {IOType.Input, ClickAddressMap.XStartAddressHex},
                 {IOType.Output, ClickAddressMap.YStartAddressHex},
                 {IOType.ControlRelay, ClickAddressMap.CStartAddressHex},
@@ -32,16 +53,16 @@ namespace LV.ClickPLCHandler
                 {IOType.Timer, ClickAddressMap.TStartAddressHex}
             };
 
-        private Dictionary<IOType, int> _sartReadAddresses = 
-            new Dictionary<IOType, int>()
-        {
-            {IOType.Input, ClickAddressMap.XStartAddressHex},
-            {IOType.Output, ClickAddressMap.YStartAddressHex},
-            {IOType.ControlRelay, ClickAddressMap.CStartAddressHex},
-            {IOType.SystemControlRelay, ClickAddressMap.SCStartAddressHex},
-            {IOType.RegisterInt16, ClickAddressMap.DSStartAddressHex},
-            {IOType.Timer, ClickAddressMap.TStartAddressHex}
-        };
+        private Dictionary<IOType, int> _sartReadAddresses =
+            new Dictionary<IOType, int>() {
+
+                {IOType.Input, ClickAddressMap.XStartAddressHex},
+                {IOType.Output, ClickAddressMap.YStartAddressHex},
+                {IOType.ControlRelay, ClickAddressMap.CStartAddressHex},
+                {IOType.SystemControlRelay, ClickAddressMap.SCStartAddressHex},
+                {IOType.RegisterInt16, ClickAddressMap.DSStartAddressHex},
+                {IOType.Timer, ClickAddressMap.TStartAddressHex}
+            };
 
         private Dictionary<string, object> Controls;
 
@@ -49,27 +70,27 @@ namespace LV.ClickPLCHandler
         private ModbusClient _mbClient;
         private ClickHandlerConfiguration _configuration;
 
-        internal ClickPLCHandler()
-        {
+        internal ClickPLCHandler() {
+
             _mbClient = new ModbusClient();
             _configuration = null;
-            _errorHistory = new StackBase<ClickHandlerException>("Error History") { };
+            _errorHistory = 
+                new StackBase<ClickHandlerException>("Error History") { };
             Controls = new Dictionary<string, object>();
         }
 
         public static ClickPLCHandler CreateHandler() => new ClickPLCHandler();
 
-        public static ClickPLCHandler CreateHandler(ClickHandlerConfiguration configuration)
-        {
+        public static ClickPLCHandler CreateHandler(
+                            ClickHandlerConfiguration configuration) {
+
             var h = new ClickPLCHandler();
             h.Init(configuration);
             return h;
         }
 
-        public bool Init(ClickHandlerConfiguration cnfg)
-        {
-            if (cnfg == null)
-            {
+        public bool Init(ClickHandlerConfiguration cnfg) {
+            if (cnfg == null) {
                 _AddErrorRecord(nameof(Init),
                     ErrorCode.ConfigurationIsNotProvided,
                     "Provided configuration object is \"null\"");
@@ -126,7 +147,8 @@ namespace LV.ClickPLCHandler
                     }
                     catch (Exception ex) {
 
-                        _AddErrorRecord(nameof(Open), ErrorCode.CloseFailed, ex.Message);
+                        _AddErrorRecord(nameof(Open), 
+                            ErrorCode.CloseFailed, ex.Message);
                     }
                 }
             }
@@ -135,7 +157,8 @@ namespace LV.ClickPLCHandler
 
                 case InterfaceSelector.Serial:
 
-                    _mbClient = new ModbusClient(_configuration.Interface.SerialPort);
+                    _mbClient = 
+                        new ModbusClient(_configuration.Interface.SerialPort);
 
                     if (_mbClient.Connect()) {
                         return true;
@@ -162,7 +185,9 @@ namespace LV.ClickPLCHandler
                         return true;
                     }
 
-                    _mbClient = new ModbusClient(_configuration.Interface.SerialPort);
+                    _mbClient = 
+                        new ModbusClient(_configuration.Interface.SerialPort);
+                    
                     if (_mbClient.Connect()) {
                         return true;
                     }
@@ -175,26 +200,6 @@ namespace LV.ClickPLCHandler
             return false;
         }
 
-        private bool _AddErrorRecord(string methodName,
-            ErrorCode code, string details = null) {
-            try {
-                _errorHistory.Push(
-                        new ClickHandlerException(methodName,
-                        ErrorCode.ConfigDeserialisationError,
-                        details), force: true);
-                return true;
-            }
-            catch (Exception ex) {
-
-#if DEBUG
-                string msg = $"Failed to add error record to the error " +
-                    $"history stack. Exception: {ex.Message}";
-                Console.WriteLine(msg);
-#endif
-                return false;
-            }
-        }
-
         public bool Close() {
             try {
                 _mbClient.Disconnect();
@@ -203,14 +208,14 @@ namespace LV.ClickPLCHandler
             catch (Exception ex) {
 
                 _AddErrorRecord(nameof(Close), ErrorCode.CloseFailed,
-                    ClickPlcHandlerErrors.GetErrorDescription(ErrorCode.CloseFailed)
+                    ClickPlcHandlerErrors.GetErrorDescription(
+                                                ErrorCode.CloseFailed)
                     + $" Exception: {ex.Message}");
                 return false;
             }
         }
 
         public bool IsOpen => _mbClient.IsConnected;
-
 
         public RelayControl GetRelayControlRW(string relayName) {
 
@@ -224,7 +229,7 @@ namespace LV.ClickPLCHandler
             if (!Controls.ContainsKey(relayName.ToUpper())) {
 
                 Controls.Add(relayName.ToUpper(),
-                    new RelayControl(relayName, 
+                    new RelayControl(relayName,
                     (v) => WriteDiscreteControl(relayName, v),
                     (out SwitchState r) => ReadDiscreteIO(relayName, out r)));
             }
@@ -274,7 +279,7 @@ namespace LV.ClickPLCHandler
 
             if (ClickAddressMap.GetModAddress(out int address,
                     control: registerName, rtu: false) != ErrorCode.NoError) {
-                
+
                 return null;
             }
 
@@ -288,19 +293,18 @@ namespace LV.ClickPLCHandler
             return Controls[registerName.ToUpper()] as RegisterInt16ControlRO;
         }
 
-
         public TimerCounter GetTimerCtrl(string timerName,
-                       string setPointName = null,                      
-                       string resetName = null, 
+                       string setPointName = null,
+                       string resetName = null,
                        bool canWriteReset = false) =>
-              _GetTimerCounter(timerName, setPointName, 
+              _GetTimerCounter(timerName, setPointName,
                   resetName, canWriteReset, timer: true);
 
         public TimerCounter GetCounterCtrl(string counterName,
                        string setPointName = null,
                        string resetName = null,
                         bool canWriteReset = false) =>
-              _GetTimerCounter(counterName, setPointName, 
+              _GetTimerCounter(counterName, setPointName,
                   resetName, canWriteReset, timer: false);
 
 
@@ -308,43 +312,43 @@ namespace LV.ClickPLCHandler
         protected TimerCounter _GetTimerCounter(string name,
                        string setPointName = null,
                        string resetName = null,
-                       bool canWriteReset = false, 
+                       bool canWriteReset = false,
                        bool timer = true) {
 
-             if (string.IsNullOrEmpty(name) 
-                || (timer && !name.StartsWith(TimerPrefix))
-                || (timer && name.StartsWith(TimerCounterPrefix))
-                || (!timer && !name.StartsWith(CounterPrefix))
-                || (!timer && name.StartsWith(CounterCounterPrefix))) {
+            if (string.IsNullOrEmpty(name)
+               || (timer && !name.StartsWith(TimerPrefix))
+               || (timer && name.StartsWith(TimerCounterPrefix))
+               || (!timer && !name.StartsWith(CounterPrefix))
+               || (!timer && name.StartsWith(CounterCounterPrefix))) {
                 _AddErrorRecord(nameof(_GetTimerCounter),
                        ErrorCode.InvalidControlName, $"Invalid " +
-                       $"{(timer? "timer" : "couner")} " +
+                       $"{(timer ? "timer" : "couner")} " +
                        $"name \"{name}\" provided.");
                 return null;
             }
 
             RelayControlRO timerCtrl = GetRelayControlRO(name);
-            string counterRegisterName = timer 
+            string counterRegisterName = timer
                 ? name.ToUpper().Replace(TimerPrefix, TimerCounterPrefix)
                 : name.ToUpper().Replace(CounterPrefix, CounterCounterPrefix);
 
-            RegisterInt16ControlRO counterCtrl = 
+            RegisterInt16ControlRO counterCtrl =
                 GetRegisterInt16ControlRO(counterRegisterName);
 
-
             RegisterInt16Control setPointCtrl =
-                string.IsNullOrEmpty(setPointName) ? null : GetRegisterInt16Control(setPointName);
+                string.IsNullOrEmpty(setPointName) ? 
+                        null : GetRegisterInt16Control(setPointName);
 
-            RelayControl resetCtrl =  
-                string.IsNullOrEmpty(resetName) ? null : GetRelayControlRW(resetName);
+            RelayControl resetCtrl =
+                string.IsNullOrEmpty(resetName) ? 
+                        null : GetRelayControlRW(resetName);
 
-            return new TimerCounter(timerCtrl, counterCtrl, 
+            return new TimerCounter(timerCtrl, counterCtrl,
                 setPointCtrl, resetCtrl, canWriteReset);
         }
 
-
         public bool WriteDiscreteControl(string name, SwitchCtrl sw) {
-            
+
             if (!(_mbClient?.IsConnected ?? false)) {
 
                 _AddErrorRecord(nameof(WriteDiscreteControl),
@@ -353,7 +357,9 @@ namespace LV.ClickPLCHandler
                 return false;
             }
 
-            if (ClickAddressMap.GetModAddress(out int address, control: name, rtu: false) == ErrorCode.NoError) {
+            if (ClickAddressMap.GetModAddress(out int address, 
+                                              control: name, rtu: false) 
+                == ErrorCode.NoError) {
 
                 try {
 
@@ -410,8 +416,7 @@ namespace LV.ClickPLCHandler
             return false;
         }
 
-        public bool ReadDiscreteIO(string name, out SwitchState state)
-        {
+        public bool ReadDiscreteIO(string name, out SwitchState state) {
             bool r = ReadDiscreteIO(name, out SwitchSt st);
             state = new SwitchState(st);
             return r;
@@ -461,7 +466,7 @@ namespace LV.ClickPLCHandler
             }
         }
 
-        public bool ReadDiscreteIOs(string name, int numberOfIosToRead, 
+        public bool ReadDiscreteIOs(string name, int numberOfIosToRead,
             out SwitchSt[] status) {
             if (!(_mbClient?.IsConnected ?? false)) {
 
@@ -502,8 +507,35 @@ namespace LV.ClickPLCHandler
             }
         }
 
-        private bool _DecodeControlName(string name, out IOType ioType, 
-            out int address, bool write) {
+        public bool WriteRegister(string name, ushort value) {
+
+            if (_DecodeControlName(name, out IOType ioType, out int address, write: true)) {
+
+                return _mbClient.WriteSingle16bitRegister(address, value);
+            }
+
+            return false;
+        }
+
+        public bool ReadRegister(string name, out ushort value) {
+            value = 0xFFFF;
+            if (_DecodeControlName(name, out IOType ioType, out int address, write: false)) {
+
+                if (_mbClient.ReadInputRegisters(address, 1, out int[] response)) {
+
+                    value = (ushort)response[0];
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+
+        #region Private Methods
+
+        private bool _DecodeControlName(string name, out IOType ioType,
+        out int address, bool write) {
             ioType = IOType.Unknown;
             address = -1;
 
@@ -540,31 +572,27 @@ namespace LV.ClickPLCHandler
             return false;
         }
 
-        public bool WriteRegister(string name, ushort value) {
-            
-            if (_DecodeControlName(name, out IOType ioType, out int address, write: true)) {
-
-                return _mbClient.WriteSingle16bitRegister(address, value);
+        private bool _AddErrorRecord(string methodName,
+                                    ErrorCode code, string details = null) {
+            try {
+                _errorHistory.Push(
+                        new ClickHandlerException(methodName,
+                        ErrorCode.ConfigDeserialisationError,
+                        details), force: true);
+                return true;
             }
+            catch (Exception ex) {
 
-            return false;
+            #if DEBUG
+                string msg = $"Failed to add error record to the error " +
+                    $"history stack. Exception: {ex.Message}";
+                Console.WriteLine(msg);
+            #endif
+
+                return false;
+            }
         }
 
-        public bool ReadRegister(string name, out ushort value)
-        {
-            value = 0xFFFF;
-            if (_DecodeControlName(name, out IOType ioType, out int address, write: false))
-            {
-
-                if (_mbClient.ReadInputRegisters(address, 1, out int[] response))
-                {
-
-                    value = (ushort)response[0];
-                    return true;
-                }
-            }
-
-            return false;
-        }
+        #endregion Private Methods
     }
 }
