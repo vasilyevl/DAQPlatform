@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net5.0</TargetFrameworks>
+    <AssemblyName>EasyModbus</AssemblyName>
+    <RootNamespace>EasyModbus</RootNamespace>
+    <SignAssembly>false</SignAssembly>
+    <Platforms>x64</Platforms>
+  </PropertyGroup>
+  
+
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net5.0'">
+    <PackageReference Include="System.IO.Ports" Version="5.0.0" />
+  </ItemGroup>
+
+
+
+
+
+</Project>
