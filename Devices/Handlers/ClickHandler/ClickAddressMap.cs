@@ -1,9 +1,67 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.WebSockets;
+using System.Runtime.Remoting.Messaging;
+using System.Security.Cryptography.X509Certificates;
 
 namespace LV.ClickPLCHandler
 {
+
+    public enum FunctionCode {
+        ReadSingleCoil = 1,
+        ReadSingleInput = 2,
+        ReadHoldingRegisters = 3,
+        ReadInternalRegisters = 4,
+        WriteSingleCoil = 5,
+        WriteSingleRegister = 6,
+        WriteMultipleCoils = 15,
+        WriteMultipleRegisters = 16,
+        MaskedWriteRegister = 22
+    }
+
+    public enum  IoFunction
+    {
+        SingleControlRead, 
+        MultipleControlRead,
+        SingleControlWrite,
+        MultipleControlWrite
+    }
+
+    public class ModBusAddress {
+        
+        private List<FunctionCode> _functionCodes = new List<FunctionCode>();
+
+        public ModBusAddress( int address,  int readCode = -1, int writeCode = -1, 
+                              int readMultipleCode = -1, int writeMultpleCode = -1) {
+
+            Address = address;
+            ReadSingleCode = readCode;
+            WriteSingleCode = writeCode;
+            ReadMultipleCode = readMultipleCode;
+            WriteMultipleCode = writeMultpleCode;
+        } 
+        
+        public int Address { 
+            get; 
+            private set; 
+        }
+
+        public int ReadSingleCode { get; private set; }
+        public int WriteSingleCode { get; private set; }
+        
+
+        private int _writeMultipleCode = -1;
+        public int WriteMultipleCode { 
+            get => _writeMultipleCode < 1 ? WriteSingleCode : _writeMultipleCode; 
+            private set => _writeMultipleCode = value; }
+
+        private int _readMultipleCode = -1;
+        public int ReadMultipleCode {
+            get => _readMultipleCode < 1 ? ReadSingleCode : _readMultipleCode; 
+            private set => _readMultipleCode = value; }
+    }
+
     public static class ClickAddressMap
     {
         public const int XStartAddress984 = 100000;
@@ -60,27 +118,78 @@ namespace LV.ClickPLCHandler
                 { IOType.Text, TxtStartAddress984 }
             };
 
-        private static readonly Dictionary<IOType, int> ModBusHexAddress =
-            new Dictionary<IOType, int>()
+        private static readonly Dictionary<IOType, ModBusAddress> ModBusHexAddress =
+            new Dictionary<IOType, ModBusAddress>()
             {
-                { IOType.Input, XStartAddressHex },
-                { IOType.Output, YStartAddressHex },
-                { IOType.ControlRelay , CStartAddressHex },
-                { IOType.Timer, TStartAddressHex },
-                { IOType.Counter, CTStartAddressHex },
-                { IOType.SystemControlRelay, SCStartAddressHex },
-                { IOType.RegisterInt16, DSStartAddressHex },
-                { IOType.RegisterInt32, DDStartAddressHex },
-                { IOType.RegisterHex, DHStartAddressHex },
-                { IOType.RegisterFloat32, DFStartAddressHex },
-                { IOType.InputRegister, XDStartAddressHex },
-                { IOType.OutputRegister, YDStartAddressHex },
-                { IOType.TimerRegister, TDStartAddressHex },
-                { IOType.CounterRegister, CTDStartAddressHex },
-                { IOType.SystemRegister, SDStartAddressHex },
-                { IOType.Text, TxtStartAddressHex }
-            };
+                { IOType.Input, new ModBusAddress( XStartAddressHex,
+                    readCode: (int) FunctionCode.ReadSingleInput)},
+                
+                { IOType.Output, new ModBusAddress(YStartAddressHex,
+                    readCode: (int) FunctionCode.ReadSingleCoil, 
+                    writeCode: (int) FunctionCode.WriteSingleCoil,
+                    writeMultpleCode: (int) FunctionCode.WriteMultipleCoils) },
+                
+                { IOType.ControlRelay , new ModBusAddress( CStartAddressHex,
+                    readCode: (int) FunctionCode.ReadSingleCoil,
+                    writeCode: (int) FunctionCode.WriteSingleCoil,
+                    writeMultpleCode: (int) FunctionCode.WriteMultipleCoils) },
 
+                { IOType.Timer, new ModBusAddress(TStartAddressHex, 
+                    readCode: (int) FunctionCode.ReadSingleInput) },
+
+
+                { IOType.Counter, new ModBusAddress(CTStartAddressHex, 
+                    readCode :(int) FunctionCode.ReadSingleInput) },
+                
+                { IOType.SystemControlRelay, new ModBusAddress(SCStartAddressHex, 
+                    readCode :(int) FunctionCode.ReadSingleInput) },
+                
+                { IOType.RegisterInt16, new ModBusAddress(DSStartAddressHex, 
+                    readCode :(int) FunctionCode.ReadHoldingRegisters, 
+                    writeCode : (int) FunctionCode.WriteSingleRegister, 
+                    writeMultpleCode :(int) FunctionCode.WriteMultipleRegisters) },
+
+                { IOType.RegisterInt32, new ModBusAddress(DDStartAddressHex,
+                    readCode :(int) FunctionCode.ReadHoldingRegisters,
+                    writeCode : (int) FunctionCode.WriteSingleRegister,
+                    writeMultpleCode :(int) FunctionCode.WriteMultipleRegisters) },
+
+                { IOType.RegisterHex, new ModBusAddress(DHStartAddressHex,
+                    readCode :(int) FunctionCode.ReadHoldingRegisters,
+                    writeCode : (int) FunctionCode.WriteSingleRegister,
+                    writeMultpleCode :(int) FunctionCode.WriteMultipleRegisters) },
+
+                { IOType.RegisterFloat32, new ModBusAddress(DFStartAddressHex,
+                    readCode :(int) FunctionCode.ReadHoldingRegisters,
+                    writeCode : (int) FunctionCode.WriteSingleRegister,
+                    writeMultpleCode :(int) FunctionCode.WriteMultipleRegisters) },
+
+                { IOType.InputRegister, new ModBusAddress(XDStartAddressHex, 
+                    readCode: (int) FunctionCode.ReadInternalRegisters) },
+
+                { IOType.OutputRegister, new ModBusAddress(YDStartAddressHex,
+                    readCode :(int) FunctionCode.ReadHoldingRegisters,
+                    writeCode : (int) FunctionCode.WriteSingleRegister,
+                    writeMultpleCode :(int) FunctionCode.WriteMultipleRegisters) },
+
+                { IOType.TimerRegister, new ModBusAddress(TDStartAddressHex,
+                    readCode :(int) FunctionCode.ReadHoldingRegisters,
+                    writeCode : (int) FunctionCode.WriteSingleRegister,
+                    writeMultpleCode :(int) FunctionCode.WriteMultipleRegisters) },
+
+                { IOType.CounterRegister, new ModBusAddress(CTDStartAddressHex,
+                    readCode :(int) FunctionCode.ReadHoldingRegisters,
+                    writeCode : (int) FunctionCode.WriteSingleRegister,
+                    writeMultpleCode :(int) FunctionCode.WriteMultipleRegisters) },
+
+                { IOType.SystemRegister, new ModBusAddress(SDStartAddressHex,
+                    readCode: (int) FunctionCode.ReadInternalRegisters) },
+
+                { IOType.Text, new ModBusAddress(TxtStartAddressHex,
+                    readCode :(int) FunctionCode.ReadHoldingRegisters,
+                    writeCode : (int) FunctionCode.WriteSingleRegister,
+                    writeMultpleCode :(int) FunctionCode.WriteMultipleRegisters) },
+            };
 
         private static IReadOnlyDictionary<string, IOType> _ioTypes =
             new Dictionary<string, IOType>() {
@@ -102,38 +211,60 @@ namespace LV.ClickPLCHandler
                 {"TXT", IOType.Text}
             };
 
-        public static ErrorCode GetModBaseAddress(out int address, IOType type, bool rtu = false)
-        {
+        private static ErrorCode _GetModBusHexAddress( IoFunction function,
+            IOType type, out int address, out int fuctionCode ) {
+
             address = -1;
-            var lookUpTable = rtu ? ModBusRtuAddress : ModBusHexAddress;
-            if (lookUpTable.ContainsKey(type))
-            {
-                address = lookUpTable[type];
+            fuctionCode = -1;
+
+            if (ModBusHexAddress.ContainsKey(type)) {
+
+                address = ModBusHexAddress[type].Address;
+
+                switch (function) {
+
+                    case IoFunction.SingleControlRead:
+                        fuctionCode = ModBusHexAddress[type].ReadSingleCode;
+                        break;
+
+                    case IoFunction.MultipleControlRead:
+                        fuctionCode = ModBusHexAddress[type].ReadMultipleCode;
+                        break;
+
+                    case IoFunction.SingleControlWrite:
+                        fuctionCode = ModBusHexAddress[type].WriteSingleCode;
+                        break;
+
+                    case IoFunction.MultipleControlWrite:
+                        fuctionCode = ModBusHexAddress[type].WriteMultipleCode;
+                        break;
+                }
+
                 return ErrorCode.NoError;
             }
-            else
-            {
+            else {
+
                 return ErrorCode.IoNotSupported;
             }
         }
 
-        public static ErrorCode GetModAddress(out int address, string control, bool rtu = false)
+        public static ErrorCode GetModBusHexAddress( IoFunction ioFunction, string control,  
+            out int address, out int functionCode)
         {
             address = -1;
+            functionCode = -1;
 
-            var err = _DecodeControlName(control, out IOType type, out int nameAddress);
+            ErrorCode err = _DecodeControlName(control, 
+                out IOType type, out int nameAddress);
 
-            if (err == ErrorCode.NoError)
-            {
+            if (err == ErrorCode.NoError) {
 
-                var lookUpTable = rtu ? ModBusRtuAddress : ModBusHexAddress;
+                err = _GetModBusHexAddress(ioFunction, type,
+                    out int baseAddress, out functionCode);
 
-                if (lookUpTable.ContainsKey(type))
-                {
-
-                    address = lookUpTable[type] + nameAddress;
-                    return ErrorCode.NoError;
-                }
+                address =  (err == ErrorCode.NoError) 
+                    ? baseAddress + nameAddress 
+                    : -1 ;
             }
 
             return err;
@@ -178,41 +309,46 @@ namespace LV.ClickPLCHandler
             ioType = IOType.Unknown;
             nameAddress = -1;
 
-            var preffix =
-                ValidControlNamePreffixes
-                .FirstOrDefault((x) => name.ToUpper().StartsWith(x.ToUpper()));
+            var preffixes = ValidControlNamePreffixes
+                .Where((x) => name.ToUpper().StartsWith(x.ToUpper()))
+                .OrderByDescending((x) => x.Length);
 
-            if (string.IsNullOrEmpty(preffix))
-            {
-                return ErrorCode.InvalidControlName;
+
+            if ((preffixes?.Count() ?? 0) < 1) {
+
+                return ErrorCode.InvalidControlNamePreffix;
             }
 
-            if (_ioTypes.ContainsKey(preffix))
-            {
+            var preffix = preffixes.First();
+
+            if (_ioTypes.ContainsKey(preffix)) {
+
                 ioType = _ioTypes[preffix];
             }
-            else
-            {
+            else {
+
                 return ErrorCode.InvalidControlNamePreffix;
             }
 
 
-            try
-            {
+            try {
+
                 int idx = name.IndexOf(preffix);
-                if (idx <= name.Length)
-                {
-                    nameAddress = Int32.Parse(name.ToUpper().Substring(idx + preffix.Length)) - 1;
+
+                if (idx <= name.Length) {
+
+                    var s = name.ToUpper().Substring(idx + preffix.Length);
+                    nameAddress = Int32.Parse(s) - 1;
                 }
-                else
-                {
+                else {
+
                     nameAddress = 0;
                 }
 
                 return ErrorCode.NoError;
             }
-            catch
-            {
+            catch {
+
                 nameAddress = -1;
                 return ErrorCode.InvalidControlName;
             }

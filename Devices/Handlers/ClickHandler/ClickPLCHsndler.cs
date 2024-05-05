@@ -8,7 +8,6 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 
 
 namespace LV.ClickPLCHandler
@@ -18,12 +17,18 @@ namespace LV.ClickPLCHandler
         Boolean IsOpen { get; }
 
         Boolean Close();
-        TimerCounter GetCounterCtrl(String counterName, String setPointName = null, String resetName = null, Boolean canWriteReset = false);
+        TimerCounter GetCounterCtrl(String counterName, 
+            String setPointName = null, String resetName = null, 
+            Boolean canWriteReset = false);
+
         RegisterInt16Control GetRegisterInt16Control(String registerName);
         RegisterInt16ControlRO GetRegisterInt16ControlRO(String registerName);
         RelayControlRO GetRelayControlRO(String relayName);
         RelayControl GetRelayControlRW(String relayName);
-        TimerCounter GetTimerCtrl(String timerName, String setPointName = null, String resetName = null, Boolean canWriteReset = false);
+        TimerCounter GetTimerCtrl(String timerName, 
+            String setPointName = null, String resetName = null, 
+            Boolean canWriteReset = false);
+
         Boolean Init(ClickHandlerConfiguration cnfg);
         Boolean Init(String configJsonString);
         Boolean Open();
@@ -36,7 +41,7 @@ namespace LV.ClickPLCHandler
         Boolean WriteRegister(String name, UInt16 value);
     }
 
-    public class ClickPLCHandler : IClickPLCHandler
+    public class ClickPLCHandler //: IClickPLCHandler
     {
         internal const string TimerPrefix = "T";
         internal const string CounterPrefix = "CT";
@@ -217,26 +222,142 @@ namespace LV.ClickPLCHandler
 
         public bool IsOpen => _mbClient.IsConnected;
 
-        public RelayControl GetRelayControlRW(string relayName) {
+        public bool WriteDiscreteControl(string name, SwitchCtrl sw) {
 
-            if (ClickAddressMap.GetModAddress(out int address,
-                control: relayName,
-                rtu: false) != ErrorCode.NoError) {
+            if (!(_mbClient?.IsConnected ?? false)) {
 
-                return null;
+                _AddErrorRecord(nameof(WriteDiscreteControl),
+                    ErrorCode.NotConnected,
+                    $"Can't write when not connected.");
+                return false;
             }
 
-            if (!Controls.ContainsKey(relayName.ToUpper())) {
+            if (ClickAddressMap.GetModBusHexAddress(
+                   ioFunction: IoFunction.SingleControlWrite,
+                   control: name, out int address, 
+                   out int functionCode) == ErrorCode.NoError) {
 
-                Controls.Add(relayName.ToUpper(),
-                    new RelayControl(relayName,
-                    (v) => WriteDiscreteControl(relayName, v),
-                    (out SwitchState r) => ReadDiscreteIO(relayName, out r)));
+                try {
+
+                    _mbClient.WriteSingleCoil(address, 
+                        sw == SwitchCtrl.On, functionCode);
+                    return true;
+                }
+                catch (Exception ex) {
+
+                    _AddErrorRecord(nameof(WriteDiscreteControl),
+                        ErrorCode.NotWritableControl,
+                        $"\"{address}\" control is not writable. {ex.Message}");
+                    return false;
+                }
             }
-
-            return Controls[relayName.ToUpper()] as RelayControl;
+            return false;
         }
 
+        public bool WriteDiscreteControls(string startName, SwitchCtrl[] ctrls) {
+
+            if (!(_mbClient?.IsConnected ?? false)) {
+
+                _AddErrorRecord(nameof(WriteDiscreteControls),
+                                       ErrorCode.NotConnected,
+                                                          $"Can't write when not connected.");
+                return false;
+            }
+
+            if (_DecodeControlName(startName, out IOType ioType,
+                               out int address, write: true)) {
+
+                try {
+
+                    _mbClient.WriteMultipleCoils(address,
+                                               ctrls.Select((c) => c == SwitchCtrl.On).ToArray());
+                    return true;
+                }
+                catch (Exception ex) {
+
+                    _AddErrorRecord(nameof(WriteDiscreteControls),
+                                               ErrorCode.GroupIoWriteFailed,
+                                                                      ex.Message);
+                    return false;
+                }
+            }
+            return false;
+        }   
+
+
+        public bool ReadDiscreteIO(string name, out SwitchState state) {
+            bool r = ReadDiscreteIO(name, out SwitchSt st);
+            state = new SwitchState(st);
+            return r;
+        }
+
+        public bool ReadDiscreteIO(string name, out SwitchSt status) {
+            
+
+            if (!(_mbClient?.IsConnected ?? false)) {
+
+                _AddErrorRecord(nameof(ReadDiscreteIO),
+                    ErrorCode.NotConnected,
+                    $"Can't read  when not connected.");
+                status = SwitchSt.Unknown;
+                return false;
+            }
+
+            if (ClickAddressMap.GetModBusHexAddress(
+                    ioFunction: IoFunction.SingleControlRead,
+                    control: name, out int address,
+                    out int functionCode) == ErrorCode.NoError) {
+
+                try {
+
+                    _mbClient.ReadCoils(address, 1, out bool[] data, functionCode);
+                    status = data[0] ? SwitchSt.On : SwitchSt.Off;
+                    return true;
+                }
+                catch (Exception ex) {
+
+                    _AddErrorRecord(nameof(ReadDiscreteIO),
+                        ErrorCode.GroupIoWriteFailed,
+                        ex.Message);
+                    status = SwitchSt.Unknown;
+                    return false;
+                }
+            }
+            else {
+
+                _AddErrorRecord(nameof(ReadDiscreteIO),
+                            ErrorCode.NotConnected,
+                            $"Invalid address \"{name}\".");
+                status = SwitchSt.Unknown;
+                return false;
+            }
+        }
+
+
+
+
+        /*  public RelayControl GetRelayControlRW(string relayName) {
+
+              if (ClickAddressMap.GetModBusHexAddress(out int address,
+                  control: relayName,
+                  rtu: false) != ErrorCode.NoError) {
+
+                  return null;
+              }
+
+              if (!Controls.ContainsKey(relayName.ToUpper())) {
+
+                  Controls.Add(relayName.ToUpper(),
+                      new RelayControl(relayName,
+                      (v) => WriteDiscreteControl(relayName, v),
+                      (out SwitchState r) => ReadDiscreteIO(relayName, out r)));
+              }
+
+              return Controls[relayName.ToUpper()] as RelayControl;
+          }
+        */
+
+        /*
         public RelayControlRO GetRelayControlRO(string relayName) {
 
             if (ClickAddressMap.GetModAddress(out int address,
@@ -255,7 +376,9 @@ namespace LV.ClickPLCHandler
 
             return Controls[relayName.ToUpper()] as RelayControlRO;
         }
+        */
 
+        /*
         public RegisterInt16Control GetRegisterInt16Control(string registerName) {
 
             if (ClickAddressMap.GetModAddress(out int address,
@@ -273,7 +396,9 @@ namespace LV.ClickPLCHandler
 
             return Controls[registerName.ToUpper()] as RegisterInt16Control;
         }
+        */
 
+        /*
         public RegisterInt16ControlRO GetRegisterInt16ControlRO(
                         string registerName) {
 
@@ -292,7 +417,8 @@ namespace LV.ClickPLCHandler
 
             return Controls[registerName.ToUpper()] as RegisterInt16ControlRO;
         }
-
+        */
+        /*
         public TimerCounter GetTimerCtrl(string timerName,
                        string setPointName = null,
                        string resetName = null,
@@ -320,14 +446,18 @@ namespace LV.ClickPLCHandler
                || (timer && name.StartsWith(TimerCounterPrefix))
                || (!timer && !name.StartsWith(CounterPrefix))
                || (!timer && name.StartsWith(CounterCounterPrefix))) {
+
                 _AddErrorRecord(nameof(_GetTimerCounter),
                        ErrorCode.InvalidControlName, $"Invalid " +
                        $"{(timer ? "timer" : "couner")} " +
                        $"name \"{name}\" provided.");
+                
                 return null;
             }
 
             RelayControlRO timerCtrl = GetRelayControlRO(name);
+
+            
             string counterRegisterName = timer
                 ? name.ToUpper().Replace(TimerPrefix, TimerCounterPrefix)
                 : name.ToUpper().Replace(CounterPrefix, CounterCounterPrefix);
@@ -343,131 +473,55 @@ namespace LV.ClickPLCHandler
                 string.IsNullOrEmpty(resetName) ? 
                         null : GetRelayControlRW(resetName);
 
+
+
             return new TimerCounter(timerCtrl, counterCtrl,
                 setPointCtrl, resetCtrl, canWriteReset);
         }
+        */
 
-        public bool WriteDiscreteControl(string name, SwitchCtrl sw) {
+
+
+        public bool ReadRegister(string name, out ushort value) {
+            
+            value = 0xFFFF;
 
             if (!(_mbClient?.IsConnected ?? false)) {
 
-                _AddErrorRecord(nameof(WriteDiscreteControl),
+                _AddErrorRecord(nameof(ReadRegister),
                     ErrorCode.NotConnected,
                     $"Can't write when not connected.");
                 return false;
             }
 
-            if (ClickAddressMap.GetModAddress(out int address, 
-                                              control: name, rtu: false) 
-                == ErrorCode.NoError) {
+            if (ClickAddressMap.GetModBusHexAddress(ioFunction: IoFunction.SingleControlRead,
+                control: name, out int address, out int functionCode) == ErrorCode.NoError) {
 
                 try {
 
-                    _mbClient.WriteSingleCoil(address, sw == SwitchCtrl.On);
+                    _mbClient.ReadInputRegisters(address, 1, functionCode, out int[] response);
+                    value = (ushort)response[0];
                     return true;
                 }
                 catch (Exception ex) {
 
-                    _AddErrorRecord(nameof(WriteDiscreteControl),
-                        ErrorCode.NotWritableControl,
-                        $"\"{address}\" control is not writable. {ex.Message}");
-                    return false;
-                }
-            }
-            return false;
-        }
-
-        public bool WriteDiscreteIOs(string startName,
-                                      SwitchCtrl[] ctrls) {
-            if (!(_mbClient?.IsConnected ?? false)) {
-
-                _AddErrorRecord(nameof(WriteDiscreteIOs),
-                    ErrorCode.NotConnected,
-                    $"Can't write when not connected.");
-                return false;
-            }
-
-            if (_DecodeControlName(startName, out IOType ioType,
-                    out int address, true)) {
-
-                if ((ctrls?.Count() ?? 0) < 1) {
-
-                    _AddErrorRecord(nameof(WriteDiscreteIOs),
-                        ErrorCode.NoDataProvided,
-                        $"No data provided fo writing");
-                    return false;
-                }
-
-                try {
-
-                    var cts = ctrls.Select((ctrl) => ctrl == SwitchCtrl.On).ToArray();
-                    _mbClient.WriteMultipleCoils(address,
-                        ctrls.Select((ctrl) => ctrl == SwitchCtrl.On).ToArray());
-                    return true;
-                }
-                catch (Exception ex) {
-
-                    _AddErrorRecord(nameof(WriteDiscreteIOs),
-                        ErrorCode.GroupIoWriteFailed,
-                        ex.Message);
-                    return false;
-                }
-            }
-            return false;
-        }
-
-        public bool ReadDiscreteIO(string name, out SwitchState state) {
-            bool r = ReadDiscreteIO(name, out SwitchSt st);
-            state = new SwitchState(st);
-            return r;
-        }
-
-        public bool ReadDiscreteIO(string name, out SwitchSt status) {
-            if (ReadDiscreteIOs(name, 1, out SwitchSt[] st)) {
-
-                status = st[0];
-                return true;
-            }
-
-            if (!(_mbClient?.IsConnected ?? false)) {
-
-                _AddErrorRecord(nameof(ReadDiscreteIO),
-                    ErrorCode.NotConnected,
-                    $"Can't read  when not connected.");
-                status = SwitchSt.Unknown;
-                return false;
-            }
-
-            if (_DecodeControlName(name, out IOType ioType,
-                            out int address, true)) {
-
-                try {
-
-                    _mbClient.ReadCoils(address, 1, out bool[] data);
-                    status = data[0] ? SwitchSt.On : SwitchSt.Off;
-                    return true;
-                }
-                catch (Exception ex) {
-
-                    _AddErrorRecord(nameof(ReadDiscreteIO),
-                        ErrorCode.GroupIoWriteFailed,
-                        ex.Message);
-                    status = SwitchSt.Unknown;
+                    _AddErrorRecord(nameof(ReadRegister),
+                                    ErrorCode.NotWritableControl,
+                                    $"\"{address}\" control is not " +
+                                    $"writable. {ex.Message}");
                     return false;
                 }
             }
             else {
-
-                _AddErrorRecord(nameof(ReadDiscreteIO),
-                            ErrorCode.NotConnected,
-                            $"Invalid address \"{name}\".");
-                status = SwitchSt.Unknown;
+                _AddErrorRecord(nameof(ReadRegister),
+                                ErrorCode.InvalidControlName,
+                                $"Invalid control name \"{name}\".");
                 return false;
             }
         }
 
-        public bool ReadDiscreteIOs(string name, int numberOfIosToRead,
-            out SwitchSt[] status) {
+        public bool ReadDiscreteIOs(string name, int numberOfIosToRead, out SwitchSt[] status) {
+
             if (!(_mbClient?.IsConnected ?? false)) {
 
                 _AddErrorRecord(nameof(ReadDiscreteIOs),
@@ -477,13 +531,13 @@ namespace LV.ClickPLCHandler
                 return false;
             }
 
-            if (_DecodeControlName(name, out IOType ioType,
-                                   out int address, true)) {
+            if (ClickAddressMap.GetModBusHexAddress(ioFunction: IoFunction.MultipleControlRead,
+                control: name, out int address, out int functionCode) == ErrorCode.NoError) {
 
                 try {
 
                     _mbClient.ReadCoils(address,
-                        Math.Max(1, numberOfIosToRead), out bool[] data);
+                        Math.Max(1, numberOfIosToRead), out bool[] data, functionCode);
                     status =
                         data.Select((st) => st ? SwitchSt.On : SwitchSt.Off).ToArray();
                     return true;
@@ -517,19 +571,7 @@ namespace LV.ClickPLCHandler
             return false;
         }
 
-        public bool ReadRegister(string name, out ushort value) {
-            value = 0xFFFF;
-            if (_DecodeControlName(name, out IOType ioType, out int address, write: false)) {
 
-                if (_mbClient.ReadInputRegisters(address, 1, out int[] response)) {
-
-                    value = (ushort)response[0];
-                    return true;
-                }
-            }
-
-            return false;
-        }
 
 
         #region Private Methods

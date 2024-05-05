@@ -992,7 +992,7 @@ namespace EasyModbus
         /// <param name="startingAddress">First discrete input to read</param>
         /// <param name="quantity">Number of discrete Inputs to read</param>
         /// <returns>Boolean Array which contains the discrete Inputs</returns>
-        public bool ReadDiscreteInputs(int startingAddress, int quantity, out bool[] response)
+        public bool ReadDiscreteInputs(int startingAddress, int quantity, out bool[] response, int functionCode = 0x02)
         {
             response = null;
             // if (debug) StoreLogData.Instance.Store("FC2 (Read Discrete Inputs from Master device), StartingAddress: "+ startingAddress+", Quantity: " +quantity, System.DateTime.Now);
@@ -1019,7 +1019,7 @@ namespace EasyModbus
             this._transactionIdentifier = BitConverter.GetBytes((uint)_transactionIdentifierInternal);
             this._protocolIdentifier = BitConverter.GetBytes((int)0x0000);
             this._length = BitConverter.GetBytes((int)0x0006);
-            this._functionCode = 0x02;
+            this._functionCode = (byte) functionCode;
             this._startingAddress = BitConverter.GetBytes(startingAddress);
             this._quantity = BitConverter.GetBytes(quantity);
 
@@ -1148,7 +1148,7 @@ namespace EasyModbus
                     }
                     else {
                         _countRetries++;
-                        return ReadDiscreteInputs(startingAddress, quantity, out response);
+                        return ReadDiscreteInputs(startingAddress, quantity, out response, functionCode);
                     }
                 }
                 else if (!dataReceived) {
@@ -1159,7 +1159,7 @@ namespace EasyModbus
                     }
                     else {
                         _countRetries++;
-                        return ReadDiscreteInputs(startingAddress, quantity, out response);
+                        return ReadDiscreteInputs(startingAddress, quantity, out response, functionCode);
                     }
                 }
             }
@@ -1182,7 +1182,7 @@ namespace EasyModbus
         /// <param name="startingAddress">First coil to read</param>
         /// <param name="quantity">Numer of coils to read</param>
         /// <returns>Boolean Array which contains the coils</returns>
-        public bool ReadCoils(int startingAddress, int quantity, out bool[] coils)
+        public bool ReadCoils(int startingAddress, int quantity, out bool[] coils, int functionCode)
         {
             coils = null;
             _transactionIdentifierInternal++;
@@ -1209,7 +1209,7 @@ namespace EasyModbus
             this._transactionIdentifier = BitConverter.GetBytes((uint)_transactionIdentifierInternal);
             this._protocolIdentifier = BitConverter.GetBytes((int)0x0000);
             this._length = BitConverter.GetBytes((int)0x0006);
-            this._functionCode = 0x01;
+            this._functionCode = (byte) functionCode;
             this._startingAddress = BitConverter.GetBytes(startingAddress);
             this._quantity = BitConverter.GetBytes(quantity);
             Byte[] data = new byte[]{
@@ -1322,7 +1322,7 @@ namespace EasyModbus
                     }
                     else {
                         _countRetries++;
-                        return ReadCoils(startingAddress, quantity, out coils);
+                        return ReadCoils(startingAddress, quantity, out coils, functionCode);
                     }
                 }
                 else if (!dataReceived) {
@@ -1334,7 +1334,7 @@ namespace EasyModbus
                     }
                     else {
                         _countRetries++;
-                        return ReadCoils(startingAddress, quantity, out coils);
+                        return ReadCoils(startingAddress, quantity, out coils, functionCode);
                     }
                 }
             }
@@ -1353,7 +1353,7 @@ namespace EasyModbus
         /// <param name="startingAddress">First holding register to be read</param>
         /// <param name="quantity">Number of holding registers to be read</param>
         /// <returns>Int Array which contains the holding registers</returns>
-        public bool ReadHoldingRegisters(int startingAddress, int quantity, out int[] registers)
+        public bool ReadHoldingRegisters(int startingAddress, int quantity, out int[] registers, int functionCode = 0x03)
         {
             registers = null;
             _transactionIdentifierInternal++;
@@ -1380,7 +1380,7 @@ namespace EasyModbus
             this._transactionIdentifier = BitConverter.GetBytes((uint)_transactionIdentifierInternal);
             this._protocolIdentifier = BitConverter.GetBytes((int)0x0000);
             this._length = BitConverter.GetBytes((int)0x0006);
-            this._functionCode = 0x03;
+            this._functionCode = (byte) functionCode;
             this._startingAddress = BitConverter.GetBytes(startingAddress);
             this._quantity = BitConverter.GetBytes(quantity);
             Byte[] data = new byte[]{   this._transactionIdentifier[1],
@@ -1528,7 +1528,7 @@ namespace EasyModbus
 
             return true;
         }
-
+/*
         public bool ReadSingle16bitRegister( int address, out ushort value)
         {
             if ( ReadInputRegisters(address, 1 , out int[] response)) {
@@ -1548,14 +1548,14 @@ namespace EasyModbus
             value = ushort.MaxValue;
             return false;
         }
-
+*/
         /// <summary>
         /// Read Input Registers from Master device (FC4).
         /// </summary>
         /// <param name="startingAddress">First input register to be read</param>
         /// <param name="quantity">Number of input registers to be read</param>
         /// <returns>Int Array which contains the input registers</returns>
-        public bool ReadInputRegisters(int startingAddress, int quantity, out int[] response)
+        public bool ReadInputRegisters(int startingAddress, int quantity, int functionCode, out int[] response)
         {
             response = null;
 
@@ -1581,7 +1581,7 @@ namespace EasyModbus
             this._transactionIdentifier = BitConverter.GetBytes((uint)_transactionIdentifierInternal);
             this._protocolIdentifier = BitConverter.GetBytes((int)0x0000);
             this._length = BitConverter.GetBytes((int)0x0006);
-            this._functionCode = 0x04;
+            this._functionCode = (byte)functionCode;
             this._startingAddress = BitConverter.GetBytes(startingAddress);
             this._quantity = BitConverter.GetBytes(quantity);
             Byte[] data = new byte[]{   this._transactionIdentifier[1],
@@ -1699,7 +1699,7 @@ namespace EasyModbus
                     }
                     else {
                         _countRetries++;
-                        return ReadInputRegisters(startingAddress, quantity, out response);
+                        return ReadInputRegisters(startingAddress, quantity, functionCode, out response);
                     }
                 }
                 else if (!dataReceived) {
@@ -1711,7 +1711,7 @@ namespace EasyModbus
                     }
                     else {
                         _countRetries++;
-                        return ReadInputRegisters(startingAddress, quantity, out response);
+                        return ReadInputRegisters(startingAddress, quantity, functionCode, out response);
                     }
 
                 }
@@ -1732,12 +1732,14 @@ namespace EasyModbus
             return true;
         }
 
+
+
         /// <summary>
         /// Write single Coil to Master device (FC5).
         /// </summary>
         /// <param name="startingAddress">Coil to be written</param>
         /// <param name="value">Coil Value to be written</param>
-        public void WriteSingleCoil(int startingAddress, bool value)
+        public void WriteSingleCoil(int startingAddress, bool value, int functionCode)
         {
 
             // if (debug) StoreLogData.Instance.Store("FC5 (Write single coil to Master device), StartingAddress: "+ startingAddress+", Value: " + value, System.DateTime.Now);
@@ -1758,7 +1760,7 @@ namespace EasyModbus
             this._transactionIdentifier = BitConverter.GetBytes((uint)_transactionIdentifierInternal);
             this._protocolIdentifier = BitConverter.GetBytes((int)0x0000);
             this._length = BitConverter.GetBytes((int)0x0006);
-            this._functionCode = 0x05;
+            this._functionCode = (byte) functionCode;
             this._startingAddress = BitConverter.GetBytes(startingAddress);
 
             if (value == true) {
@@ -1885,7 +1887,7 @@ namespace EasyModbus
                     }
                     else {
                         _countRetries++;
-                        WriteSingleCoil(startingAddress, value);
+                        WriteSingleCoil(startingAddress, value, functionCode);
                     }
                 }
                 else if (!dataReceived) {
@@ -1897,17 +1899,20 @@ namespace EasyModbus
                     }
                     else {
                         _countRetries++;
-                        WriteSingleCoil(startingAddress, value);
+                        WriteSingleCoil(startingAddress, value, functionCode);
                     }
                 }
             }
         }
+        
+        
+        
         /// <summary>
         /// Write single Register to Master device (FC6).
         /// </summary>
         /// <param name="startingAddress">Register to be written</param>
         /// <param name="value">Register Value to be written</param>
-        public bool WriteSingle16bitRegister(int startingAddress, ushort value)
+        public bool WriteSingle16bitRegister(int startingAddress, ushort value, int functionCode = 0x06)
         {
             // if (debug) StoreLogData.Instance.Store("FC6 (Write single register to Master device), StartingAddress: "+ startingAddress+", Value: " + value, System.DateTime.Now);
             _transactionIdentifierInternal++;
@@ -1931,7 +1936,7 @@ namespace EasyModbus
                 BitConverter.GetBytes((int)0x0000);
             this._length = 
                 BitConverter.GetBytes((int)0x0006);
-            this._functionCode = 0x06;
+            this._functionCode = (byte) functionCode;
             this._startingAddress = 
                 BitConverter.GetBytes(startingAddress);
             registerValue = 
@@ -2289,7 +2294,7 @@ namespace EasyModbus
         /// </summary>
         /// <param name="startingAddress">First coil to be written</param>
         /// <param name="values">Coil Values to be written</param>
-        public bool WriteMultipleCoils(int startingAddress, bool[] values)
+        public bool WriteMultipleCoils(int startingAddress, bool[] values, int functionCode = 0x0F)
         {
             string debugString = "";
             for (int i = 0; i < values.Length; i++)
@@ -2314,7 +2319,7 @@ namespace EasyModbus
             this._transactionIdentifier = BitConverter.GetBytes((uint)_transactionIdentifierInternal);
             this._protocolIdentifier = BitConverter.GetBytes((int)0x0000);
             this._length = BitConverter.GetBytes((int)(7 + (byteCount)));
-            this._functionCode = 0x0F;
+            this._functionCode = (byte)functionCode;
             this._startingAddress = BitConverter.GetBytes(startingAddress);
 
 

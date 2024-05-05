@@ -5,28 +5,29 @@ using LV.HWControl.Common.Handlers;
 using Newtonsoft.Json;
 
 using System;
-
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 
 namespace ClickTester
 {
-
     public enum TestType
     {
         SingleIO,
         IOArray
     }
+
     internal class Program
     {
         static ClickPLCHandler _handler;
         static bool _consoleOutputEnabled = false;
-        static int _sycles = 10;
         static TestType _testType = TestType.IOArray;
         static int cntr = 0;
         static string _io  = "C1";
-
+        static string _timer = "T1";
+        static string _setPoint = "DS10";
+        static string _controlRelay = "C16";
+        static int timeSetTime = 1234;
+        static int exitCode = 0;
         static int Main(string[] args)
         {            
             int exitCode = 0;
@@ -43,6 +44,51 @@ namespace ClickTester
                 return exitCode;
             }
 
+            Console.WriteLine("Handler opened.");
+
+            Console.WriteLine("Starting simple single Descrete IO test test.");
+            if((exitCode = DoSingleIO(_io)) != 0) {
+                Console.WriteLine($"Simple single Descrete IO test failed with exit code {exitCode} .");
+                goto Exit;
+            }
+
+            Console.WriteLine("Simple single Descrete IO test complete.");
+
+
+            Console.WriteLine("Starting Descrete IO array test.");
+
+
+            SwitchCtrl[] control = Enumerable.Repeat(SwitchCtrl.On, 8).ToArray();
+
+            Console.WriteLine($"Setting all IOs to {SwitchCtrl.On}.");
+
+            if( (exitCode = DoDiscreteIOs(_io, control)) != 0) {
+                Console.WriteLine($"Descrete IO array test failed with exit code {exitCode} .");
+                goto Exit;
+            }
+            Thread.Sleep(2000);
+            control = Enumerable.Repeat(SwitchCtrl.Off, 8).ToArray();
+
+            Console.WriteLine($"Setting all IOs to {SwitchCtrl.Off}.");
+            
+            if ((exitCode = DoDiscreteIOs(_io, control)) != 0) {
+                Console.WriteLine($"Descrete IO array test failed with exit code {exitCode} .");
+                goto Exit;
+            }
+
+            Console.WriteLine("Descrete IO array test complete.");
+            Thread.Sleep(2000);
+
+            Console.WriteLine("Starting simple timer test.");
+
+            if( (exitCode = DoSimpleTimerTest(_timer, _setPoint, _controlRelay, timeSetTime)) != 0) {
+                Console.WriteLine($"Simple timer test failed with exit code {exitCode} .");
+                goto Exit;
+            }
+            Console.WriteLine("Simple timer test complete.");
+
+                
+            /*
             var ct = _handler.GetRelayControlRW("C101");
 
             bool res = ct.Set(SwitchCtrl.On);
@@ -105,7 +151,8 @@ namespace ClickTester
                 Console.WriteLine($"Test failed with exception: {ex.Message}");
                 exitCode = -1;
             }
-
+            */
+            Exit:
             Console.WriteLine($"Test complete with error code {exitCode}");
             Console.WriteLine("Click 'Enter' to exit.");
             Console.ReadLine();
@@ -132,156 +179,194 @@ namespace ClickTester
             return cnfg;
         }
 
-        private static int DoArrayIO( string io, SwitchCtrl[] control)
+       
+        private static int DoDiscreteIOs( string io, SwitchCtrl[] controls)
         {
-            if (!_handler.WriteDiscreteIOs(io, control)) {
+
+            if (!_handler.ReadDiscreteIOs(io, controls.Length, out SwitchSt[] status)) {
+                Console.WriteLine($"Failed to read {io}x{controls.Length} relays status.");
+                return -1;
+            }
+            
+            if ( status.Where( (o) => o == SwitchSt.Unknown).Count() > 0) {
+
+                Console.WriteLine($"Failed to read {io}x{controls.Length} relays status. " +
+                    $"Some IOs have unknown status: {string.Join(" ," ,status)}");
                 return -2;
             }
 
-            if (!_handler.ReadDiscreteIOs(io, 16, out SwitchSt[] status)) {
-                return -2;
+            Console.WriteLine($"{io} relays status is {string.Join(" ,", status)}.");
+
+            if (!_handler.WriteDiscreteControls(io, controls)) {
+                Console.WriteLine($"Failed to write {io}x{controls.Length} relays status.");
+                return -3;
+            }   
+
+            Console.WriteLine($"{io} relays set to {string.Join(" ,", controls)}.");
+
+            if (!_handler.ReadDiscreteIOs(io, controls.Length, out status)) {
+                Console.WriteLine($"Failed to read {io}x{controls.Length} relays status.");
+                return -4 ;
             }
 
-            if (_consoleOutputEnabled) {
-                Console.WriteLine($"{io} relay status is {status}.");
-            }
+            if (status.Where((o) => o == SwitchSt.Unknown).Count() > 0) {
 
-            for( int i = 0; i < status.Length; i++) {
-                if ((int)control[i] != (int)status[i]) {
-                    return -3;
-                }
-            }
-
-            return 0;
-        }
-
-        private static int DoSingleIO( string io, SwitchCtrl sw)
-        {
-            if (!_handler.WriteDiscreteControl(io, sw)) {
+                Console.WriteLine($"Failed to read {io}x{controls.Length} relays status. " +
+                    $"Some IOs have unknown status: {string.Join(" ,", status)}");
                 return -5;
             }
 
-            if (_consoleOutputEnabled) {
-                Console.WriteLine($"{io} relay set to Off.");
-            }
-
-            if (!_handler.ReadDiscreteIO(io, out SwitchSt status)) {
-                return -6;
-            }
-
-            if (_consoleOutputEnabled) {
-                Console.WriteLine($"{io} relay status is {status}.");
-            }
-
-            if ((int)status != (int)sw) {
-                Console.WriteLine($"Failed to set \"{io}\" to {sw}");
-                return -7;
-            }
+            Console.WriteLine($"{io} relays status is {string.Join(" ,", status)}.");
 
             return 0;
         }
 
-        private static int DoTimerObjectTest( string  timerName, 
-            string setPointRegister, int timerSetValue,  string controlRelay) 
-            {
-            var timerCtrl = _handler.GetTimerCtrl(timerName: timerName, setPointName: setPointRegister);
-            
-            timerCtrl.SetSetPoint((ushort)timerSetValue);
-                 
-            SwitchCtrl ctrl = SwitchCtrl.Off;
+        private static int DoSingleIO( string io, int repeats = 4)
+        {
+            SwitchSt status;
 
-            if (_handler.WriteDiscreteControl(controlRelay, ctrl)) {
-                Console.WriteLine($"{controlRelay} set to {ctrl}");
-                Thread.Sleep(500);
-            }
-            else {
-                Console.WriteLine($"Failed to set {controlRelay}");
-                return -1;
-            }
+            for (int i = 0; i < repeats; i++) {
+                Thread.Sleep(100);
+                SwitchCtrl ctrl = (i % 2) == 0 ? SwitchCtrl.On : SwitchCtrl.Off;
 
-            ctrl = SwitchCtrl.On;
-            if (_handler.WriteDiscreteControl(controlRelay, ctrl)) {
-                Console.WriteLine($"{controlRelay} set to {ctrl}");
-                Thread.Sleep(50);
-            }
-            else {
-                Console.WriteLine($"Failed to set {controlRelay}");
-                return -1;
-            }
-
-            while (true) {
-
-                Thread.Sleep(250);
-
-                var status = timerCtrl.GetState().State;
-                bool result = timerCtrl.GetCounts(out ushort timer);
-
-
-                Console.WriteLine($"Timer status: {status}. Counts {timer}.");
-
-                if (status == SwitchSt.On) {
-                    Console.WriteLine("Timer tripped.");
-                    return 0;
+                if (!_handler.WriteDiscreteControl(io, ctrl)) {
+                    return -1;
                 }
-                else if (status == SwitchSt.Unknown) {
-                    Console.WriteLine($"Failed to read timer state.");
-                    return -4;
+
+                Console.WriteLine($"{io} relay set to {ctrl}.");
+                Thread.Sleep(100);
+
+                if (!_handler.ReadDiscreteIO(io, out status)) {
+                    return -2;
                 }
-            }
 
-
-
+                Console.WriteLine($"{io} relay status is {status}.");
+            }                   
+            return 0;
         }
 
 
-        private static int DoSimpleTimerTest(string timerValue, string timerPreset, 
-            string controlRelay,  int timerTimeMs) {
+        private static int DoSimpleTimerTest( string timer, string setRegister, string controlRelay,  int timerTimeMs) {
 
-            SwitchCtrl ctrl = SwitchCtrl.Off;
+            string timerCurrentValueRegister = timer.Replace("T", "TD");
 
-            if (_handler.WriteDiscreteControl(controlRelay, ctrl)) {
-                Console.WriteLine($"{controlRelay} set to {ctrl}");
-                Thread.Sleep(500);
+            if (_handler.WriteDiscreteControl(controlRelay, SwitchCtrl.Off)) {
+                Console.WriteLine($"Control relay {controlRelay} switched off.");
             }
             else {
-                Console.WriteLine($"Failed to set {controlRelay}");
-                return  -1;
+                Console.WriteLine($"Failed to switch control relay {controlRelay} to off.");
+                return -1;
             }
 
-            bool r = _handler.WriteRegister("DS1", 0xFF);
-
-            if (_handler.WriteRegister(timerPreset, (ushort) timerTimeMs)) {
-                Console.WriteLine($"Timer preset {timerPreset} set to {timerTimeMs}ms.");
+            if (_handler.ReadRegister(setRegister, out ushort timerValue)) {
+                Console.WriteLine($"Current timer set value {timerValue}.");
             }
             else {
-                Console.WriteLine($"Failed to set timer preset {timerPreset}.");
+                Console.WriteLine($"Failed to read current set value from {setRegister}.");
                 return -2;
             }
 
-            if (_handler.WriteDiscreteControl(controlRelay, SwitchCtrl.On)) {
-                Console.WriteLine($"Starting trigger using {controlRelay}.");
+            Thread.Sleep(1000);
+
+            if (_handler.WriteRegister(setRegister, (ushort)timerTimeMs)) {
+                Console.WriteLine($"Set timer value to {timerTimeMs}.");
             }
             else {
-                Console.WriteLine($"Failed to start timer using {controlRelay}.");
-                return  -3;
+                Console.WriteLine($"Failed to set register {setRegister} to {timerTimeMs}.");
+                return -3;
             }
 
-            SwitchSt status = SwitchSt.Unknown;
+            if (_handler.ReadRegister(setRegister, out timerValue)) {
+                Console.WriteLine($"Current timer set value: {timerValue}.");
+            }
+            else {
+                Console.WriteLine($"Failed to read current set value from {setRegister}.");
+                return -4;
+            }
 
+            if (_handler.ReadRegister(timerCurrentValueRegister, out timerValue)) {
+                Console.WriteLine($"Current timer counter value: {timerValue}.");
+            }
+            else {
+                Console.WriteLine($"Failed to read current timer " +
+                    $"counter value form {timerCurrentValueRegister}.");
+                return -5;
+            }
+
+
+            if (_handler.ReadDiscreteIO(timer, out SwitchState switchState)) {
+                Console.WriteLine($"Current timer output state: {switchState}.");
+            }
+            else {
+                Console.WriteLine($"Failed to read current timer " +
+                    $"output state value form {timer}.");
+                return -6;
+            }
+
+
+            if (_handler.WriteDiscreteControl(controlRelay, SwitchCtrl.On)) {
+                Console.WriteLine($"Control relay {controlRelay} switched On.");
+            }
+            else {
+                Console.WriteLine($"Failed to switch control relay {controlRelay} to off.");
+                return -1;
+            }
 
             while (true) {
+               
+                if(!_handler.ReadDiscreteIO(timer, out switchState)) {
+                    Console.WriteLine($"Failed to read timer {timer} state.");
+                    return -7;
+                }
+
+                if(!_handler.ReadRegister(timerCurrentValueRegister, out timerValue)) {
+                    Console.WriteLine($"Failed to read timer current value from {timerCurrentValueRegister}.");
+                    return -8;
+                }
+
+                switch ( switchState.State) {
+
+                    case SwitchSt.On:
+                        Console.WriteLine($"Timer tripped. Current countvalue: {timerValue}.");
+                        Thread.Sleep(2500);
+                        if (_handler.WriteDiscreteControl(controlRelay, SwitchCtrl.Off)) {
+                            Console.WriteLine($"Control relay {controlRelay} switched off.");
+                       
+
+                            if (_handler.WriteRegister(setRegister, 0)) {
+                                Console.WriteLine($"Timer set point cleared.");
+                                Thread.Sleep(2500);
+                                return 0;
+                            }
+                            else {
+                                Console.WriteLine($"Failed to set timer set pint register {setRegister} to 0.");
+                                return -12;
+                            }
+                            
+                        }
+                        else {
+                            Console.WriteLine($"Failed to switch control relay {controlRelay} to off.");
+                            return -9;
+                        }
+                        
+
+                    case SwitchSt.Off:
+                        Console.WriteLine($"Timer is off at {timerValue} counts.");
+                        break;
+
+                    case SwitchSt.Unknown:
+                        Console.WriteLine($"Error. Timer state is unknown at {timerValue} counts.");
+
+                        if (_handler.WriteDiscreteControl(controlRelay, SwitchCtrl.Off)) {
+                            Console.WriteLine($"Control relay {controlRelay} switched off.");
+                        }
+                        else {
+                            Console.WriteLine($"Failed to switch control relay {controlRelay} to off.");
+                            return -11;
+                        }
+                        return -10;
+                }
                 Thread.Sleep(250);
-                r = _handler.ReadDiscreteIO("T1", out status);
-
-                Console.WriteLine($"Timer status: {status}.");
-
-                if (status == SwitchSt.On) {
-                    return 0;
-                }
-                else if (status == SwitchSt.Unknown) {
-                    Console.WriteLine($"Failed to read timer state.");
-                    return -4;
-                }
             }
         }
     }
