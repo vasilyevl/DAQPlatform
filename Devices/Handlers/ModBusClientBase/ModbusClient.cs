@@ -1,38 +1,35 @@
 ﻿/*
-Copyright (c) 2018-2020 Rossmann-Engineering
-Permission is hereby granted, free of charge, 
-to any person obtaining a copy of this software
-and associated documentation files (the "Software"),
-to deal in the Software without restriction, 
-including without limitation the rights to use, 
-copy, modify, merge, publish, distribute, sublicense, 
-and/or sell copies of the Software, and to permit 
-persons to whom the Software is furnished to do so, 
+This code is based on  2018-2020 Rossmann-Engineering EasyModbus project. 
+The original code is available at:
+https://github.com/rossmann-engineering/EasyModbusTCP.NET
+  
+Copyright (c) 2022 LV Permission is hereby granted, 
+free of charge, to any person obtaining a copy of this software
+and associated documentation files (the "Software"),to deal in the Software 
+without restriction, including without limitation the rights to use, copy, 
+modify, merge, publish, distribute, sublicense, and/or sell copies of the 
+Software, and to permit persons to whom the Software is furnished to do so, 
 subject to the following conditions:
 
-The above copyright notice and this permission 
-notice shall be included in all copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included 
+in all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, 
-DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, 
-ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,FITNESS FOR A 
+PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
+
+*/
+
 using System;
 using System.Net.Sockets;
 using System.Net;
 using System.IO.Ports;
-using System.Reflection;
-using System.Text;
-using System.Collections.Generic;
-using System.Runtime.Remoting.Messaging;
 using LV.HWControl.Common.Handlers;
-using System.Xml.Schema;
-
-namespace EasyModbus
+     
+namespace ModeBusHandler
 {
     /// <summary>
     /// Implements a ModbusClient.
@@ -45,11 +42,21 @@ namespace EasyModbus
             HighLow = 1
         };
 
+        private int actualPositionToRead = 0;
+        private DateTime dateTimeLastRead;
+
+        private bool dataReceived = false;
+        private bool receiveActive = false;
+        private byte[] readBuffer = new byte[256];
+        private int bytesToRead = 0;
+
         //private bool debug=false;
         private TcpClient _tcpClient;
         private string _ipAddress = "127.0.0.1";
         private int _port = 502;
+
         private uint _transactionIdentifierInternal = 0;
+
         private byte [] _transactionIdentifier = new byte[2];
         private byte [] _protocolIdentifier = new byte[2];
         private byte[] _crc = new byte[2];
@@ -58,6 +65,7 @@ namespace EasyModbus
         private byte _functionCode;
         private byte [] _startingAddress = new byte[2];
         private byte [] _quantity = new byte[2];
+
         private bool _udpFlag = false;
         private int _portOut;
         private int _baudRate = 9600;
@@ -69,11 +77,11 @@ namespace EasyModbus
         private StopBits _stopBits = StopBits.One;
         private bool _connected = false;
         private int _countRetries = 0;
-
         public int NumberOfRetries { get; set; } = 3;
 
         private object _lastErrorLock = new object();   
         private string _lastError = null;
+
         public string LastError {
             get {
                 lock (_lastErrorLock) {
@@ -144,7 +152,6 @@ namespace EasyModbus
             _serialPort.ReadTimeout = sp.ReadTimeoutMs;
         }
 
-
         /// <summary>
         /// Parameterless constructor
         /// </summary>
@@ -190,7 +197,7 @@ namespace EasyModbus
                 var result = _tcpClient.BeginConnect(_ipAddress, _port, null, null);
                 var success = result.AsyncWaitHandle.WaitOne(_connectTimeout);
                 if (!success) {
-                    throw new EasyModbus.Exceptions.ConnectionException("connection timed out");
+                    throw new ModeBusHandler.Exceptions.ConnectionException("connection timed out");
                 }
                 _tcpClient.EndConnect(result);
 
@@ -242,8 +249,6 @@ namespace EasyModbus
                         goto exit;
                     }
                 }
-
-
             }
             else {
                 _connected = false;
@@ -347,6 +352,7 @@ namespace EasyModbus
         public  bool ConvertRegistersToFloat(int[] registers, 
             RegisterOrder registerOrder, out float result)
         {
+
             int [] swappedRegisters = {registers[0],registers[1]};
             if (registerOrder == RegisterOrder.HighLow) {
                 swappedRegisters = new int[] { registers[1], registers[0] };
@@ -361,6 +367,7 @@ namespace EasyModbus
         /// <returns>Connected 32 Bit Integer value</returns>
         public bool ConvertRegistersToInt(int[] registers, out Int32 result)
         {
+
             if (registers.Length != 2) {
                 result = Int32.MinValue;
                 throw new ArgumentException("Input Array length invalid - Array langth must be '2'");
@@ -387,6 +394,7 @@ namespace EasyModbus
         /// <returns>Connecteds 32 Bit Integer value</returns>
         public bool ConvertRegistersToInt(int[] registers, RegisterOrder registerOrder, out Int32 result)
         {
+
             int[] swappedRegisters = { registers[0], registers[1] };
             
             if (registerOrder == RegisterOrder.HighLow) {
@@ -404,6 +412,7 @@ namespace EasyModbus
         /// <returns>64 bit value</returns>
         public bool ConvertRegistersToLong(int[] registers, out Int64 result)
         {
+
             if (registers.Length != 4) {
                 result = Int64.MinValue;
                 LastError = "Input Array length invalid - Array langth must be '4'";
@@ -414,20 +423,19 @@ namespace EasyModbus
             int highLowRegister = registers[2];
             int lowHighRegister = registers[1];
             int lowRegister = registers[0];
+
             byte[] highRegisterBytes = BitConverter.GetBytes(highRegister);
             byte[] highLowRegisterBytes = BitConverter.GetBytes(highLowRegister);
             byte[] lowHighRegisterBytes = BitConverter.GetBytes(lowHighRegister);
             byte[] lowRegisterBytes = BitConverter.GetBytes(lowRegister);
-            byte[] longBytes = {
-                                    lowRegisterBytes[0],
-                                    lowRegisterBytes[1],
-                                    lowHighRegisterBytes[0],
-                                    lowHighRegisterBytes[1],
-                                    highLowRegisterBytes[0],
-                                    highLowRegisterBytes[1],
-                                    highRegisterBytes[0],
-                                    highRegisterBytes[1]
-            };
+            byte[] longBytes = { lowRegisterBytes[0],
+                                 lowRegisterBytes[1],
+                                 lowHighRegisterBytes[0],
+                                 lowHighRegisterBytes[1],
+                                 highLowRegisterBytes[0],
+                                 highLowRegisterBytes[1],
+                                 highRegisterBytes[0],
+                                 highRegisterBytes[1] };
 
             result =  BitConverter.ToInt64(longBytes, 0);
             return true;
@@ -442,6 +450,7 @@ namespace EasyModbus
         public bool ConvertRegistersToLong(int[] registers, 
             RegisterOrder registerOrder, out Int64 result)
         {
+
             if (registers.Length != 4) {
                 result= Int64.MinValue;
                 LastError = "Input Array length invalid - Array langth must be '4'";
@@ -463,6 +472,7 @@ namespace EasyModbus
         /// <returns>64 bit value</returns>
         public bool ConvertRegistersToDouble(int[] registers, out double result)
         {
+
             if (registers.Length != 4) {
                 result = Double.NaN;
                 LastError = "Input Array length invalid - Array langth must be '4'";
@@ -500,6 +510,7 @@ namespace EasyModbus
         public bool ConvertRegistersToDouble(int[] registers, 
             RegisterOrder registerOrder, out double result)
         {
+
             if (registers.Length != 4) {
                 result = Double.NaN;
                 LastError = "Input Array length invalid - Array langth must be '4'";
@@ -522,6 +533,7 @@ namespace EasyModbus
         /// <returns>Register values</returns>
         public static int[] ConvertFloatToRegisters(float floatValue)
         {
+
             byte[] floatBytes = BitConverter.GetBytes(floatValue);
             byte[] highRegisterBytes =
             {
@@ -554,6 +566,7 @@ namespace EasyModbus
         /// <returns>Register values</returns>
         public static int[] ConvertFloatToRegisters(float floatValue, RegisterOrder registerOrder)
         {
+
             int[] registerValues = ConvertFloatToRegisters(floatValue);
             int[] returnValue = registerValues;
             if (registerOrder == RegisterOrder.HighLow)
@@ -568,6 +581,7 @@ namespace EasyModbus
         /// <returns>Register values</returns>
         public static int[] ConvertIntToRegisters(Int32 intValue)
         {
+
             byte[] doubleBytes = BitConverter.GetBytes(intValue);
             byte[] highRegisterBytes =
             {
@@ -600,6 +614,7 @@ namespace EasyModbus
         /// <returns>Register values</returns>
         public static int[] ConvertIntToRegisters(Int32 intValue, RegisterOrder registerOrder)
         {
+
             int[] registerValues = ConvertIntToRegisters(intValue);
             int[] returnValue = registerValues;
             if (registerOrder == RegisterOrder.HighLow)
@@ -614,6 +629,7 @@ namespace EasyModbus
         /// <returns>Register values</returns>
         public static int[] ConvertLongToRegisters(Int64 longValue)
         {
+
             byte[] longBytes = BitConverter.GetBytes(longValue);
             byte[] highRegisterBytes =
             {
@@ -662,6 +678,7 @@ namespace EasyModbus
         /// <returns>Register values</returns>
         public static int[] ConvertLongToRegisters(Int64 longValue, RegisterOrder registerOrder)
         {
+
             int[] registerValues = ConvertLongToRegisters(longValue);
             int[] returnValue = registerValues;
             if (registerOrder == RegisterOrder.HighLow)
@@ -676,6 +693,7 @@ namespace EasyModbus
         /// <returns>Register values</returns>
         public static int[] ConvertDoubleToRegisters(double doubleValue)
         {
+
             byte[] doubleBytes = BitConverter.GetBytes(doubleValue);
             byte[] highRegisterBytes =
             {
@@ -724,6 +742,7 @@ namespace EasyModbus
         /// <returns>Register values</returns>
         public static int[] ConvertDoubleToRegisters(double doubleValue, RegisterOrder registerOrder)
         {
+
             int[] registerValues = ConvertDoubleToRegisters(doubleValue);
             int[] returnValue = registerValues;
             if (registerOrder == RegisterOrder.HighLow)
@@ -740,6 +759,7 @@ namespace EasyModbus
         /// <returns>Converted String</returns>
         public static string ConvertRegistersToString(int[] registers, int offset, int stringLength)
         {
+
             byte[] result = new byte[stringLength];
             byte[] registerResult = new byte[2];
 
@@ -758,6 +778,7 @@ namespace EasyModbus
         /// <returns>Converted String</returns>
         public static int[] ConvertStringToRegisters(string stringToConvert)
         {
+
             byte[] array = System.Text.Encoding.ASCII.GetBytes(stringToConvert);
             int[] returnarray = new int[stringToConvert.Length / 2 + stringToConvert.Length % 2];
             for (int i = 0; i < returnarray.Length; i++) {
@@ -836,58 +857,6 @@ namespace EasyModbus
             return (UInt16)((UInt16)uchCRCHi << 8 | uchCRCLo);
         }
 
-        private bool dataReceived = false;
-        private bool receiveActive = false;
-        private byte[] readBuffer = new byte[256];
-        private int bytesToRead = 0;
-
-        /* private int akjjjctualPositionToRead = 0;
-         DateTime dateTimeLastRead;
-        
-                private void DataReceivedHandler(object sender,
-                                SerialDataReceivedEventArgs e)
-                {
-                    long ticksWait = TimeSpan.TicksPerMillisecond * 2000;
-                    SerialPort sp = (SerialPort)sender;
-
-                    if (bytesToRead == 0 || sp.BytesToRead == 0)
-                    {
-                        actualPositionToRead = 0;
-                        sp.DiscardInBuffer();
-                        dataReceived = false;
-                        receiveActive = false;
-                        return;
-                    }
-
-                    if (actualPositionToRead == 0 && !dataReceived)
-                        readBuffer = new byte[256];
-
-                    //if ((DateTime.Now.Ticks - dateTimeLastRead.Ticks) > ticksWait)
-                    //{
-                    //    readBuffer = new byte[256];
-                    //    actualPositionToRead = 0;
-                    //}
-                    int numberOfBytesInBuffer = sp.BytesToRead;
-                    sp.Read(readBuffer, actualPositionToRead, ((numberOfBytesInBuffer + actualPositionToRead) > readBuffer.Length) ? 0 : numberOfBytesInBuffer);
-                    actualPositionToRead = actualPositionToRead + numberOfBytesInBuffer;
-                    //sp.DiscardInBuffer();
-                    //if (DetectValidModbusFrame(readBuffer, (actualPositionToRead < readBuffer.Length) ? actualPositionToRead : readBuffer.Length) | bytesToRead <= actualPositionToRead)
-                    if (actualPositionToRead >= bytesToRead)
-                    {
-
-                            dataReceived = true;
-                            bytesToRead = 0;
-                            actualPositionToRead = 0;
-                            // if (debug) StoreLogData.Instance.Store("Received Serial-Data: " + BitConverter.ToString(readBuffer), System.DateTime.Now);
-
-                    }
-
-
-                    //dateTimeLastRead = DateTime.Now;
-                }
-         */
-
-
         private void DataReceivedHandler(object sender,
                         SerialDataReceivedEventArgs e)
         {
@@ -924,7 +893,10 @@ namespace EasyModbus
 
                     byte[] rxbytearray = new byte[numbytes];
                     sp.Read(rxbytearray, 0, numbytes);
-                    Array.Copy(rxbytearray, 0, readBuffer, actualPositionToRead, (actualPositionToRead + rxbytearray.Length) <= bytesToRead ? rxbytearray.Length : bytesToRead - actualPositionToRead);
+                    Array.Copy(rxbytearray, 0, readBuffer, actualPositionToRead, 
+                        (actualPositionToRead + rxbytearray.Length) <= bytesToRead 
+                        ? rxbytearray.Length 
+                        : bytesToRead - actualPositionToRead);
 
                     actualPositionToRead = actualPositionToRead + rxbytearray.Length;
 
@@ -936,7 +908,10 @@ namespace EasyModbus
                 if (bytesToRead <= actualPositionToRead)
                     break;
 
-                if (DetectValidModbusFrame(readBuffer, (actualPositionToRead < readBuffer.Length) ? actualPositionToRead : readBuffer.Length) | bytesToRead <= actualPositionToRead)
+                if (DetectValidModbusFrame(readBuffer, 
+                    (actualPositionToRead < readBuffer.Length) 
+                    ? actualPositionToRead 
+                    : readBuffer.Length) | bytesToRead <= actualPositionToRead)
                     break;
             }
 
@@ -945,11 +920,12 @@ namespace EasyModbus
             //10.000 Ticks in 1 ms
 
             _receiveData = new byte[actualPositionToRead];
-            Array.Copy(readBuffer, 0, _receiveData, 0, (actualPositionToRead < readBuffer.Length) ? actualPositionToRead : readBuffer.Length);
+            Array.Copy(readBuffer, 0, _receiveData, 0, 
+                (actualPositionToRead < readBuffer.Length) 
+                ? actualPositionToRead 
+                : readBuffer.Length);
             // if (debug) StoreLogData.Instance.Store("Received Serial-Data: "+BitConverter.ToString(readBuffer) ,System.DateTime.Now);
             bytesToRead = 0;
-
-
 
 
             dataReceived = true;
@@ -983,7 +959,6 @@ namespace EasyModbus
 
             return true;
         }
-
 
 
         /// <summary>
@@ -1067,7 +1042,8 @@ namespace EasyModbus
                 DateTime dateTimeSend = DateTime.Now;
                 byte receivedUnitIdentifier = 0xFF;
 
-                while (receivedUnitIdentifier != this._unitIdentifier & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout)) {
+                while (receivedUnitIdentifier != this._unitIdentifier 
+                      & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout)) {
 
                     while (dataReceived == false & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout)) {
                      
@@ -1182,7 +1158,7 @@ namespace EasyModbus
         /// <param name="startingAddress">First coil to read</param>
         /// <param name="quantity">Numer of coils to read</param>
         /// <returns>Boolean Array which contains the coils</returns>
-        public bool ReadCoils(int startingAddress, int quantity, out bool[] coils, int functionCode)
+        public bool ReadCoils(int startingAddress, int quantity, out bool[] coils, int functionCode = 0x01)
         {
             coils = null;
             _transactionIdentifierInternal++;
@@ -1318,7 +1294,7 @@ namespace EasyModbus
                     // if (debug) StoreLogData.Instance.Store("CRCCheckFailedException Throwed", System.DateTime.Now);
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
-                        throw new EasyModbus.Exceptions.CRCCheckFailedException("Response CRC check failed");
+                        throw new ModeBusHandler.Exceptions.CRCCheckFailedException("Response CRC check failed");
                     }
                     else {
                         _countRetries++;
@@ -1748,12 +1724,12 @@ namespace EasyModbus
 
                 if (!_serialPort.IsOpen) {
                     // if (debug) StoreLogData.Instance.Store("SerialPortNotOpenedException Throwed", System.DateTime.Now);
-                    throw new EasyModbus.Exceptions.SerialPortNotOpenedException("serial port not opened");
+                    throw new ModeBusHandler.Exceptions.SerialPortNotOpenedException("serial port not opened");
                 }
             }
             if (_tcpClient == null & !_udpFlag & _serialPort == null) {
                 // if (debug) StoreLogData.Instance.Store("ConnectionException Throwed", System.DateTime.Now);
-                throw new EasyModbus.Exceptions.ConnectionException("connection error");
+                throw new ModeBusHandler.Exceptions.ConnectionException("connection error");
             }
 
             byte[] coilValue = new byte[2];
@@ -1857,22 +1833,22 @@ namespace EasyModbus
 
             if (data[7] == 0x85 & data[8] == 0x01) {
                 // if (debug) StoreLogData.Instance.Store("FunctionCodeNotSupportedException Throwed", System.DateTime.Now);
-                throw new EasyModbus.Exceptions.FunctionCodeNotSupportedException("Function code not supported by master");
+                throw new ModeBusHandler.Exceptions.FunctionCodeNotSupportedException("Function code not supported by master");
             }
 
             if (data[7] == 0x85 & data[8] == 0x02) {
                 // if (debug) StoreLogData.Instance.Store("StartingAddressInvalidException Throwed", System.DateTime.Now);
-                throw new EasyModbus.Exceptions.StartingAddressInvalidException("Starting address invalid or starting address + quantity invalid");
+                throw new ModeBusHandler.Exceptions.StartingAddressInvalidException("Starting address invalid or starting address + quantity invalid");
             }
 
             if (data[7] == 0x85 & data[8] == 0x03) {
                 // if (debug) StoreLogData.Instance.Store("QuantityInvalidException Throwed", System.DateTime.Now);
-                throw new EasyModbus.Exceptions.QuantityInvalidException("quantity invalid");
+                throw new ModeBusHandler.Exceptions.QuantityInvalidException("quantity invalid");
             }
 
             if (data[7] == 0x85 & data[8] == 0x04) {
                 // if (debug) StoreLogData.Instance.Store("ModbusException Throwed", System.DateTime.Now);
-                throw new EasyModbus.Exceptions.ModbusException("error reading");
+                throw new ModeBusHandler.Exceptions.ModbusException("error reading");
             }
 
             if (_serialPort != null) {
@@ -1883,7 +1859,7 @@ namespace EasyModbus
                     // if (debug) StoreLogData.Instance.Store("CRCCheckFailedException Throwed", System.DateTime.Now);
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
-                        throw new EasyModbus.Exceptions.CRCCheckFailedException("Response CRC check failed");
+                        throw new ModeBusHandler.Exceptions.CRCCheckFailedException("Response CRC check failed");
                     }
                     else {
                         _countRetries++;
@@ -2488,11 +2464,11 @@ namespace EasyModbus
             if (_serialPort != null)
                 if (!_serialPort.IsOpen) {
                     // if (debug) StoreLogData.Instance.Store("SerialPortNotOpenedException Throwed", System.DateTime.Now);
-                    throw new EasyModbus.Exceptions.SerialPortNotOpenedException("serial port not opened");
+                    throw new ModeBusHandler.Exceptions.SerialPortNotOpenedException("serial port not opened");
                 }
             if (_tcpClient == null & !_udpFlag & _serialPort == null) {
                 // if (debug) StoreLogData.Instance.Store("ConnectionException Throwed", System.DateTime.Now);
-                throw new EasyModbus.Exceptions.ConnectionException("connection error");
+                throw new ModeBusHandler.Exceptions.ConnectionException("connection error");
             }
             this._transactionIdentifier = BitConverter.GetBytes((uint)_transactionIdentifierInternal);
             this._protocolIdentifier = BitConverter.GetBytes((int)0x0000);
@@ -2601,19 +2577,19 @@ namespace EasyModbus
 
             if (data[7] == 0x90 & data[8] == 0x01) {
                 // if (debug) StoreLogData.Instance.Store("FunctionCodeNotSupportedException Throwed", System.DateTime.Now);
-                throw new EasyModbus.Exceptions.FunctionCodeNotSupportedException("Function code not supported by master");
+                throw new ModeBusHandler.Exceptions.FunctionCodeNotSupportedException("Function code not supported by master");
             }
             if (data[7] == 0x90 & data[8] == 0x02) {
                 // if (debug) StoreLogData.Instance.Store("StartingAddressInvalidException Throwed", System.DateTime.Now);
-                throw new EasyModbus.Exceptions.StartingAddressInvalidException("Starting address invalid or starting address + quantity invalid");
+                throw new ModeBusHandler.Exceptions.StartingAddressInvalidException("Starting address invalid or starting address + quantity invalid");
             }
             if (data[7] == 0x90 & data[8] == 0x03) {
                 // if (debug) StoreLogData.Instance.Store("QuantityInvalidException Throwed", System.DateTime.Now);
-                throw new EasyModbus.Exceptions.QuantityInvalidException("quantity invalid");
+                throw new ModeBusHandler.Exceptions.QuantityInvalidException("quantity invalid");
             }
             if (data[7] == 0x90 & data[8] == 0x04) {
                 // if (debug) StoreLogData.Instance.Store("ModbusException Throwed", System.DateTime.Now);
-                throw new EasyModbus.Exceptions.ModbusException("error reading");
+                throw new ModeBusHandler.Exceptions.ModbusException("error reading");
             }
             if (_serialPort != null) {
                 _crc = BitConverter.GetBytes(calculateCRC(data, 6, 6));
@@ -2621,7 +2597,7 @@ namespace EasyModbus
                     // if (debug) StoreLogData.Instance.Store("CRCCheckFailedException Throwed", System.DateTime.Now);
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
-                        throw new EasyModbus.Exceptions.CRCCheckFailedException("Response CRC check failed");
+                        throw new ModeBusHandler.Exceptions.CRCCheckFailedException("Response CRC check failed");
                     }
                     else {
                         _countRetries++;
@@ -2667,11 +2643,11 @@ namespace EasyModbus
             if (_serialPort != null)
                 if (!_serialPort.IsOpen) {
                     // if (debug) StoreLogData.Instance.Store("SerialPortNotOpenedException Throwed", System.DateTime.Now);
-                    throw new EasyModbus.Exceptions.SerialPortNotOpenedException("serial port not opened");
+                    throw new ModeBusHandler.Exceptions.SerialPortNotOpenedException("serial port not opened");
                 }
             if (_tcpClient == null & !_udpFlag & _serialPort == null) {
                 // if (debug) StoreLogData.Instance.Store("ConnectionException Throwed", System.DateTime.Now);
-                throw new EasyModbus.Exceptions.ConnectionException("connection error");
+                throw new ModeBusHandler.Exceptions.ConnectionException("connection error");
             }
             if (startingAddressRead > 65535 | quantityRead > 125 | startingAddressWrite > 65535 | values.Length > 121) {
                 // if (debug) StoreLogData.Instance.Store("ArgumentException Throwed", System.DateTime.Now);
@@ -2773,19 +2749,19 @@ namespace EasyModbus
             }
             if (data[7] == 0x97 & data[8] == 0x01) {
                 // if (debug) StoreLogData.Instance.Store("FunctionCodeNotSupportedException Throwed", System.DateTime.Now);
-                throw new EasyModbus.Exceptions.FunctionCodeNotSupportedException("Function code not supported by master");
+                throw new ModeBusHandler.Exceptions.FunctionCodeNotSupportedException("Function code not supported by master");
             }
             if (data[7] == 0x97 & data[8] == 0x02) {
                 // if (debug) StoreLogData.Instance.Store("StartingAddressInvalidException Throwed", System.DateTime.Now);
-                throw new EasyModbus.Exceptions.StartingAddressInvalidException("Starting address invalid or starting address + quantity invalid");
+                throw new ModeBusHandler.Exceptions.StartingAddressInvalidException("Starting address invalid or starting address + quantity invalid");
             }
             if (data[7] == 0x97 & data[8] == 0x03) {
                 // if (debug) StoreLogData.Instance.Store("QuantityInvalidException Throwed", System.DateTime.Now);
-                throw new EasyModbus.Exceptions.QuantityInvalidException("quantity invalid");
+                throw new ModeBusHandler.Exceptions.QuantityInvalidException("quantity invalid");
             }
             if (data[7] == 0x97 & data[8] == 0x04) {
                 // if (debug) StoreLogData.Instance.Store("ModbusException Throwed", System.DateTime.Now);
-                throw new EasyModbus.Exceptions.ModbusException("error reading");
+                throw new ModeBusHandler.Exceptions.ModbusException("error reading");
             }
             response = new int[quantityRead];
             for (int i = 0; i < quantityRead; i++) {

@@ -1,4 +1,4 @@
-﻿using EasyModbus;
+﻿using ModeBusHandler;
 using LV.HWControl.Common.Handlers;
 using System;
 using System.Collections.Generic;

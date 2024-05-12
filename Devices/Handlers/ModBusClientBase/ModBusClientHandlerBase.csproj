@@ -42,7 +42,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AdvancedModbusClient.cs" />
     <Compile Include="Exceptions\Exceptions.cs" />
     <Compile Include="ModbusClient.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
