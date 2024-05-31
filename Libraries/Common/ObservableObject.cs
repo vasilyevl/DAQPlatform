@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using System.ComponentModel;
 using System.Windows.Input;
 
-namespace LV.Common
+namespace GSE.Common
 {
     public class ObservableObject : INotifyPropertyChanged
     {

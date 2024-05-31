@@ -5,7 +5,7 @@ using System.Net.WebSockets;
 using System.Runtime.Remoting.Messaging;
 using System.Security.Cryptography.X509Certificates;
 
-namespace LV.ClickPLCHandler
+namespace GSE.ClickPLCHandler
 {
 
     public enum FunctionCode {
@@ -67,7 +67,7 @@ namespace LV.ClickPLCHandler
         public const int XStartAddress984 = 100000;
         public const int XStartAddressHex = 0x0;
         public const int YStartAddress984 = 8192;
-        public const int YStartAddressHex = 2000;
+        public const int YStartAddressHex = 0x2000;
         public const int CStartAddress984 = 16384;
         public const int CStartAddressHex = 0x4000;
         public const int TStartAddress984 = 145056;

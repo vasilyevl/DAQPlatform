@@ -1,6 +1,6 @@
 ﻿using ModeBusHandler;
-using LV.Common;
-using LV.HWControl.Common;
+using GSE.Common;
+using GSE.HWControl.Common;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 
-namespace LV.ClickPLCHandler
+namespace GSE.ClickPLCHandler
 {
     public interface IClickPLCHandler
     {
@@ -334,8 +334,6 @@ namespace LV.ClickPLCHandler
         }
 
 
-
-
         /*  public RelayControl GetRelayControlRW(string relayName) {
 
               if (ClickAddressMap.GetModBusHexAddress(out int address,
@@ -356,7 +354,6 @@ namespace LV.ClickPLCHandler
               return Controls[relayName.ToUpper()] as RelayControl;
           }
         */
-
         /*
         public RelayControlRO GetRelayControlRO(string relayName) {
 
@@ -377,7 +374,6 @@ namespace LV.ClickPLCHandler
             return Controls[relayName.ToUpper()] as RelayControlRO;
         }
         */
-
         /*
         public RegisterInt16Control GetRegisterInt16Control(string registerName) {
 
@@ -397,7 +393,6 @@ namespace LV.ClickPLCHandler
             return Controls[registerName.ToUpper()] as RegisterInt16Control;
         }
         */
-
         /*
         public RegisterInt16ControlRO GetRegisterInt16ControlRO(
                         string registerName) {
@@ -480,8 +475,6 @@ namespace LV.ClickPLCHandler
         }
         */
 
-
-
         public bool ReadRegister(string name, out ushort value) {
             
             value = 0xFFFF;
@@ -499,7 +492,7 @@ namespace LV.ClickPLCHandler
 
                 try {
 
-                    _mbClient.ReadInputRegisters(address, 1, functionCode, out int[] response);
+                    _mbClient.ReadInputRegisters(address, 1, out int[] response, functionCode);
                     value = (ushort)response[0];
                     return true;
                 }
@@ -520,11 +513,10 @@ namespace LV.ClickPLCHandler
             }
         }
 
-        public bool ReadDiscreteIOs(string name, int numberOfIosToRead, out SwitchSt[] status) {
+        public bool ReadDiscreteIOs(string name, int numberOfIosToRead, out SwitchState[] status) {
 
             if (!(_mbClient?.IsConnected ?? false)) {
-
-                _AddErrorRecord(nameof(ReadDiscreteIOs),
+                _AddErrorRecord(nameof(ReadDiscreteIO),
                     ErrorCode.NotConnected,
                     $"Can't read  when not connected.");
                 status = null;
@@ -536,19 +528,18 @@ namespace LV.ClickPLCHandler
 
                 try {
 
-                    _mbClient.ReadCoils(address,
-                        Math.Max(1, numberOfIosToRead), out bool[] data, functionCode);
-                    status =
-                        data.Select((st) => st ? SwitchSt.On : SwitchSt.Off).ToArray();
-                    return true;
+                    if (_mbClient.ReadCoils(address,
+                        Math.Max(1, numberOfIosToRead), out bool[] data, functionCode)) {
+                        status =
+                            data.Select((st) => new SwitchState(st ? SwitchSt.On : SwitchSt.Off)).ToArray();
+                        return true;
+                    }
                 }
                 catch (Exception ex) {
 
                     _AddErrorRecord(nameof(ReadDiscreteIO),
                         ErrorCode.GroupIoWriteFailed,
                         ex.Message);
-                    status = Enumerable.Repeat(SwitchSt.Unknown, numberOfIosToRead).ToArray();
-                    return false;
                 }
             }
             else {
@@ -556,9 +547,10 @@ namespace LV.ClickPLCHandler
                 _AddErrorRecord(nameof(ReadDiscreteIOs),
                             ErrorCode.NotConnected,
                             $"Invalid start address \"{name}\".");
-                status = Enumerable.Repeat(SwitchSt.Unknown, numberOfIosToRead).ToArray();
-                return false;
             }
+
+            status = Enumerable.Repeat(new SwitchState(SwitchSt.Unknown), numberOfIosToRead).ToArray();
+            return false;
         }
 
         public bool WriteRegister(string name, ushort value) {

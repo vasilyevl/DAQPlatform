@@ -1,4 +1,4 @@
-﻿using LV.Common;
+﻿using GSE.Common;
 
 using Newtonsoft.Json;
 
@@ -8,7 +8,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 
 
-namespace LV.ClickPLCHandler
+namespace GSE.ClickPLCHandler
 {
     public enum IOType
     {

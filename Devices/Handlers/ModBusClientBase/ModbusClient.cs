@@ -3,7 +3,7 @@ This code is based on  2018-2020 Rossmann-Engineering EasyModbus project.
 The original code is available at:
 https://github.com/rossmann-engineering/EasyModbusTCP.NET
   
-Copyright (c) 2022 LV Permission is hereby granted, 
+Copyright (c) 2024 LV Permission is hereby granted, 
 free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"),to deal in the Software 
 without restriction, including without limitation the rights to use, copy, 
@@ -27,7 +27,8 @@ using System;
 using System.Net.Sockets;
 using System.Net;
 using System.IO.Ports;
-using LV.HWControl.Common.Handlers;
+
+using GSE.HWControl.Common.Handlers;
      
 namespace ModeBusHandler
 {
@@ -118,6 +119,7 @@ namespace ModeBusHandler
             this._ipAddress = ipAddress;
             this._port = port;
         }
+
 
         /// <summary>
         /// Constructor which determines the Serial-Port
@@ -966,6 +968,7 @@ namespace ModeBusHandler
         /// </summary>
         /// <param name="startingAddress">First discrete input to read</param>
         /// <param name="quantity">Number of discrete Inputs to read</param>
+        ///  <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x02 by deafult.</param>
         /// <returns>Boolean Array which contains the discrete Inputs</returns>
         public bool ReadDiscreteInputs(int startingAddress, int quantity, out bool[] response, int functionCode = 0x02)
         {
@@ -1157,6 +1160,7 @@ namespace ModeBusHandler
         /// </summary>
         /// <param name="startingAddress">First coil to read</param>
         /// <param name="quantity">Numer of coils to read</param>
+        ///  <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x01 by deafult.</param>
         /// <returns>Boolean Array which contains the coils</returns>
         public bool ReadCoils(int startingAddress, int quantity, out bool[] coils, int functionCode = 0x01)
         {
@@ -1328,6 +1332,7 @@ namespace ModeBusHandler
         /// </summary>
         /// <param name="startingAddress">First holding register to be read</param>
         /// <param name="quantity">Number of holding registers to be read</param>
+        /// <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x03 by deafult.</param>
         /// <returns>Int Array which contains the holding registers</returns>
         public bool ReadHoldingRegisters(int startingAddress, int quantity, out int[] registers, int functionCode = 0x03)
         {
@@ -1504,10 +1509,10 @@ namespace ModeBusHandler
 
             return true;
         }
-/*
-        public bool ReadSingle16bitRegister( int address, out ushort value)
+
+        public bool ReadSingle16bitRegister( int address, out ushort value, int functionCode = 0x03)
         {
-            if ( ReadInputRegisters(address, 1 , out int[] response)) {
+            if ( ReadInputRegisters(address, 1 , out int[] response, functionCode)) {
                 value = (ushort) response[0];
                 return true;
             }
@@ -1515,23 +1520,24 @@ namespace ModeBusHandler
             return false;
         }
 
-        public bool ReadSingle32bitRegister(int address, out ushort value)
+        public bool ReadSingle32bitRegister(int address, out int value, int functionCode = 0x03)
         {
-            if (ReadInputRegisters(address, 1, out int[] response)) {
-                value = (ushort)response[0];
-                return true;
+            if (ReadInputRegisters(address, 2, out int[] response, functionCode) 
+                && ConvertRegistersToInt(response, out value)) {        
+                    return true;
             }
-            value = ushort.MaxValue;
-            return false;
+            value = int.MaxValue;
+           return false;
         }
-*/
+
         /// <summary>
         /// Read Input Registers from Master device (FC4).
         /// </summary>
         /// <param name="startingAddress">First input register to be read</param>
         /// <param name="quantity">Number of input registers to be read</param>
+        /// <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x03 by deafult.</param>
         /// <returns>Int Array which contains the input registers</returns>
-        public bool ReadInputRegisters(int startingAddress, int quantity, int functionCode, out int[] response)
+        public bool ReadInputRegisters(int startingAddress, int quantity, out int[] response, int functionCode = 0x03)
         {
             response = null;
 
@@ -1675,7 +1681,7 @@ namespace ModeBusHandler
                     }
                     else {
                         _countRetries++;
-                        return ReadInputRegisters(startingAddress, quantity, functionCode, out response);
+                        return ReadInputRegisters(startingAddress, quantity, out response, functionCode);
                     }
                 }
                 else if (!dataReceived) {
@@ -1687,7 +1693,7 @@ namespace ModeBusHandler
                     }
                     else {
                         _countRetries++;
-                        return ReadInputRegisters(startingAddress, quantity, functionCode, out response);
+                        return ReadInputRegisters(startingAddress, quantity, out response,functionCode);
                     }
 
                 }
@@ -1715,7 +1721,8 @@ namespace ModeBusHandler
         /// </summary>
         /// <param name="startingAddress">Coil to be written</param>
         /// <param name="value">Coil Value to be written</param>
-        public void WriteSingleCoil(int startingAddress, bool value, int functionCode)
+        /// <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x05 by deafult.</param>
+        public void WriteSingleCoil(int startingAddress, bool value, int functionCode = 0x05)
         {
 
             // if (debug) StoreLogData.Instance.Store("FC5 (Write single coil to Master device), StartingAddress: "+ startingAddress+", Value: " + value, System.DateTime.Now);
@@ -1880,14 +1887,15 @@ namespace ModeBusHandler
                 }
             }
         }
-        
-        
-        
+
+
+
         /// <summary>
         /// Write single Register to Master device (FC6).
         /// </summary>
         /// <param name="startingAddress">Register to be written</param>
         /// <param name="value">Register Value to be written</param>
+        /// <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x06 by deafult.</param>
         public bool WriteSingle16bitRegister(int startingAddress, ushort value, int functionCode = 0x06)
         {
             // if (debug) StoreLogData.Instance.Store("FC6 (Write single register to Master device), StartingAddress: "+ startingAddress+", Value: " + value, System.DateTime.Now);
@@ -2093,7 +2101,8 @@ namespace ModeBusHandler
         /// </summary>
         /// <param name="startingAddress">Register to be written</param>
         /// <param name="value">Register Value to be written</param>
-        public bool WriteSingle32bitRegister(int startingAddress, int value)
+        /// <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x06 by deafult.</param>
+        public bool WriteSingle32bitRegister(int startingAddress, int value, int functionCode = 0x06)
         {
             // if (debug) StoreLogData.Instance.Store("FC6 (Write single register to Master device), StartingAddress: "+ startingAddress+", Value: " + value, System.DateTime.Now);
             _transactionIdentifierInternal++;
@@ -2117,7 +2126,7 @@ namespace ModeBusHandler
             this._transactionIdentifier = BitConverter.GetBytes((uint)_transactionIdentifierInternal);
             this._protocolIdentifier = BitConverter.GetBytes((int)0x0000);
             this._length = BitConverter.GetBytes((int)0x0006);
-            this._functionCode = 0x06;
+            this._functionCode = (byte)functionCode;
             this._startingAddress = BitConverter.GetBytes(startingAddress);
             registerValue = BitConverter.GetBytes((int)value);
 
@@ -2270,6 +2279,7 @@ namespace ModeBusHandler
         /// </summary>
         /// <param name="startingAddress">First coil to be written</param>
         /// <param name="values">Coil Values to be written</param>
+        /// <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x0F by deafult.</param>
         public bool WriteMultipleCoils(int startingAddress, bool[] values, int functionCode = 0x0F)
         {
             string debugString = "";
@@ -2452,7 +2462,8 @@ namespace ModeBusHandler
         /// </summary>
         /// <param name="startingAddress">First register to be written</param>
         /// <param name="values">register Values to be written</param>
-        public void WriteMultipleRegisters(int startingAddress, int[] values)
+        /// <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x10 by deafult.</param>
+        public void WriteMultipleRegisters(int startingAddress, int[] values, int functionCode = 0x10)
         {
             string debugString = "";
             for (int i = 0; i < values.Length; i++)
@@ -2473,7 +2484,7 @@ namespace ModeBusHandler
             this._transactionIdentifier = BitConverter.GetBytes((uint)_transactionIdentifierInternal);
             this._protocolIdentifier = BitConverter.GetBytes((int)0x0000);
             this._length = BitConverter.GetBytes((int)(7 + values.Length * 2));
-            this._functionCode = 0x10;
+            this._functionCode = (byte) functionCode;
             this._startingAddress = BitConverter.GetBytes(startingAddress);
 
             Byte[] data = new byte[13+2 + values.Length*2];
@@ -2626,8 +2637,10 @@ namespace ModeBusHandler
         /// <param name="quantityRead">Number of input registers to read</param>
         /// <param name="startingAddressWrite">First input register to write</param>
         /// <param name="values">Values to write</param>
+        /// <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x17 by deafult.</param>
         /// <returns>Int Array which contains the Holding registers</returns>
-        public int[] ReadWriteMultipleRegisters(int startingAddressRead, int quantityRead, int startingAddressWrite, int[] values)
+        public int[] ReadWriteMultipleRegisters(int startingAddressRead, int quantityRead, 
+            int startingAddressWrite, int[] values, int functionCode = 0x17)
         {
 
             string debugString = "";
@@ -2657,7 +2670,7 @@ namespace ModeBusHandler
             this._transactionIdentifier = BitConverter.GetBytes((uint)_transactionIdentifierInternal);
             this._protocolIdentifier = BitConverter.GetBytes((int)0x0000);
             this._length = BitConverter.GetBytes((int)11 + values.Length * 2);
-            this._functionCode = 0x17;
+            this._functionCode = (byte) functionCode;
             startingAddressReadLocal = BitConverter.GetBytes(startingAddressRead);
             quantityReadLocal = BitConverter.GetBytes(quantityRead);
             startingAddressWriteLocal = BitConverter.GetBytes(startingAddressWrite);

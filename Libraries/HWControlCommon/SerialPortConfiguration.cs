@@ -1,5 +1,5 @@
-﻿using LV.Common;
-using LV.Common.Utilities;
+﻿using GSE.Common;
+using GSE.Common.Utilities;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -9,7 +9,7 @@ using System;
 using System.IO.Ports;
 
 
-namespace LV.HWControl.Common.Handlers
+namespace GSE.HWControl.Common.Handlers
 {
 
 

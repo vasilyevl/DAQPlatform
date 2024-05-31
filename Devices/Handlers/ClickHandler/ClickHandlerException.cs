@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace LV.ClickPLCHandler
+namespace GSE.ClickPLCHandler
 {
     public enum ErrorCode
     {

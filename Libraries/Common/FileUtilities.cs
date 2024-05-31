@@ -1,5 +1,5 @@
 ﻿
-using LV.Common;
+using GSE.Common;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,7 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace LV.Common.Utilities
+namespace GSE.Common.Utilities
 {
     public delegate void ErrorEvent(string source, ErrorEventArgs args);
 

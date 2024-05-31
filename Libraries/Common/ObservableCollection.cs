@@ -1,15 +1,16 @@
 ﻿using System;
+
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+
 using System.Linq;
 
 
-namespace LV.Common
+namespace GSE.Common
 {
     [Serializable]
     public class ObservableCollectionEx<T> : ObservableCollection<T>
     {
-
         /// <summary>
         /// Constructors
         /// </summary>

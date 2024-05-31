@@ -1,8 +1,8 @@
-﻿using LV.HWControl.Common;
+﻿using GSE.HWControl.Common;
 
 using Newtonsoft.Json;
 
-namespace LV.ClickPLCHandler
+namespace GSE.ClickPLCHandler
 {
     [JsonObject(MemberSerialization = MemberSerialization.OptIn)]
     public class InputConfiguration : ChannelConfigurationBase<bool>

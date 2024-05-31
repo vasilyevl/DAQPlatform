@@ -11,7 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 
-namespace LV.Common.Utilities
+namespace GSE.Common.Utilities
 {
 
     public interface ILogger

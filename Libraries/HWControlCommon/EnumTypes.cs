@@ -3,7 +3,7 @@ using Newtonsoft.Json.Converters;
 
 using System;
 
-namespace LV.HWControl.Common
+namespace GSE.HWControl.Common
 {
     public enum InterfaceSelector {
         Auto = 0,
@@ -87,6 +87,25 @@ namespace LV.HWControl.Common
         public override int GetHashCode()
         {
             return base.GetHashCode() + 2*State.GetHashCode();
+        }
+
+        public override String ToString() {
+
+            string result = "Unknown";
+            switch( State ) {
+
+                case (SwitchSt.On):
+                    result = "On";
+                    break;
+
+                case (SwitchSt.Off):
+                    result =  "Off";
+                    break;
+
+            }
+
+            return result;
+
         }
     }
 }

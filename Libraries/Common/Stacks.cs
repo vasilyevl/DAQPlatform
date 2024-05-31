@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
-namespace LV.Common
+namespace GSE.Common
 {
     public interface IStack<T>
     {

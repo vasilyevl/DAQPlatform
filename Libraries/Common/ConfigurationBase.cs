@@ -1,5 +1,5 @@
-﻿using LV.Common;
-using LV.Common.Utilities;
+﻿using GSE.Common;
+using GSE.Common.Utilities;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 using System;
 
 
-namespace LV.Common
+namespace GSE.Common
 {
 
     public interface IConfigurationBase: ICloneable

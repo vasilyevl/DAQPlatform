@@ -1,6 +1,6 @@
-﻿using LV.HWControl.Common;
+﻿using GSE.HWControl.Common;
 
-namespace LV.ClickPLCHandler
+namespace GSE.ClickPLCHandler
 {
     public class RelayControl : ReadWriteControlBase<SwitchCtrl, SwitchState>
     {

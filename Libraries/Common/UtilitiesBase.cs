@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LV.Common
+namespace GSE.Common
 {
     /*
     public class ErrorEventArgs : EventArgs

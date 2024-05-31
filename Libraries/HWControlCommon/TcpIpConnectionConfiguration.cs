@@ -1,4 +1,4 @@
-﻿using LV.Common;
+﻿using GSE.Common;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LV.HWControl.Common.Handlers
+namespace GSE.HWControl.Common.Handlers
 {
     [JsonObject(MemberSerialization = MemberSerialization.OptOut)]
     public class EthernetConnectionConfiguration : ConfigurationBase

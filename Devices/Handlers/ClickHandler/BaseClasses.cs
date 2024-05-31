@@ -1,4 +1,4 @@
-﻿namespace LV.ClickPLCHandler
+﻿namespace GSE.ClickPLCHandler
 {
     public delegate bool Write<TValue>(TValue value);
     public delegate bool Read<TValue>(out TValue value);

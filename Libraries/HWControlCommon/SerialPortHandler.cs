@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LV.HWControl.Common.Handlers
+namespace GSE.HWControl.Common.Handlers
 {
     public enum IOStatus
     {
