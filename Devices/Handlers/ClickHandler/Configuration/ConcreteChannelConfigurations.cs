@@ -1,8 +1,8 @@
-﻿using GSE.HWControl.Common;
+﻿using PissedEngineer.HWControl;
 
 using Newtonsoft.Json;
 
-namespace GSE.ClickPLCHandler
+namespace PissedEngineer.ClickPLCHandler
 {
     [JsonObject(MemberSerialization = MemberSerialization.OptIn)]
     public class InputConfiguration : ChannelConfigurationBase<bool>

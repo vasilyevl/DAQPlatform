@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
-namespace GSE.Common
+namespace PissedEngineer.Primitives.Stacks
 {
     public interface IStack<T>
     {

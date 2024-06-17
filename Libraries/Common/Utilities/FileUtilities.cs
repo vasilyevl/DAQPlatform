@@ -1,5 +1,5 @@
 ﻿
-using GSE.Common;
+using PissedEngineer.Primitives;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,7 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace GSE.Common.Utilities
+namespace PissedEngineer.Primitives.Utilities
 {
     public delegate void ErrorEvent(string source, ErrorEventArgs args);
 

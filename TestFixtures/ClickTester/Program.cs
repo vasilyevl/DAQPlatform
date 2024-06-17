@@ -1,22 +1,22 @@
-﻿using GSE.ClickPLCHandler;
-using GSE.HWControl.Common;
-using GSE.HWControl.Common.Handlers;
+﻿using PissedEngineer.ClickPLCHandler;
+using PissedEngineer.HWControl;
+using PissedEngineer.HWControl.Handlers;
 
-using Newtonsoft.Json;
+//using Newtonsoft.Json;
 
 using System;
-using System.Diagnostics.Contracts;
 using System.Linq;
+using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Timers;
+
 
 namespace ClickTester
 {
 
     internal class Program
     {
-        static ClickPLCHandler _handler;
+        static IClickPLCHandler _handler;
         static string _io  = "C1";
         static string _timer = "T1";
         static string _setPoint = "DS10";
@@ -27,22 +27,11 @@ namespace ClickTester
         {            
             int exitCode = 0;
      
-            _handler = ClickPLCHandler.CreateHandler();
+            _handler = ClickHandlerFactory.CreateHandler();
 
-            string cnfg = JsonConvert.SerializeObject(new ClickHandlerConfiguration() {
-
-                Interface = new InterfaceConfiguration() {
-                    Selector = InterfaceSelector.Network,
-                    SerialPort = null,
-                    Network = new EthernetConnectionConfiguration() {
-                        Name = "ClickPLC",
-                        IpAddress = "192.168.1.22",
-                        Port = 502
-                    }
-                }
-            });
-
-            _handler.Init(cnfg);
+            _handler.Init( ClickHandlerFactory.CreateClickHandlerConfiguration(
+                            ipAddress: "192.168.1.22", 
+                            port: 502));
 
             if (!_handler.Open()) { 
                 
@@ -52,16 +41,16 @@ namespace ClickTester
             }
 
             Console.WriteLine("Handler opened.");
-
             Console.WriteLine("Starting simple single discrete IO test test.");
+            
             if((exitCode = DoSingleIO(_io)) != 0) {
                 Console.WriteLine($"Simple single discrete IO test failed" +
                     $" with exit code {exitCode} .");
                 goto Exit;
             }
 
-            Console.WriteLine("Simple single discrete IO test complete.");
-
+            Console.WriteLine("Simple single discrete IO test complete. Hit any key to continue.");
+            Console.ReadKey();
 
             Console.WriteLine("Starting discrete IO array test.");
 
@@ -71,9 +60,8 @@ namespace ClickTester
                 goto Exit;
             }
           
-
-            Console.WriteLine("Discrete IO array test complete.");
-            Thread.Sleep(1000);
+            Console.WriteLine("Discrete IO array test complete. Hit any key to continue.");
+            Console.ReadKey();
 
             exitCode = DoSimpleCounterTest("CT1", "DS11", "C10", "C11", 25);
             if (exitCode != 0) {
@@ -81,7 +69,8 @@ namespace ClickTester
                     $"exit code {exitCode} .");
                 goto Exit;
             }
-            Console.WriteLine("Simple counter test complete.");
+            Console.WriteLine("Simple counter test complete. Hit any key to continue.");
+            Console.ReadKey();
 
             Console.WriteLine("Starting simple timer test.");
             exitCode = DoSimpleTimerTest(_timer, _setPoint, _controlRelay, timeSetTime);
@@ -90,9 +79,9 @@ namespace ClickTester
                     $"code {exitCode} .");
                 goto Exit;
             }
-            Console.WriteLine("Simple timer test complete.");
+            Console.WriteLine("Simple timer test complete. Hit any key to continue.");
+            Console.ReadKey();
 
-      
             Exit:
             Console.WriteLine($"Test complete with error code {exitCode}");
             Console.WriteLine("Click 'Enter' to exit.");
@@ -313,7 +302,7 @@ namespace ClickTester
 
                     case SwitchSt.On:
                         Console.WriteLine($"Timer tripped. Current count value: {timerValue}.");
-                        Thread.Sleep(5000);
+                  
                         if (_handler.WriteDiscreteControl(controlRelay, SwitchCtrl.Off)) {
                             Console.WriteLine($"Control relay {controlRelay} switched off.");
                        
@@ -413,7 +402,6 @@ namespace ClickTester
                 return -6;
             }
 
-
             if (_handler.ReadDiscreteIO(counter, out SwitchState switchState)) {
                 Console.WriteLine($"Current counter output state: {switchState.State.ToString()}.");
             }
@@ -464,8 +452,6 @@ namespace ClickTester
                 return -4;
             }
 
-            Thread.Sleep(5000);
-
             if (_handler.WriteDiscreteControl(resetRelay, SwitchCtrl.Off)) {
                 Console.WriteLine($"Reset relay {resetRelay} switched Off.");
             }
@@ -474,12 +460,8 @@ namespace ClickTester
                 return -5;
             }
 
-
-
             return 0;
-
         }
-
 
         public static int ReadIOs( string startIO, int ioLen, string name) {
 
@@ -501,8 +483,5 @@ namespace ClickTester
             return 0;
 
         }
-
     }
-
-
 }

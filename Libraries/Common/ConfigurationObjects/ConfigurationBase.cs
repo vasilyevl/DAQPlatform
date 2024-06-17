@@ -1,5 +1,5 @@
-﻿using GSE.Common;
-using GSE.Common.Utilities;
+﻿using PissedEngineer.Primitives;
+using PissedEngineer.Primitives.Utilities;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 using System;
 
 
-namespace GSE.Common
+namespace PissedEngineer.Primitives
 {
 
     public interface IConfigurationBase: ICloneable
@@ -124,8 +124,6 @@ namespace GSE.Common
                 return "{\n\t\"FileName\": \"" + FileName + "\"\n}";
             }
         }
-
-
 
         [JsonProperty]
         public string FileName { 

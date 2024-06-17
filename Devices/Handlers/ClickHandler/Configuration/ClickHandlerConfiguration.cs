@@ -1,15 +1,16 @@
-﻿using GSE.Common;
+﻿using PissedEngineer.Primitives;
 
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
 
 
-namespace GSE.ClickPLCHandler
+namespace PissedEngineer.ClickPLCHandler
 {
     public interface IClickHandlerConfiguration
     {
         IInterfaceConfiguration Interface { get; set; }
+        bool CopyFrom(object src);
     }
 
 
@@ -24,7 +25,7 @@ namespace GSE.ClickPLCHandler
         //  private List<OutputConfiguration> _outputs;
         // private List<ControlRelayConfiguration> _controlRelays;
 
-        public ClickHandlerConfiguration() : base() {
+        internal ClickHandlerConfiguration() : base() {
 
             _interface = new InterfaceConfiguration();
             //  _inputs = new List<InputConfiguration>();
@@ -32,15 +33,27 @@ namespace GSE.ClickPLCHandler
             //  _controlRelays = new List<ControlRelayConfiguration>();
         }
 
+
+        internal ClickHandlerConfiguration(IClickHandlerConfiguration src) : base() {
+
+            _interface = new InterfaceConfiguration();
+            _interface.CopyFrom((object)src.Interface) ;
+            //  _inputs = new List<InputConfiguration>();
+            //  _outputs = new List<OutputConfiguration>();
+            //  _controlRelays = new List<ControlRelayConfiguration>();
+        }
+
+
+
         public override bool CopyFrom(object src) {
-            var s = src as ClickHandlerConfiguration;
+            var s = src as IClickHandlerConfiguration;
 
             if (s == null) { return false; }
 
-            if (  s._interface != null) {
+            if (  s.Interface != null) {
 
                 var tmp = new InterfaceConfiguration();                  
-                tmp.CopyFrom(s._interface);
+                tmp.CopyFrom(s.Interface);
                 _interface = tmp;
             }
             /*

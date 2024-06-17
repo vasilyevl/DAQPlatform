@@ -1,5 +1,5 @@
-﻿using GSE.Common;
-using GSE.Common.Utilities;
+﻿using PissedEngineer.Primitives;
+using PissedEngineer.Primitives.Utilities;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -9,12 +9,12 @@ using System;
 using System.IO.Ports;
 
 
-namespace GSE.HWControl.Common.Handlers
+namespace PissedEngineer.HWControl.Handlers
 {
 
 
     [JsonObject(MemberSerialization.OptIn)]
-    public class SerialPortConfiguration: ConfigurationBase, IConfigurationBase
+    public class SerialPortConfiguration : ConfigurationBase, IConfigurationBase, ISerialPortConfiguration
     {
         protected const int DefaultBaudRate = 9600;
         protected const int DefaultBits = 8;
@@ -23,7 +23,7 @@ namespace GSE.HWControl.Common.Handlers
         protected const StopBits DefaultStopBits = StopBits.One;
         protected const int DefaultReadWriteTimeoutMs = 200;
         protected const string _DefaultPortName = "NotSet";
-        protected const int DefaultDelayBetweenTrasactions = 100;
+        protected const int DefaultDelayBetweenTransactions = 100;
 
 
         private string _portName;
@@ -41,18 +41,15 @@ namespace GSE.HWControl.Common.Handlers
         private string _txTerminator;
         private string _rxTerminator;
 
-        public SerialPortConfiguration() : base()
-        {
+        internal SerialPortConfiguration() : base() {
             SetToDefaults();
         }
 
-        public SerialPortConfiguration(string portName) : this()
-        {
+        internal SerialPortConfiguration(string portName) : this() {
             _portName = portName;
         }
 
-        public SerialPortConfiguration(SerialPortConfiguration source, string newPortName = null) : this()
-        {
+        internal SerialPortConfiguration(SerialPortConfiguration source, string newPortName = null) : this() {
             CopyFrom(source);
 
             if (newPortName != null) {
@@ -60,18 +57,17 @@ namespace GSE.HWControl.Common.Handlers
             }
         }
 
-        public override bool CopyFrom( object src )
-        {
+        public override bool CopyFrom(object src) {
 
-            var s = src as  SerialPortConfiguration;
+            var s = src as SerialPortConfiguration;
             if (s == null) {
                 LastErrorComment = "Source type is not compatible with SerialPortConfiguration type";
-                return false;   
+                return false;
             }
 
             try {
 
-                _portName = (string)(s.Name?.Clone() ??  null);
+                _portName = (string)(s.Name?.Clone() ?? null);
                 _baudRate = s.BaudRate;
                 _parity = s.Parity;
                 _handShake = s.HandShake;
@@ -92,8 +88,7 @@ namespace GSE.HWControl.Common.Handlers
             }
         }
 
-        public void SetToDefaults()
-        {
+        public void SetToDefaults() {
             _portName = _DefaultPortName;
             _baudRate = DefaultBaudRate;
             _parity = DefaultParity;
@@ -104,7 +99,7 @@ namespace GSE.HWControl.Common.Handlers
             _writeTimeoutMs = DefaultReadWriteTimeoutMs;
             _txTerminator = null;
             _rxTerminator = null;
-            _minTimeBetweenTranszactionsMs = DefaultDelayBetweenTrasactions;
+            _minTimeBetweenTranszactionsMs = DefaultDelayBetweenTransactions;
         }
 
         [JsonProperty]
@@ -113,7 +108,7 @@ namespace GSE.HWControl.Common.Handlers
             set { _portName = (string)value?.Clone() ?? _DefaultPortName; }
         }
 
-        public bool PortNameIsDefault => 
+        public bool PortNameIsDefault =>
             _portName.Equals(_DefaultPortName, StringComparison.OrdinalIgnoreCase);
 
         [JsonProperty]
@@ -183,10 +178,9 @@ namespace GSE.HWControl.Common.Handlers
         [JsonIgnore]
         public int WriteReadTimeout => WriteTimeoutMs + ReadTimeoutMs;
 
-        public override string ToString()
-        {
+        public override string ToString() {
             try {
-                string ret =  JsonConvert.SerializeObject(this,
+                string ret = JsonConvert.SerializeObject(this,
                     Formatting.Indented);
                 return ret;
             }

@@ -6,7 +6,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 
 
-namespace GSE.Common
+namespace PissedEngineer.Primitives
 {
     [Serializable]
     public class ObservableCollectionEx<T> : ObservableCollection<T>

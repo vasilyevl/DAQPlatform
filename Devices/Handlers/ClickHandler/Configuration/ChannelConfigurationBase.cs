@@ -1,4 +1,4 @@
-﻿using GSE.Common;
+﻿using PissedEngineer.Primitives;
 
 using Newtonsoft.Json;
 
@@ -8,7 +8,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 
 
-namespace GSE.ClickPLCHandler
+namespace PissedEngineer.ClickPLCHandler
 {
     public enum IOType
     {

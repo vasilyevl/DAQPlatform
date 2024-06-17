@@ -43,10 +43,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Exceptions\Exceptions.cs" />
+    <Compile Include="IModbusClient.cs" />
     <Compile Include="ModbusClient.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Libraries\Common\Primitives.csproj">
+      <Project>{DBBC7A1E-1C2A-463B-8C6D-DD7AC8E0E5EB}</Project>
+      <Name>Primitives</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\..\Libraries\HWControlCommon\HWControlCommon.csproj">
       <Project>{465926B7-7DC3-4651-9A64-9776E7563E00}</Project>
       <Name>HWControlCommon</Name>

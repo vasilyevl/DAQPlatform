@@ -55,9 +55,9 @@
       <Project>{b6b7a6ed-6d47-41d8-833c-29251fa53b39}</Project>
       <Name>ModBusClientHandlerBase</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Libraries\Common\Common.csproj">
+    <ProjectReference Include="..\..\Libraries\Common\Primitives.csproj">
       <Project>{dbbc7a1e-1c2a-463b-8c6d-dd7ac8e0e5eb}</Project>
-      <Name>Common</Name>
+      <Name>Primitives</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\Libraries\HWControlCommon\HWControlCommon.csproj">
       <Project>{465926b7-7dc3-4651-9a64-9776e7563e00}</Project>

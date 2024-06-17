@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace GSE.HWControl.Common.Handlers
+namespace PissedEngineer.HWControl.Handlers
 {
     public enum IOStatus
     {

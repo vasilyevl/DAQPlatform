@@ -2,10 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace GSE.Common
+namespace PissedEngineer.Primitives
 {
     /// <summary>
     /// Per MSDN article, 

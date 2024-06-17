@@ -1,54 +1,81 @@
-﻿using ModeBusHandler;
-using GSE.Common;
-using GSE.HWControl.Common;
+﻿/*
+Copyright (c) 2024 LV-PissedEngineer Permission is hereby granted, 
+free of charge, to any person obtaining a copy of this software
+and associated documentation files (the "Software"),to deal in the Software 
+without restriction, including without limitation the rights to use, copy, 
+modify, merge, publish, distribute, sublicense, and/or sell copies of the 
+Software, and to permit persons to whom the Software is furnished to do so, 
+subject to the following conditions:
 
+The above copyright notice and this permission notice shall be included 
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,FITNESS FOR A 
+PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
+OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+using ModeBusHandler;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-
+using PissedEngineer.HWControl;
+using PissedEngineer.HWControl.Handlers;
+using PissedEngineer.Primitives.Utilities;
+using PissedEngineer.Primitives.Utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-
-namespace GSE.ClickPLCHandler
+namespace PissedEngineer.ClickPLCHandler
 {
-    public interface IClickPLCHandler
-    {
-        Boolean IsOpen { get; }
 
-        Boolean Close();
-        TimerCounter GetCounterCtrl(String counterName, 
-            String setPointName = null, String resetName = null, 
-            Boolean canWriteReset = false);
+    public static class ClickHandlerFactory {         
+      
+        public static IClickPLCHandler CreateHandler() => 
+                        new ClickPLCHandler();
 
-        RegisterInt16Control GetRegisterInt16Control(String registerName);
-        RegisterInt16ControlRO GetRegisterInt16ControlRO(String registerName);
-        RelayControlRO GetRelayControlRO(String relayName);
-        RelayControl GetRelayControlRW(String relayName);
-        TimerCounter GetTimerCtrl(String timerName, 
-            String setPointName = null, String resetName = null, 
-            Boolean canWriteReset = false);
+        public static IClickPLCHandler CreateHandler(
+                        ClickHandlerConfiguration configuration) {
+            try {
+                var h = new ClickPLCHandler();
+                h.Init(configuration);
+                return h;
+            } catch (Exception ex) {
+                   return null;
+            }
+        }
 
-        Boolean Init(ClickHandlerConfiguration cnfg);
-        Boolean Init(String configJsonString);
-        Boolean Open();
-        Boolean ReadDiscreteIO(String name, out SwitchSt status);
-        Boolean ReadDiscreteIO(String name, out SwitchState state);
-        Boolean ReadDiscreteIOs(String name, Int32 numberOfIosToRead, out SwitchSt[] status);
-        Boolean ReadRegister(String name, out UInt16 value);
-        Boolean WriteDiscreteControl(String name, SwitchCtrl sw);
-        Boolean WriteDiscreteIOs(String startName, SwitchCtrl[] ctrls);
-        Boolean WriteRegister(String name, UInt16 value);
+        public static IClickHandlerConfiguration CreateClickHandlerConfiguration() =>
+            new ClickHandlerConfiguration();
+
+        public static IClickHandlerConfiguration CreateClickHandlerConfiguration(
+            IClickHandlerConfiguration cnfg) => new ClickHandlerConfiguration(cnfg);
+
+        public static IClickHandlerConfiguration CreateClickHandlerConfiguration(
+           string ipAddress, int port, string name = "ClickPLC") => 
+            
+            new ClickHandlerConfiguration() {
+                Interface = new InterfaceConfiguration() {
+                    Selector = InterfaceSelector.Network,
+                    SerialPort = null,
+                    Network =  
+                    HwControlObjectFactory.CreateEthernetConnectionConfiguration( 
+                        name, ipAddress, port)
+                }
+            };
     }
 
-    public class ClickPLCHandler //: IClickPLCHandler
+    public class ClickPLCHandler : IClickPLCHandler
     {
         internal const string TimerPrefix = "T";
         internal const string CounterPrefix = "CT";
         internal const string TimerCounterPrefix = "TD";
         internal const string CounterCounterPrefix = "CTD";
 
-        private Dictionary<IOType, int> _sartWriteAddresses =
+        private Dictionary<IOType, int> _startWriteAddresses =
             new Dictionary<IOType, int>() {
 
                 {IOType.Input, ClickAddressMap.XStartAddressHex},
@@ -58,7 +85,7 @@ namespace GSE.ClickPLCHandler
                 {IOType.Timer, ClickAddressMap.TStartAddressHex}
             };
 
-        private Dictionary<IOType, int> _sartReadAddresses =
+        private Dictionary<IOType, int> _startReadAddresses =
             new Dictionary<IOType, int>() {
 
                 {IOType.Input, ClickAddressMap.XStartAddressHex},
@@ -71,7 +98,7 @@ namespace GSE.ClickPLCHandler
 
         private Dictionary<string, object> Controls;
 
-        private StackBase<ClickHandlerException> _errorHistory;
+        private LogHistory _errorHistory;
         private ModbusClient _mbClient;
         private ClickHandlerConfiguration _configuration;
 
@@ -79,35 +106,23 @@ namespace GSE.ClickPLCHandler
 
             _mbClient = new ModbusClient();
             _configuration = null;
-            _errorHistory = 
-                new StackBase<ClickHandlerException>("Error History") { };
+            _errorHistory =
+                new LogHistory() { };
             Controls = new Dictionary<string, object>();
         }
 
-        public static ClickPLCHandler CreateHandler() => new ClickPLCHandler();
-
-        public static ClickPLCHandler CreateHandler(
-                            ClickHandlerConfiguration configuration) {
-
-            var h = new ClickPLCHandler();
-            h.Init(configuration);
-            return h;
-        }
-
-        public bool Init(ClickHandlerConfiguration cnfg) {
+        public bool Init(IClickHandlerConfiguration cnfg) {
             if (cnfg == null) {
                 _AddErrorRecord(nameof(Init),
                     ErrorCode.ConfigurationIsNotProvided,
                     "Provided configuration object is \"null\"");
                 return false;
             }
-
-            var jobject = JObject.FromObject(_configuration);
-            _configuration = jobject.ToObject<ClickHandlerConfiguration>();
-
-            _configuration.CopyFrom(cnfg);
+            _configuration = new  ClickHandlerConfiguration(cnfg);
             return true;
         }
+
+
 
         public bool Init(string configJsonString) {
 
@@ -152,7 +167,7 @@ namespace GSE.ClickPLCHandler
                     }
                     catch (Exception ex) {
 
-                        _AddErrorRecord(nameof(Open), 
+                        _AddErrorRecord(nameof(Open),
                             ErrorCode.CloseFailed, ex.Message);
                     }
                 }
@@ -162,8 +177,8 @@ namespace GSE.ClickPLCHandler
 
                 case InterfaceSelector.Serial:
 
-                    _mbClient = 
-                        new ModbusClient(_configuration.Interface.SerialPort);
+                    _mbClient =
+                        new  ModbusClient(_configuration.Interface.SerialPort.Name);
 
                     if (_mbClient.Connect()) {
                         return true;
@@ -190,9 +205,9 @@ namespace GSE.ClickPLCHandler
                         return true;
                     }
 
-                    _mbClient = 
-                        new ModbusClient(_configuration.Interface.SerialPort);
-                    
+                    _mbClient =
+                        new ModbusClient(_configuration.Interface.SerialPort.Name);
+
                     if (_mbClient.Connect()) {
                         return true;
                     }
@@ -234,12 +249,12 @@ namespace GSE.ClickPLCHandler
 
             if (ClickAddressMap.GetModBusHexAddress(
                    ioFunction: IoFunction.SingleControlWrite,
-                   control: name, out int address, 
+                   control: name, out int address,
                    out int functionCode) == ErrorCode.NoError) {
 
                 try {
 
-                    _mbClient.WriteSingleCoil(address, 
+                    _mbClient.WriteSingleCoil(address,
                         sw == SwitchCtrl.On, functionCode);
                     return true;
                 }
@@ -282,7 +297,7 @@ namespace GSE.ClickPLCHandler
                 }
             }
             return false;
-        }   
+        }
 
 
         public bool ReadDiscreteIO(string name, out SwitchState state) {
@@ -292,7 +307,7 @@ namespace GSE.ClickPLCHandler
         }
 
         public bool ReadDiscreteIO(string name, out SwitchSt status) {
-            
+
 
             if (!(_mbClient?.IsConnected ?? false)) {
 
@@ -476,7 +491,7 @@ namespace GSE.ClickPLCHandler
         */
 
         public bool ReadRegister(string name, out ushort value) {
-            
+
             value = 0xFFFF;
 
             if (!(_mbClient?.IsConnected ?? false)) {
@@ -584,7 +599,7 @@ namespace GSE.ClickPLCHandler
             }
 
             IOType tp = ChannelConstants.IoTypes[preffix];
-            var selector = write ? _sartWriteAddresses : _sartReadAddresses;
+            var selector = write ? _startWriteAddresses : _startReadAddresses;
 
             if (selector.ContainsKey(tp)) {
                 try {
@@ -609,19 +624,19 @@ namespace GSE.ClickPLCHandler
         private bool _AddErrorRecord(string methodName,
                                     ErrorCode code, string details = null) {
             try {
-                _errorHistory.Push(
-                        new ClickHandlerException(methodName,
-                        ErrorCode.ConfigDeserialisationError,
-                        details), force: true);
+                _errorHistory.Push( 
+                        new LogRecord( Primitives.Utility.LogLevel.Error, 
+                        $"{methodName}: {ErrorCode.ConfigDeserialisationError}. " +
+                        $"{details}"), force: true);
                 return true;
             }
             catch (Exception ex) {
 
-            #if DEBUG
+#if DEBUG
                 string msg = $"Failed to add error record to the error " +
                     $"history stack. Exception: {ex.Message}";
                 Console.WriteLine(msg);
-            #endif
+#endif
 
                 return false;
             }

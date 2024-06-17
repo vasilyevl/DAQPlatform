@@ -59,9 +59,9 @@
       <Project>{26c95efa-52c7-4fdc-ac7a-d32005e9d114}</Project>
       <Name>ClickPLCHandler</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\Libraries\Common\Common.csproj">
+    <ProjectReference Include="..\..\Libraries\Common\Primitives.csproj">
       <Project>{dbbc7a1e-1c2a-463b-8c6d-dd7ac8e0e5eb}</Project>
-      <Name>Common</Name>
+      <Name>Primitives</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\Libraries\HWControlCommon\HWControlCommon.csproj">
       <Project>{465926b7-7dc3-4651-9a64-9776e7563e00}</Project>

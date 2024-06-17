@@ -1,22 +1,25 @@
-﻿using GSE.Common;
+﻿using Newtonsoft.Json;
 
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using PissedEngineer.Primitives;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GSE.HWControl.Common.Handlers
+namespace PissedEngineer.HWControl.Handlers
 {
+
+
+
     [JsonObject(MemberSerialization = MemberSerialization.OptOut)]
-    public class EthernetConnectionConfiguration : ConfigurationBase
+    internal class EthernetConnectionConfiguration : ConfigurationBase, IEthernetConnectionConfiguration
     {
-        public const int DefaultTimeputMs = 5000;
+        public const int DefaultTimeoutMs = 5000;
         public const string DefaultIP = "0:0:0:0";
 
-        public const int  DefaultPort = 0;
+        public const int DefaultPort = 0;
 
 
         private string _name;
@@ -26,9 +29,12 @@ namespace GSE.HWControl.Common.Handlers
         private int _messagePort;
         private int _timeout;
 
-        public EthernetConnectionConfiguration ()
-        {
-            Timeout = DefaultTimeputMs;
+        internal EthernetConnectionConfiguration() {
+            Timeout = DefaultTimeoutMs;
+        }
+
+        internal EthernetConnectionConfiguration(IEthernetConnectionConfiguration src):this() {
+            CopyFrom(src);
         }
 
         [JsonProperty]
@@ -61,36 +67,35 @@ namespace GSE.HWControl.Common.Handlers
             set { SetProperty(ref _messagePort, value, () => MessagePort); }
         }
 
-
         [JsonProperty]
         public int Timeout {
             get { return _timeout; }
             set { SetProperty(ref _timeout, value, () => Timeout); }
         }
 
-
-        public void SetToDefaults()
-        {
-            Timeout = DefaultTimeputMs;
+        public void SetToDefaults() {
+            Timeout = DefaultTimeoutMs;
             IpAddress = DefaultIP;
             Port = DefaultPort;
             MessagePort = DefaultPort;
             DataPort = DefaultPort;
         }
 
-        public override bool CopyFrom(object src)
-        {
-            var s = src as EthernetConnectionConfiguration;
+        public override bool CopyFrom(object src) {
+            var s = src as IEthernetConnectionConfiguration;
+            return CopyFrom(s); 
+        }
 
-            if (s == null) { return false; }
+        public bool CopyFrom(IEthernetConnectionConfiguration src) {
+            if (src == null) { return false; }
 
-            Timeout = s.Timeout;
-            IpAddress = s.IpAddress;
-            Port = s.Port;
-            MessagePort = s.MessagePort;
-            DataPort = s.DataPort;
+            Timeout = src.Timeout;
+            IpAddress = src.IpAddress;
+            Port = src.Port;
+            MessagePort = src.MessagePort;
+            DataPort = src.DataPort;
 
             return true;
-        }
+        } 
     }
 }

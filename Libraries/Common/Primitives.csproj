@@ -7,8 +7,8 @@
     <ProjectGuid>{DBBC7A1E-1C2A-463B-8C6D-DD7AC8E0E5EB}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>GSE.Common</RootNamespace>
-    <AssemblyName>Common</AssemblyName>
+    <RootNamespace>PissedEngineer.Primitives</RootNamespace>
+    <AssemblyName>LVPE.Primitives</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -92,15 +92,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ConfigurationBase.cs" />
-    <Compile Include="ConfigurationExt.cs" />
-    <Compile Include="EnumBase.cs" />
-    <Compile Include="FileUtilities.cs" />
-    <Compile Include="Logger.cs" />
-    <Compile Include="ObservableCollection.cs" />
-    <Compile Include="ObservableObject.cs" />
+    <Compile Include="ConfigurationObjects\ConfigurationBase.cs" />
+    <Compile Include="ConfigurationObjects\ConfigurationExt.cs" />
+    <Compile Include="BaseObjects\EnumBase.cs" />
+    <Compile Include="Utilities\ControException.cs" />
+    <Compile Include="Utilities\FileUtilities.cs" />
+    <Compile Include="Utilities\Logger.cs" />
+    <Compile Include="BaseObjects\ObservableCollection.cs" />
+    <Compile Include="BaseObjects\ObservableObject.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Stacks.cs" />
+    <Compile Include="Utilities\LogHistory.cs" />
+    <Compile Include="Stacks\StackBase.cs" />
     <Compile Include="UtilitiesBase.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -72,20 +72,21 @@
   <ItemGroup>
     <Compile Include="BaseClasses.cs" />
     <Compile Include="ClickAddressMap.cs" />
-    <Compile Include="ClickPLCHsndler.cs" />
+    <Compile Include="ClickPLCHandler.cs" />
     <Compile Include="Configuration\ChannelConfigurationBase.cs" />
     <Compile Include="Configuration\ClickHandlerConfiguration.cs" />
     <Compile Include="Configuration\ConcreteChannelConfigurations.cs" />
     <Compile Include="Configuration\InterfaceConfiguration.cs" />
     <Compile Include="ClickHandlerException.cs" />
+    <Compile Include="IClickPLCHandler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SimpleControls.cs" />
     <Compile Include="TimerCounter.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Libraries\Common\Common.csproj">
+    <ProjectReference Include="..\..\..\Libraries\Common\Primitives.csproj">
       <Project>{DBBC7A1E-1C2A-463B-8C6D-DD7AC8E0E5EB}</Project>
-      <Name>Common</Name>
+      <Name>Primitives</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\..\Libraries\HWControlCommon\HWControlCommon.csproj">
       <Project>{465926B7-7DC3-4651-9A64-9776E7563E00}</Project>

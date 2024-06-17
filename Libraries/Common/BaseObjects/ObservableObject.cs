@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using System.ComponentModel;
 using System.Windows.Input;
 
-namespace GSE.Common
+namespace PissedEngineer.Primitives
 {
     public class ObservableObject : INotifyPropertyChanged
     {

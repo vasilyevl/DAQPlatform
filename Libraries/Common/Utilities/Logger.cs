@@ -1,25 +1,17 @@
 ﻿using Serilog;
-using Serilog.Sinks.File;
+
 using System;
-using System.CodeDom;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
-
-namespace GSE.Common.Utilities
+namespace PissedEngineer.Primitives.Utilities
 {
-
     public interface ILogger
     {
         bool IsConfigured { get; }
         void AddLogRecord(LogLevel level, string message);
     }
-
 
     public enum LogLevel
     {
@@ -32,7 +24,7 @@ namespace GSE.Common.Utilities
 
     public static class Logger
     {
-        private const string _Preffix = "Logger:";
+        private const string _Prefix = "Logger:";
         private const long DefaultMaxLogFileSizeInBytes = 2097152;
 
         private static bool _configured = false;    
@@ -86,7 +78,7 @@ namespace GSE.Common.Utilities
             if (!FileUtilities.DirectoryExists(logFolder)
              && !FileUtilities.CreateFolder(logFolder, out lastError, 10000)) {
 
-                lastError = $"{_Preffix} Failed to find and create Log folder \"{logFolder}\".";
+                lastError = $"{_Prefix} Failed to find and create Log folder \"{logFolder}\".";
             }
 
             if (cleanupFolder) {

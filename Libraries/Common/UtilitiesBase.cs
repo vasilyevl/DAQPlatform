@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GSE.Common
+namespace PissedEngineer.Primitives
 {
     /*
     public class ErrorEventArgs : EventArgs

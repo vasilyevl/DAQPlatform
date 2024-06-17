@@ -3,7 +3,7 @@ This code is based on  2018-2020 Rossmann-Engineering EasyModbus project.
 The original code is available at:
 https://github.com/rossmann-engineering/EasyModbusTCP.NET
   
-Copyright (c) 2024 LV Permission is hereby granted, 
+Copyright (c) 2024 LV-PissedEngineer Permission is hereby granted, 
 free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"),to deal in the Software 
 without restriction, including without limitation the rights to use, copy, 
@@ -20,7 +20,6 @@ PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGH
 HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 */
 
 using System;
@@ -28,75 +27,92 @@ using System.Net.Sockets;
 using System.Net;
 using System.IO.Ports;
 
-using GSE.HWControl.Common.Handlers;
-     
+using PissedEngineer.HWControl.Handlers;
+using PissedEngineer.Primitives.Stacks;
+using PissedEngineer.Primitives.Utility;
+
 namespace ModeBusHandler
 {
     /// <summary>
     /// Implements a ModbusClient.
     /// </summary>
-    public partial class ModbusClient
+    public partial class ModbusClient : IModbusClient
     {
+        // Mod bus function codes
+        public const int ReadCoilsFunctionCode = 0x01;
+        public const int ReadDiscreteInputsFunctionCode = 0x02;
+        public const int ReadHoldingRegistersFunctionCode = 0x03;
+        public const int ReadInputRegistersFunctionCode = 0x04;
+        public const int WriteSingleCoilFunctionCode = 0x05;
+        public const int WriteSingleRegisterFunctionCode = 0x06;
+        public const int WriteMultipleCoilsFunctionCode = 0x0F;
+        public const int WriteMultipleRegistersFunctionCode = 0x10;
+        public const int WriteReadMultipleRegistersFunctionCode = 0x17;
+
+
+        private const byte _ErrorSignature = 0x80;
+        private const int _ReadBufferSize = 256;
+        private const string _DefaultIP = "127.0.0.1";
+        private const int _DefaultPort = 502;
+        private const int _DefaultFieldLength = sizeof(ushort);
+
+        private const int _DefaultConnectionTimeoutMs = 1000;
+        private const int _DefaultSerialWriteTimeoutMs = 10000;
+        private const int _DefaultBaudRate = 9600;
+        private const Parity _DefaultParity = Parity.Even;
+        private const StopBits _DefaultStopBits = StopBits.One;
+
+        private const int _DefaultConnectionRetries = 3;
+
+        private const int _DefaultSerialPortRxTimeoutMs = 2000;
+        private const int _DefaultWaitPeriodMs = 10;
         public enum RegisterOrder
         {
             LowHigh = 0,
             HighLow = 1
         };
 
-        private int actualPositionToRead = 0;
-        private DateTime dateTimeLastRead;
 
-        private bool dataReceived = false;
-        private bool receiveActive = false;
-        private byte[] readBuffer = new byte[256];
-        private int bytesToRead = 0;
 
-        //private bool debug=false;
+        private bool _dataReceived;
+        private bool _receiveActive;
+        private byte[] _readBuffer;
+        private int _bytesToRead = 0;
+
         private TcpClient _tcpClient;
-        private string _ipAddress = "127.0.0.1";
-        private int _port = 502;
+        private string _ipAddress;
+        private int _port;
 
-        private uint _transactionIdentifierInternal = 0;
+        private uint _transactionIdentifierInternal;
 
-        private byte [] _transactionIdentifier = new byte[2];
-        private byte [] _protocolIdentifier = new byte[2];
-        private byte[] _crc = new byte[2];
-        private byte [] _length = new byte[2];
-        private byte _unitIdentifier = 0x01;
+        private byte[] _transactionIdentifier;
+        private byte[] _protocolIdentifier;
+        private byte[] _crc;
+        private byte[] _length;
+        private byte _unitIdentifier;
         private byte _functionCode;
-        private byte [] _startingAddress = new byte[2];
-        private byte [] _quantity = new byte[2];
+        private byte[] _startingAddress;
+        private byte[] _quantity;
 
-        private bool _udpFlag = false;
+        private bool _udpFlag;
         private int _portOut;
-        private int _baudRate = 9600;
-        private int _connectTimeout = 1000;
+        private int _baudRate;
+        private int _connectTimeoutMs;
         public byte[] _receiveData;
         public byte[] _sendData;
         private SerialPort _serialPort;
-        private Parity _parity = Parity.Even;
-        private StopBits _stopBits = StopBits.One;
-        private bool _connected = false;
-        private int _countRetries = 0;
-        public int NumberOfRetries { get; set; } = 3;
+        private Parity _parity;
+        private StopBits _stopBits;
+        private bool _connected;
+        private int _countRetries;
+        private const int _LogHistoryDepth = 1024;
 
-        private object _lastErrorLock = new object();   
-        private string _lastError = null;
+        private object _lastErrorLock;
+        private LogHistory _log;
 
-        public string LastError {
-            get {
-                lock (_lastErrorLock) {
-                    return (string)(_lastError?.Clone() ?? null);
-                }
-            }
-            set {
-                lock (_lastErrorLock) {
-                    _lastError = (string)(value?.Clone() ?? null);
-                }
-            }
-        }
 
-        public bool IsConnected => _connected;
+
+
 
         public delegate void ReceiveDataChangedHandler(object sender);
         public event ReceiveDataChangedHandler ReceiveDataChanged;
@@ -109,13 +125,46 @@ namespace ModeBusHandler
 
         NetworkStream stream;
 
+
+        /// <summary>
+        /// Parameterless constructor
+        /// </summary>
+        public ModbusClient() {
+            _tcpClient = null;
+            _dataReceived = false;
+            _receiveActive = false;
+            _readBuffer = new byte[_ReadBufferSize];
+            _bytesToRead = 0;
+            _transactionIdentifierInternal = 0;
+            _transactionIdentifier = new byte[_DefaultFieldLength];
+            _protocolIdentifier = new byte[_DefaultFieldLength];
+            _crc = new byte[_DefaultFieldLength];
+            _length = new byte[_DefaultFieldLength];
+            _unitIdentifier = 0x01;
+            _functionCode = 0xFF;
+            _startingAddress = new byte[_DefaultFieldLength];
+            _quantity = new byte[_DefaultFieldLength];
+            _udpFlag = false;
+            _baudRate = _DefaultBaudRate;
+            _connectTimeoutMs = _DefaultConnectionTimeoutMs;
+            _parity = _DefaultParity;
+            _stopBits = _DefaultStopBits;
+            _connected = false;
+            _countRetries = 0;
+            NumberOfRetries = _DefaultConnectionRetries;
+            _lastErrorLock = new object();
+            _log = new LogHistory(_LogHistoryDepth);
+
+        }
+
+
+
         /// <summary>
         /// Constructor which determines the Master ip-address and the Master Port.
         /// </summary>
         /// <param name="ipAddress">IP-Address of the Master device</param>
         /// <param name="port">Listening port of the Master device (should be 502)</param>
-        public ModbusClient(string ipAddress, int port)
-        {
+        public ModbusClient(string ipAddress, int port) : this() {
             this._ipAddress = ipAddress;
             this._port = port;
         }
@@ -125,27 +174,24 @@ namespace ModeBusHandler
         /// Constructor which determines the Serial-Port
         /// </summary>
         /// <param name="serialPort">Serial-Port Name e.G. "COM1"</param>
-        public ModbusClient(string serialPort)
-        {
-            this._serialPort = new SerialPort();
+        public ModbusClient(string serialPort) : this() {
+            _serialPort = new SerialPort();
             _serialPort.PortName = serialPort;
             _serialPort.BaudRate = _baudRate;
             _serialPort.Parity = _parity;
             _serialPort.StopBits = _stopBits;
-            _serialPort.WriteTimeout = 10000;
-            _serialPort.ReadTimeout = _connectTimeout;
-
+            _serialPort.WriteTimeout = _DefaultSerialWriteTimeoutMs;
+            _serialPort.ReadTimeout = _connectTimeoutMs;
             _serialPort.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
         }
 
-        public ModbusClient( SerialPortConfiguration sp)
-        {
-            _serialPort = new SerialPort();
+        public ModbusClient(SerialPortConfiguration sp) : this() {
 
+            _serialPort = new SerialPort();
             _baudRate = sp.BaudRate;
             _parity = sp.Parity;
             _stopBits = sp.StopBits;
-            _connectTimeout = sp.WriteTimeoutMs;
+            _connectTimeoutMs = sp.WriteTimeoutMs;
             _serialPort.PortName = sp.Name;
             _serialPort.BaudRate = _baudRate;
             _serialPort.Parity = _parity;
@@ -154,63 +200,37 @@ namespace ModeBusHandler
             _serialPort.ReadTimeout = sp.ReadTimeoutMs;
         }
 
-        /// <summary>
-        /// Parameterless constructor
-        /// </summary>
-        public ModbusClient()
-        { }
+
+        public bool IsConnected => _connected;
+        public int NumberOfRetries { get; set; }
+
+        public string LastError {
+            get {
+                if (_log.Peek(out LogRecord err)) {
+                    return (string)err.Clone();
+                }
+                else {
+                    return string.Empty;
+                }
+            }
+        }
+
 
         /// <summary>
         /// Establish connection to Master device in case of Modbus TCP. Opens COM-Port in case of Modbus RTU
         /// </summary>
-        public bool Connect()
-        {
+        public bool Connect() {
             if (_serialPort != null) {
-                
-                if (!_serialPort.IsOpen) {
-                    try {
-                        _serialPort.BaudRate = _baudRate;
-                        _serialPort.Parity = _parity;
-                        _serialPort.StopBits = _stopBits;
-                        _serialPort.WriteTimeout = 10000;
-                        _serialPort.ReadTimeout = _connectTimeout;
-                        _serialPort.Open();
-                        _connected = true;
-                    }
-                    catch (Exception ex ) {
-                        LastError = $"Faled to open port {_serialPort.PortName}. Exception: {ex.Message}";
-                        _connected = false; 
-                    }
-                }
 
-                if (_connected && ConnectedChanged != null)
-                    try {
-                        ConnectedChanged(this);
-                    }
-                    catch {
-
-                    }
-                return _connected;
+                return _ConnectViaSerialInterface();
             }
 
-            if (!_udpFlag) {
-                // if (debug) StoreLogData.Instance.Store("Open TCP-Socket, IP-Address: " + ipAddress + ", Port: " + port, System.DateTime.Now);
-                _tcpClient = new TcpClient();
-                var result = _tcpClient.BeginConnect(_ipAddress, _port, null, null);
-                var success = result.AsyncWaitHandle.WaitOne(_connectTimeout);
-                if (!success) {
-                    throw new ModeBusHandler.Exceptions.ConnectionException("connection timed out");
-                }
-                _tcpClient.EndConnect(result);
+            if (_udpFlag) {
 
-                //tcpClient = new TcpClient(ipAddress, port);
-                stream = _tcpClient.GetStream();
-                stream.ReadTimeout = _connectTimeout;
-                _connected = true;
+                _ConnectUsingUDP();
             }
             else {
-                _tcpClient = new TcpClient();
-                _connected = true;
+                return _ConnectUsingTcp();
             }
 
             if (ConnectedChanged != null)
@@ -223,8 +243,7 @@ namespace ModeBusHandler
             return _connected;
         }
 
-        private bool _ConnectViaSerialInterface()
-        {
+        private bool _ConnectViaSerialInterface() {
             if (_serialPort != null) {
 
                 if (!_serialPort.IsOpen) {
@@ -232,8 +251,8 @@ namespace ModeBusHandler
                         _serialPort.BaudRate = _baudRate;
                         _serialPort.Parity = _parity;
                         _serialPort.StopBits = _stopBits;
-                        _serialPort.WriteTimeout = 10000;
-                        _serialPort.ReadTimeout = _connectTimeout;
+                        _serialPort.WriteTimeout = _DefaultSerialWriteTimeoutMs;
+                        _serialPort.ReadTimeout = _connectTimeoutMs;
                         _serialPort.Open();
                         _connected = true;
 
@@ -246,7 +265,8 @@ namespace ModeBusHandler
                         }
                     }
                     catch (Exception ex) {
-                        LastError = $"Faled to open port {_serialPort.PortName}. Exception: {ex.Message}";
+                        _log.Error($"Failed to open port {_serialPort.PortName}. " +
+                            $"Exception: {ex.Message}");
                         _connected = false;
                         goto exit;
                     }
@@ -259,17 +279,25 @@ namespace ModeBusHandler
             return _connected;
         }
 
-        private bool _ConnectUsingTcp(string ipAddress, int port)
-        {
+        private bool _ConnectUsingTcp(string ipAddress = null, int port = -1) {
+
             _tcpClient = new TcpClient();
-            IAsyncResult result = _tcpClient.BeginConnect(ipAddress, port, null, null);
-            
-            bool success = result.AsyncWaitHandle.WaitOne(_connectTimeout);
-            
+            if (ipAddress != null) {
+                _ipAddress = ipAddress;
+            }
+            if (port != -1) {
+                _port = port;
+            }
+
+
+            IAsyncResult result = _tcpClient.BeginConnect(_ipAddress, _port, null, null);
+
+            bool success = result.AsyncWaitHandle.WaitOne(_connectTimeoutMs);
+
             if (!success) {
 
-                LastError = $"Failed to connect to a server via " +
-                    $"{ipAddress}:{port} within {_connectTimeout}ms.";
+                _log.Error($"Failed to connect to a server via " +
+                    $"{ipAddress}:{port} within {_connectTimeoutMs}ms.");
 
                 _connected = false;
                 goto exit;
@@ -279,57 +307,34 @@ namespace ModeBusHandler
 
             //tcpClient = new TcpClient(ipAddress, port);
             stream = _tcpClient.GetStream();
-            stream.ReadTimeout = _connectTimeout;
+            stream.ReadTimeout = _connectTimeoutMs;
             _connected = true;
 
             exit:
             return _connected;
         }
 
-        private bool _ConnectUsingUDP(string ipAddress, int port)
-        {
+        private bool _ConnectUsingUDP() {
             _tcpClient = new TcpClient();
             _connected = true;
             return true;
         }
 
-        /// <summary>
-        /// Establish connection to Master device in case of Modbus TCP.
-        /// </summary>
-        public bool Connect(string ipAddress, int port)
-        {
-            bool res = false;
-            if(_serialPort != null) {
-                res =  _ConnectViaSerialInterface();
-            }
-            else if (!_udpFlag) {
-                res = _ConnectUsingTcp(ipAddress, port);
-            }
-            else {
-                res = _ConnectUsingUDP(ipAddress, port);
-            }
 
-            if (res && ConnectedChanged != null) {
-                ConnectedChanged(this);
-            }
-
-            return res;
-        }
 
         /// <summary>
         /// Converts two ModbusRegisters to Float - Example: EasyModbus.ModbusClient.ConvertRegistersToFloat(modbusClient.ReadHoldingRegisters(19,2))
         /// </summary>
         /// <param name="registers">Two Register values received from Modbus</param>
         /// <returns>Connected float value</returns>
-        public  bool ConvertRegistersToFloat(int[] registers, out float result)
-        {
+        public bool ConvertRegistersToFloat(int[] registers, out float result) {
             if (registers.Length != 2) {
 
-                LastError = "Input Array length invalid - Array langth must be '2'";
+                _log.Error("Input Array length invalid - Array langth must be '2'");
                 result = float.NaN;
                 return false;
             }
-                       
+
             int highRegister = registers[1];
             int lowRegister = registers[0];
             byte[] highRegisterBytes = BitConverter.GetBytes(highRegister);
@@ -341,8 +346,8 @@ namespace ModeBusHandler
                 highRegisterBytes[1]
             };
 
-            result =  BitConverter.ToSingle(floatBytes, 0);
-            return true;    
+            result = BitConverter.ToSingle(floatBytes, 0);
+            return true;
         }
 
         /// <summary>
@@ -351,11 +356,10 @@ namespace ModeBusHandler
         /// <param name="registers">Two Register values received from Modbus</param>
         /// <param name="registerOrder">Desired Word Order (Low Register first or High Register first</param>
         /// <returns>Connected float value</returns>
-        public  bool ConvertRegistersToFloat(int[] registers, 
-            RegisterOrder registerOrder, out float result)
-        {
+        public bool ConvertRegistersToFloat(int[] registers,
+            RegisterOrder registerOrder, out float result) {
 
-            int [] swappedRegisters = {registers[0],registers[1]};
+            int[] swappedRegisters = { registers[0], registers[1] };
             if (registerOrder == RegisterOrder.HighLow) {
                 swappedRegisters = new int[] { registers[1], registers[0] };
             }
@@ -367,12 +371,12 @@ namespace ModeBusHandler
         /// </summary>
         /// <param name="registers">Two Register values received from Modbus</param>
         /// <returns>Connected 32 Bit Integer value</returns>
-        public bool ConvertRegistersToInt(int[] registers, out Int32 result)
-        {
+        public bool ConvertRegistersToInt(int[] registers, out Int32 result) {
 
             if (registers.Length != 2) {
                 result = Int32.MinValue;
-                throw new ArgumentException("Input Array length invalid - Array langth must be '2'");
+                _log.Error("Input Array length invalid - Array langth must be '2'");
+                return false;
             }
             int highRegister = registers[1];
             int lowRegister = registers[0];
@@ -384,7 +388,7 @@ namespace ModeBusHandler
                                     highRegisterBytes[0],
                                     highRegisterBytes[1]
                                 };
-            result =  BitConverter.ToInt32(doubleBytes, 0);
+            result = BitConverter.ToInt32(doubleBytes, 0);
             return true;
         }
 
@@ -394,16 +398,15 @@ namespace ModeBusHandler
         /// <param name="registers">Two Register values received from Modbus</param>
         /// <param name="registerOrder">Desired Word Order (Low Register first or High Register first</param>
         /// <returns>Connecteds 32 Bit Integer value</returns>
-        public bool ConvertRegistersToInt(int[] registers, RegisterOrder registerOrder, out Int32 result)
-        {
+        public bool ConvertRegistersToInt(int[] registers, RegisterOrder registerOrder, out Int32 result) {
 
             int[] swappedRegisters = { registers[0], registers[1] };
-            
+
             if (registerOrder == RegisterOrder.HighLow) {
-             
+
                 swappedRegisters = new int[] { registers[1], registers[0] };
             }
-            
+
             return ConvertRegistersToInt(swappedRegisters, out result);
         }
 
@@ -412,12 +415,11 @@ namespace ModeBusHandler
         /// </summary>
         /// <param name="registers">four Register values received from Modbus</param>
         /// <returns>64 bit value</returns>
-        public bool ConvertRegistersToLong(int[] registers, out Int64 result)
-        {
+        public bool ConvertRegistersToLong(int[] registers, out Int64 result) {
 
             if (registers.Length != 4) {
                 result = Int64.MinValue;
-                LastError = "Input Array length invalid - Array langth must be '4'";
+                _log.Error("Input Array length invalid - Array length must be '4'");
                 return false;
             }
 
@@ -439,7 +441,7 @@ namespace ModeBusHandler
                                  highRegisterBytes[0],
                                  highRegisterBytes[1] };
 
-            result =  BitConverter.ToInt64(longBytes, 0);
+            result = BitConverter.ToInt64(longBytes, 0);
             return true;
         }
 
@@ -449,22 +451,21 @@ namespace ModeBusHandler
         /// <param name="registers">four Register values received from Modbus</param>
         /// <param name="registerOrder">Desired Word Order (Low Register first or High Register first</param>
         /// <returns>Connected 64 Bit Integer value</returns>
-        public bool ConvertRegistersToLong(int[] registers, 
-            RegisterOrder registerOrder, out Int64 result)
-        {
+        public bool ConvertRegistersToLong(int[] registers,
+            RegisterOrder registerOrder, out Int64 result) {
 
             if (registers.Length != 4) {
-                result= Int64.MinValue;
-                LastError = "Input Array length invalid - Array langth must be '4'";
+                result = Int64.MinValue;
+                _log.Error("Input Array length invalid - Array length must be '4'");
                 return false;
             }
             int[] swappedRegisters = { registers[0], registers[1], registers[2], registers[3] };
-            
+
             if (registerOrder == RegisterOrder.HighLow) {
                 swappedRegisters = new int[] { registers[3], registers[2], registers[1], registers[0] };
             }
 
-            return  ConvertRegistersToLong(swappedRegisters, out result);
+            return ConvertRegistersToLong(swappedRegisters, out result);
         }
 
         /// <summary>
@@ -472,12 +473,11 @@ namespace ModeBusHandler
         /// </summary>
         /// <param name="registers">four Register values received from Modbus</param>
         /// <returns>64 bit value</returns>
-        public bool ConvertRegistersToDouble(int[] registers, out double result)
-        {
+        public bool ConvertRegistersToDouble(int[] registers, out double result) {
 
             if (registers.Length != 4) {
                 result = Double.NaN;
-                LastError = "Input Array length invalid - Array langth must be '4'";
+                _log.Error("Input Array length invalid - Array length must be '4'");
                 return false;
             }
 
@@ -499,7 +499,7 @@ namespace ModeBusHandler
                                     highRegisterBytes[0],
                                     highRegisterBytes[1]
                                 };
-            result =  BitConverter.ToDouble(longBytes, 0);
+            result = BitConverter.ToDouble(longBytes, 0);
             return true;
         }
 
@@ -509,22 +509,21 @@ namespace ModeBusHandler
         /// <param name="registers">four Register values received from Modbus</param>
         /// <param name="registerOrder">Desired Word Order (Low Register first or High Register first</param>
         /// <returns>Connected double prec. float value</returns>
-        public bool ConvertRegistersToDouble(int[] registers, 
-            RegisterOrder registerOrder, out double result)
-        {
+        public bool ConvertRegistersToDouble(int[] registers,
+            RegisterOrder registerOrder, out double result) {
 
             if (registers.Length != 4) {
                 result = Double.NaN;
-                LastError = "Input Array length invalid - Array langth must be '4'";
+                _log.Error("Input Array length invalid - Array length must be '4'");
                 return false;
             }
-            
+
             int[] swappedRegisters = { registers[0], registers[1], registers[2], registers[3] };
-            
+
             if (registerOrder == RegisterOrder.HighLow) {
                 swappedRegisters = new int[] { registers[3], registers[2], registers[1], registers[0] };
             }
-            
+
             return ConvertRegistersToDouble(swappedRegisters, out result);
         }
 
@@ -533,8 +532,7 @@ namespace ModeBusHandler
         /// </summary>
         /// <param name="floatValue">Float value which has to be converted into two registers</param>
         /// <returns>Register values</returns>
-        public static int[] ConvertFloatToRegisters(float floatValue)
-        {
+        public static int[] ConvertFloatToRegisters(float floatValue) {
 
             byte[] floatBytes = BitConverter.GetBytes(floatValue);
             byte[] highRegisterBytes =
@@ -566,8 +564,7 @@ namespace ModeBusHandler
         /// <param name="floatValue">Float value which has to be converted into two registers</param>
         /// <param name="registerOrder">Desired Word Order (Low Register first or High Register first</param>
         /// <returns>Register values</returns>
-        public static int[] ConvertFloatToRegisters(float floatValue, RegisterOrder registerOrder)
-        {
+        public static int[] ConvertFloatToRegisters(float floatValue, RegisterOrder registerOrder) {
 
             int[] registerValues = ConvertFloatToRegisters(floatValue);
             int[] returnValue = registerValues;
@@ -581,8 +578,7 @@ namespace ModeBusHandler
         /// </summary>
         /// <param name="intValue">Int value which has to be converted into two registers</param>
         /// <returns>Register values</returns>
-        public static int[] ConvertIntToRegisters(Int32 intValue)
-        {
+        public static int[] ConvertIntToRegisters(Int32 intValue) {
 
             byte[] doubleBytes = BitConverter.GetBytes(intValue);
             byte[] highRegisterBytes =
@@ -614,8 +610,7 @@ namespace ModeBusHandler
         /// <param name="intValue">Double value which has to be converted into two registers</param>
         /// <param name="registerOrder">Desired Word Order (Low Register first or High Register first</param>
         /// <returns>Register values</returns>
-        public static int[] ConvertIntToRegisters(Int32 intValue, RegisterOrder registerOrder)
-        {
+        public static int[] ConvertIntToRegisters(Int32 intValue, RegisterOrder registerOrder) {
 
             int[] registerValues = ConvertIntToRegisters(intValue);
             int[] returnValue = registerValues;
@@ -629,8 +624,7 @@ namespace ModeBusHandler
         /// </summary>
         /// <param name="longValue">long value which has to be converted into four registers</param>
         /// <returns>Register values</returns>
-        public static int[] ConvertLongToRegisters(Int64 longValue)
-        {
+        public static int[] ConvertLongToRegisters(Int64 longValue) {
 
             byte[] longBytes = BitConverter.GetBytes(longValue);
             byte[] highRegisterBytes =
@@ -678,8 +672,7 @@ namespace ModeBusHandler
         /// <param name="longValue">long value which has to be converted into four registers</param>
         /// <param name="registerOrder">Desired Word Order (Low Register first or High Register first</param>
         /// <returns>Register values</returns>
-        public static int[] ConvertLongToRegisters(Int64 longValue, RegisterOrder registerOrder)
-        {
+        public static int[] ConvertLongToRegisters(Int64 longValue, RegisterOrder registerOrder) {
 
             int[] registerValues = ConvertLongToRegisters(longValue);
             int[] returnValue = registerValues;
@@ -693,8 +686,7 @@ namespace ModeBusHandler
         /// </summary>
         /// <param name="doubleValue">double value which has to be converted into four registers</param>
         /// <returns>Register values</returns>
-        public static int[] ConvertDoubleToRegisters(double doubleValue)
-        {
+        public static int[] ConvertDoubleToRegisters(double doubleValue) {
 
             byte[] doubleBytes = BitConverter.GetBytes(doubleValue);
             byte[] highRegisterBytes =
@@ -742,8 +734,7 @@ namespace ModeBusHandler
         /// <param name="doubleValue">double value which has to be converted into four registers</param>
         /// <param name="registerOrder">Desired Word Order (Low Register first or High Register first</param>
         /// <returns>Register values</returns>
-        public static int[] ConvertDoubleToRegisters(double doubleValue, RegisterOrder registerOrder)
-        {
+        public static int[] ConvertDoubleToRegisters(double doubleValue, RegisterOrder registerOrder) {
 
             int[] registerValues = ConvertDoubleToRegisters(doubleValue);
             int[] returnValue = registerValues;
@@ -759,8 +750,7 @@ namespace ModeBusHandler
         /// <param name="offset">First Register containing the String to convert</param>
         /// <param name="stringLength">number of characters in String (must be even)</param>
         /// <returns>Converted String</returns>
-        public static string ConvertRegistersToString(int[] registers, int offset, int stringLength)
-        {
+        public static string ConvertRegistersToString(int[] registers, int offset, int stringLength) {
 
             byte[] result = new byte[stringLength];
             byte[] registerResult = new byte[2];
@@ -778,8 +768,7 @@ namespace ModeBusHandler
         /// </summary>
         /// <param name="registers">Register array received via Modbus</param>
         /// <returns>Converted String</returns>
-        public static int[] ConvertStringToRegisters(string stringToConvert)
-        {
+        public static int[] ConvertStringToRegisters(string stringToConvert) {
 
             byte[] array = System.Text.Encoding.ASCII.GetBytes(stringToConvert);
             int[] returnarray = new int[stringToConvert.Length / 2 + stringToConvert.Length % 2];
@@ -799,8 +788,7 @@ namespace ModeBusHandler
         /// <param name="data">Byte buffer to send</param>
         /// <param name="numberOfBytes">Number of bytes to calculate CRC</param>
         /// <param name="startByte">First byte in buffer to start calculating CRC</param>
-        public static UInt16 calculateCRC(byte[] data, UInt16 numberOfBytes, int startByte)
-        {
+        protected static UInt16 calculateCRC(byte[] data, UInt16 numberOfBytes, int startByte) {
             byte[] auchCRCHi = {
             0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0, 0x80, 0x41, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81,
             0x40, 0x01, 0xC0, 0x80, 0x41, 0x00, 0xC1, 0x81, 0x40, 0x00, 0xC1, 0x81, 0x40, 0x01, 0xC0,
@@ -843,10 +831,10 @@ namespace ModeBusHandler
             0x40
             };
             UInt16 usDataLen = numberOfBytes;
-            byte  uchCRCHi = 0xFF ;
-            byte uchCRCLo = 0xFF ;
+            byte uchCRCHi = 0xFF;
+            byte uchCRCLo = 0xFF;
             int i = 0;
-            int uIndex ;
+            int uIndex;
             while (usDataLen > 0) {
                 usDataLen--;
                 if ((i + startByte) < data.Length) {
@@ -860,60 +848,66 @@ namespace ModeBusHandler
         }
 
         private void DataReceivedHandler(object sender,
-                        SerialDataReceivedEventArgs e)
-        {
+                        SerialDataReceivedEventArgs e) {
             _serialPort.DataReceived -= DataReceivedHandler;
 
             //while (receiveActive | dataReceived)
             //	System.Threading.Thread.Sleep(10);
-            receiveActive = true;
+            _receiveActive = true;
 
-            const long ticksWait = TimeSpan.TicksPerMillisecond * 2000;//((40*10000000) / this.baudRate);
+            const long ticksWait = TimeSpan.TicksPerMillisecond * _DefaultSerialPortRxTimeoutMs;
 
 
             SerialPort sp = (SerialPort)sender;
-            if (bytesToRead == 0) {
+
+            if (_bytesToRead == 0) {
+
                 sp.DiscardInBuffer();
-                receiveActive = false;
+                _receiveActive = false;
                 _serialPort.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
                 return;
             }
-            readBuffer = new byte[256];
-            int numbytes=0;
+            _readBuffer = new byte[256];
+            int numBytes = 0;
             int actualPositionToRead = 0;
+
             DateTime dateTimeLastRead = DateTime.Now;
             do {
                 try {
+
                     dateTimeLastRead = DateTime.Now;
-                    while ((sp.BytesToRead) == 0) {
-                        System.Threading.Thread.Sleep(10);
+
+                    while (sp.BytesToRead == 0) {
+                        System.Threading.Thread.Sleep(_DefaultWaitPeriodMs);
                         if ((DateTime.Now.Ticks - dateTimeLastRead.Ticks) > ticksWait)
                             break;
                     }
-                    numbytes = sp.BytesToRead;
 
+                    numBytes = sp.BytesToRead;
 
-                    byte[] rxbytearray = new byte[numbytes];
-                    sp.Read(rxbytearray, 0, numbytes);
-                    Array.Copy(rxbytearray, 0, readBuffer, actualPositionToRead, 
-                        (actualPositionToRead + rxbytearray.Length) <= bytesToRead 
-                        ? rxbytearray.Length 
-                        : bytesToRead - actualPositionToRead);
+                    byte[] rxByteArray = new byte[numBytes];
+                    sp.Read(rxByteArray, 0, numBytes);
+                    Array.Copy(rxByteArray, 0, _readBuffer, actualPositionToRead,
+                        (actualPositionToRead + rxByteArray.Length) <= _bytesToRead
+                        ? rxByteArray.Length
+                        : _bytesToRead - actualPositionToRead);
 
-                    actualPositionToRead = actualPositionToRead + rxbytearray.Length;
-
-                }
-                catch (Exception) {
+                    actualPositionToRead = actualPositionToRead + rxByteArray.Length;
 
                 }
+                catch (Exception ex) {
 
-                if (bytesToRead <= actualPositionToRead)
+                    _log.Error($"Error while reading from Serial Port. " +
+                        $"Exception: {ex.Message}");
+                }
+
+                if (_bytesToRead <= actualPositionToRead)
                     break;
 
-                if (DetectValidModbusFrame(readBuffer, 
-                    (actualPositionToRead < readBuffer.Length) 
-                    ? actualPositionToRead 
-                    : readBuffer.Length) | bytesToRead <= actualPositionToRead)
+                if (ModbusFrameIsValid(_readBuffer,
+                    (actualPositionToRead < _readBuffer.Length)
+                        ? actualPositionToRead
+                        : _readBuffer.Length) | _bytesToRead <= actualPositionToRead)
                     break;
             }
 
@@ -922,41 +916,41 @@ namespace ModeBusHandler
             //10.000 Ticks in 1 ms
 
             _receiveData = new byte[actualPositionToRead];
-            Array.Copy(readBuffer, 0, _receiveData, 0, 
-                (actualPositionToRead < readBuffer.Length) 
-                ? actualPositionToRead 
-                : readBuffer.Length);
-            // if (debug) StoreLogData.Instance.Store("Received Serial-Data: "+BitConverter.ToString(readBuffer) ,System.DateTime.Now);
-            bytesToRead = 0;
+            Array.Copy(_readBuffer, 0, _receiveData, 0,
+                (actualPositionToRead < _readBuffer.Length)
+                ? actualPositionToRead
+                : _readBuffer.Length);
 
+            _bytesToRead = 0;
 
-            dataReceived = true;
-            receiveActive = false;
-            _serialPort.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
+            _dataReceived = true;
+            _receiveActive = false;
+
+            _serialPort.DataReceived +=
+                new SerialDataReceivedEventHandler(DataReceivedHandler);
+
             if (ReceiveDataChanged != null) {
 
                 ReceiveDataChanged(this);
-
             }
 
             //sp.DiscardInBuffer();
         }
 
-        public static bool DetectValidModbusFrame(byte[] readBuffer, int length)
-        {
+        public static bool ModbusFrameIsValid(byte[] readBuffer, int length) {
             // minimum length 6 bytes
             if (length < 6) {
                 return false;
             }
             //SlaveID correct
-            if ((readBuffer[0] < 1) | (readBuffer[0] > 247)) { 
-                return false; 
+            if ((readBuffer[0] < 1) | (readBuffer[0] > 247)) {
+                return false;
             }
             //CRC correct?
             byte[] crc = new byte[2];
             crc = BitConverter.GetBytes(calculateCRC(readBuffer, (ushort)(length - 2), 0));
-            if (crc[0] != readBuffer[length - 2] | crc[1] != readBuffer[length - 1]) { 
-                return false; 
+            if (crc[0] != readBuffer[length - 2] | crc[1] != readBuffer[length - 1]) {
+                return false;
             }
 
             return true;
@@ -970,34 +964,26 @@ namespace ModeBusHandler
         /// <param name="quantity">Number of discrete Inputs to read</param>
         ///  <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x02 by deafult.</param>
         /// <returns>Boolean Array which contains the discrete Inputs</returns>
-        public bool ReadDiscreteInputs(int startingAddress, int quantity, out bool[] response, int functionCode = 0x02)
-        {
+        public bool ReadDiscreteInputs(int startingAddress, int quantity, out bool[] response, int functionCode = 0x02) {
             response = null;
-            // if (debug) StoreLogData.Instance.Store("FC2 (Read Discrete Inputs from Master device), StartingAddress: "+ startingAddress+", Quantity: " +quantity, System.DateTime.Now);
+
             _transactionIdentifierInternal++;
-            if (_serialPort != null) {
-                if (!_serialPort.IsOpen) {
 
-                    LastError = "serial port not opened";
-                    return false;
-                }
-            }
-
-            if (_tcpClient == null & !_udpFlag & _serialPort == null) {
-                
-                LastError = "connection error";
+            if (!ConnectionIsOpen()) {
                 return false;
             }
+
+
             if (startingAddress > 65535 | quantity > 2000) {
 
-                LastError = "Starting address must be 0 - 65535; quantity must be 0 - 2000";
+                _log.Error("Starting address must be 0 - 65535; quantity must be 0 - 2000");
                 return false;
             }
 
             this._transactionIdentifier = BitConverter.GetBytes((uint)_transactionIdentifierInternal);
             this._protocolIdentifier = BitConverter.GetBytes((int)0x0000);
             this._length = BitConverter.GetBytes((int)0x0006);
-            this._functionCode = (byte) functionCode;
+            this._functionCode = (byte)functionCode;
             this._startingAddress = BitConverter.GetBytes(startingAddress);
             this._quantity = BitConverter.GetBytes(quantity);
 
@@ -1024,37 +1010,40 @@ namespace ModeBusHandler
 
             if (_serialPort != null) {
 
-                dataReceived = false;
+                _dataReceived = false;
 
                 if (quantity % 8 == 0) {
-                    bytesToRead = 5 + quantity / 8;
+                    _bytesToRead = 5 + quantity / 8;
                 }
                 else {
-                    bytesToRead = 6 + quantity / 8;
-                    //               serialport.ReceivedBytesThreshold = bytesToRead;
+                    _bytesToRead = 6 + quantity / 8;
+                    //serialport.ReceivedBytesThreshold = bytesToRead;
                 }
                 if (SendDataChanged != null) {
-                 
+
                     _sendData = new byte[8];
                     Array.Copy(data, 6, _sendData, 0, 8);
                     SendDataChanged(this);
                 }
 
                 data = new byte[2100];
-                readBuffer = new byte[256];
+                _readBuffer = new byte[256];
                 DateTime dateTimeSend = DateTime.Now;
                 byte receivedUnitIdentifier = 0xFF;
 
-                while (receivedUnitIdentifier != this._unitIdentifier 
-                      & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout)) {
+                Int64 timeoutInTicks = TimeSpan.TicksPerMillisecond * this._connectTimeoutMs;
 
-                    while (dataReceived == false & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout)) {
-                     
+                while (receivedUnitIdentifier != this._unitIdentifier
+                      & ((DateTime.Now.Ticks - dateTimeSend.Ticks) <= timeoutInTicks)) {
+
+                    while (_dataReceived == false
+                        & ((DateTime.Now.Ticks - dateTimeSend.Ticks) <= timeoutInTicks)) {
+
                         System.Threading.Thread.Sleep(1);
                     }
 
                     data = new byte[2100];
-                    Array.Copy(readBuffer, 0, data, 6, readBuffer.Length);
+                    Array.Copy(_readBuffer, 0, data, 6, _readBuffer.Length);
                     receivedUnitIdentifier = data[6];
                 }
                 if (receivedUnitIdentifier != this._unitIdentifier)
@@ -1063,9 +1052,9 @@ namespace ModeBusHandler
                     _countRetries = 0;
             }
             else if (_tcpClient.Client.Connected | _udpFlag) {
- 
+
                 if (_udpFlag) {
-                
+
                     UdpClient udpClient = new UdpClient();
                     IPEndPoint endPoint = new IPEndPoint(System.Net.IPAddress.Parse(_ipAddress), _port);
                     udpClient.Send(data, data.Length - 2, endPoint);
@@ -1078,16 +1067,16 @@ namespace ModeBusHandler
                     stream.Write(data, 0, data.Length - 2);
 
                     if (SendDataChanged != null) {
-                    
+
                         _sendData = new byte[data.Length - 2];
                         Array.Copy(data, 0, _sendData, 0, data.Length - 2);
                         SendDataChanged(this);
                     }
                     data = new Byte[2100];
                     int NumberOfBytes = stream.Read(data, 0, data.Length);
-                    
+
                     if (ReceiveDataChanged != null) {
-                    
+
                         _receiveData = new byte[NumberOfBytes];
                         Array.Copy(data, 0, _receiveData, 0, NumberOfBytes);
                         // if (debug) StoreLogData.Instance.Store("Receive ModbusTCP-Data: " + BitConverter.ToString(receiveData), System.DateTime.Now);
@@ -1095,46 +1084,31 @@ namespace ModeBusHandler
                     }
                 }
             }
-            if (data[7] == 0x82 & data[8] == 0x01) {
-                
-                LastError = "Function code not supported by master";
+
+            if (ErrorDetected(response: data, functionCode: functionCode)) {
                 return false;
             }
-            if (data[7] == 0x82 & data[8] == 0x02) {
-                
-                LastError = "Starting address invalid or starting address + quantity invalid";
-                return false;
-            }
-            if (data[7] == 0x82 & data[8] == 0x03) {
-                // if (debug) StoreLogData.Instance.Store("QuantityInvalidException Throwed", System.DateTime.Now);
-                LastError = "quantity invalid";
-                return false;
-            }
-            if (data[7] == 0x82 & data[8] == 0x04) {
-                
-                LastError = "error reading";
-                return false;
-            }
+
             if (_serialPort != null) {
 
                 _crc = BitConverter.GetBytes(calculateCRC(data, (ushort)(data[8] + 3), 6));
-                
-                if ((_crc[0] != data[data[8] + 9] | _crc[1] != data[data[8] + 10]) & dataReceived) {
-                         
+
+                if ((_crc[0] != data[data[8] + 9] | _crc[1] != data[data[8] + 10]) & _dataReceived) {
+
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
-                        LastError = "Response CRC check failed";
+                        _log.Error("Response CRC check failed");
                     }
                     else {
                         _countRetries++;
                         return ReadDiscreteInputs(startingAddress, quantity, out response, functionCode);
                     }
                 }
-                else if (!dataReceived) {
-                   
+                else if (!_dataReceived) {
+
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
-                        LastError = "No Response from Modbus Slave";
+                        _log.Error("No Response from Modbus Slave");
                     }
                     else {
                         _countRetries++;
@@ -1143,11 +1117,11 @@ namespace ModeBusHandler
                 }
             }
             response = new bool[quantity];
-            
+
             for (int i = 0; i < quantity; i++) {
-            
-                int intData = data[9+i/8];
-                int mask = Convert.ToInt32(Math.Pow(2, (i%8)));
+
+                int intData = data[9 + i / 8];
+                int mask = Convert.ToInt32(Math.Pow(2, (i % 8)));
                 response[i] = Convert.ToBoolean((intData & mask) / mask);
             }
 
@@ -1162,34 +1136,24 @@ namespace ModeBusHandler
         /// <param name="quantity">Numer of coils to read</param>
         ///  <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x01 by deafult.</param>
         /// <returns>Boolean Array which contains the coils</returns>
-        public bool ReadCoils(int startingAddress, int quantity, out bool[] coils, int functionCode = 0x01)
-        {
+        public bool ReadCoils(int startingAddress, int quantity, out bool[] coils, int functionCode = 0x01) {
             coils = null;
             _transactionIdentifierInternal++;
 
-            if (_serialPort != null) {
-                if (!_serialPort.IsOpen) {
-                     LastError = "serial port not opened";
-                    return false;
-                }
-            }
-
-            if (_tcpClient == null & !_udpFlag & _serialPort == null) {
-
-                LastError = "connection error";
+            if (!ConnectionIsOpen()) {
                 return false;
             }
 
-           if (startingAddress > 65535 | quantity > 2000) {
+            if (startingAddress > 65535 | quantity > 2000) {
 
-               LastError = "Starting address must be 0 - 65535; quantity must be 0 - 2000";
-               return false;
-           }
-  
+                _log.Error("Starting address must be 0 - 65535; quantity must be 0 - 2000");
+                return false;
+            }
+
             this._transactionIdentifier = BitConverter.GetBytes((uint)_transactionIdentifierInternal);
             this._protocolIdentifier = BitConverter.GetBytes((int)0x0000);
             this._length = BitConverter.GetBytes((int)0x0006);
-            this._functionCode = (byte) functionCode;
+            this._functionCode = (byte)functionCode;
             this._startingAddress = BitConverter.GetBytes(startingAddress);
             this._quantity = BitConverter.GetBytes(quantity);
             Byte[] data = new byte[]{
@@ -1213,11 +1177,11 @@ namespace ModeBusHandler
             data[12] = _crc[0];
             data[13] = _crc[1];
             if (_serialPort != null) {
-                dataReceived = false;
+                _dataReceived = false;
                 if (quantity % 8 == 0)
-                    bytesToRead = 5 + quantity / 8;
+                    _bytesToRead = 5 + quantity / 8;
                 else
-                    bytesToRead = 6 + quantity / 8;
+                    _bytesToRead = 6 + quantity / 8;
                 //               serialport.ReceivedBytesThreshold = bytesToRead;
                 _serialPort.Write(data, 6, 8);
 
@@ -1228,15 +1192,15 @@ namespace ModeBusHandler
 
                 }
                 data = new byte[2100];
-                readBuffer = new byte[256];
+                _readBuffer = new byte[256];
                 DateTime dateTimeSend = DateTime.Now;
                 byte receivedUnitIdentifier = 0xFF;
-                while (receivedUnitIdentifier != this._unitIdentifier & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout)) {
-                    while (dataReceived == false & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout))
+                while (receivedUnitIdentifier != this._unitIdentifier & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeoutMs)) {
+                    while (_dataReceived == false & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeoutMs))
                         System.Threading.Thread.Sleep(1);
                     data = new byte[2100];
 
-                    Array.Copy(readBuffer, 0, data, 6, readBuffer.Length);
+                    Array.Copy(_readBuffer, 0, data, 6, _readBuffer.Length);
                     receivedUnitIdentifier = data[6];
                 }
                 if (receivedUnitIdentifier != this._unitIdentifier)
@@ -1273,28 +1237,16 @@ namespace ModeBusHandler
                     }
                 }
             }
-            if (data[7] == 0x81 & data[8] == 0x01) {
 
-                LastError = "Function code not supported by master";
+            if (ErrorDetected(response: data, functionCode: functionCode)) {
                 return false;
             }
-            if (data[7] == 0x81 & data[8] == 0x02) {
-                LastError = "Starting address invalid or starting address + quantity invalid";
-                return false;
-            }
-            if (data[7] == 0x81 & data[8] == 0x03) {
-                LastError = "quantity invalid";
-                return false;
-            }
-            if (data[7] == 0x81 & data[8] == 0x04) {
-                LastError = "error reading";
-                return false;
-            }
+
             if (_serialPort != null) {
 
                 _crc = BitConverter.GetBytes(calculateCRC(data, (ushort)(data[8] + 3), 6));
-                
-                if ((_crc[0] != data[data[8] + 9] | _crc[1] != data[data[8] + 10]) & dataReceived) {
+
+                if ((_crc[0] != data[data[8] + 9] | _crc[1] != data[data[8] + 10]) & _dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("CRCCheckFailedException Throwed", System.DateTime.Now);
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
@@ -1305,11 +1257,11 @@ namespace ModeBusHandler
                         return ReadCoils(startingAddress, quantity, out coils, functionCode);
                     }
                 }
-                else if (!dataReceived) {
+                else if (!_dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("TimeoutException Throwed", System.DateTime.Now);
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
-                        LastError = "No Response from Modbus Slave";
+                        _log.Error("No Response from Modbus Slave");
                         return false;
                     }
                     else {
@@ -1320,8 +1272,8 @@ namespace ModeBusHandler
             }
             coils = new bool[quantity];
             for (int i = 0; i < quantity; i++) {
-                int intData = data[9+i/8];
-                int mask = Convert.ToInt32(Math.Pow(2, (i%8)));
+                int intData = data[9 + i / 8];
+                int mask = Convert.ToInt32(Math.Pow(2, (i % 8)));
                 coils[i] = Convert.ToBoolean((intData & mask) / mask);
             }
             return true;
@@ -1334,34 +1286,24 @@ namespace ModeBusHandler
         /// <param name="quantity">Number of holding registers to be read</param>
         /// <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x03 by deafult.</param>
         /// <returns>Int Array which contains the holding registers</returns>
-        public bool ReadHoldingRegisters(int startingAddress, int quantity, out int[] registers, int functionCode = 0x03)
-        {
+        public bool ReadHoldingRegisters(int startingAddress, int quantity, out int[] registers, int functionCode = 0x03) {
             registers = null;
             _transactionIdentifierInternal++;
 
-            if (_serialPort != null) {
-                if (!_serialPort.IsOpen) {
-
-                    LastError = "serial port not opened";
-                    return false;
-                }
-            }
-
-            if (_tcpClient == null & !_udpFlag & _serialPort == null) {
-               
-                LastError = "connection error";
+            if (!ConnectionIsOpen()) {
                 return false;
             }
+
             if (startingAddress > 65535 | quantity > 125) {
-                
-                LastError = "Starting address must be 0 - 65535; quantity must be 0 - 125";
+
+                _log.Error("Starting address must be 0 - 65535; quantity must be 0 - 125");
                 return false;
             }
-    
+
             this._transactionIdentifier = BitConverter.GetBytes((uint)_transactionIdentifierInternal);
             this._protocolIdentifier = BitConverter.GetBytes((int)0x0000);
             this._length = BitConverter.GetBytes((int)0x0006);
-            this._functionCode = (byte) functionCode;
+            this._functionCode = (byte)functionCode;
             this._startingAddress = BitConverter.GetBytes(startingAddress);
             this._quantity = BitConverter.GetBytes(quantity);
             Byte[] data = new byte[]{   this._transactionIdentifier[1],
@@ -1383,8 +1325,8 @@ namespace ModeBusHandler
             data[12] = _crc[0];
             data[13] = _crc[1];
             if (_serialPort != null) {
-                dataReceived = false;
-                bytesToRead = 5 + 2 * quantity;
+                _dataReceived = false;
+                _bytesToRead = 5 + 2 * quantity;
                 //                serialport.ReceivedBytesThreshold = bytesToRead;
                 _serialPort.Write(data, 6, 8);
 
@@ -1395,15 +1337,15 @@ namespace ModeBusHandler
 
                 }
                 data = new byte[2100];
-                readBuffer = new byte[256];
+                _readBuffer = new byte[256];
 
                 DateTime dateTimeSend = DateTime.Now;
                 byte receivedUnitIdentifier = 0xFF;
-                while (receivedUnitIdentifier != this._unitIdentifier & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout)) {
-                    while (dataReceived == false & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout))
+                while (receivedUnitIdentifier != this._unitIdentifier & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeoutMs)) {
+                    while (_dataReceived == false & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeoutMs))
                         System.Threading.Thread.Sleep(1);
                     data = new byte[2100];
-                    Array.Copy(readBuffer, 0, data, 6, readBuffer.Length);
+                    Array.Copy(_readBuffer, 0, data, 6, _readBuffer.Length);
 
                     receivedUnitIdentifier = data[6];
                 }
@@ -1441,36 +1383,21 @@ namespace ModeBusHandler
                     }
                 }
             }
-            if (data[7] == 0x83 & data[8] == 0x01) {
-                
-                LastError = "Function code not supported by master";
-                return false;
-            }
-            if (data[7] == 0x83 & data[8] == 0x02) {
 
-                LastError = "Starting address invalid or starting address + quantity invalid";
+            if (ErrorDetected(response: data, functionCode: functionCode)) {
                 return false;
             }
-            if (data[7] == 0x83 & data[8] == 0x03) {
 
-                LastError = "quantity invalid";
-                return false;
-            }
-            if (data[7] == 0x83 & data[8] == 0x04) {
-
-                LastError = "error reading";
-                return false;
-            }
             if (_serialPort != null) {
-                
+
                 _crc = BitConverter.GetBytes(calculateCRC(data, (ushort)(data[8] + 3), 6));
-                
-                if ((_crc[0] != data[data[8] + 9] | _crc[1] != data[data[8] + 10]) & dataReceived) {
-                   
+
+                if ((_crc[0] != data[data[8] + 9] | _crc[1] != data[data[8] + 10]) & _dataReceived) {
+
                     if (NumberOfRetries <= _countRetries) {
-                        
+
                         _countRetries = 0;
-                        LastError = "Response CRC check failed";
+                        _log.Error("Response CRC check failed");
                         return false;
                     }
                     else {
@@ -1478,12 +1405,12 @@ namespace ModeBusHandler
                         return ReadHoldingRegisters(startingAddress, quantity, out registers);
                     }
                 }
-                else if (!dataReceived) {
+                else if (!_dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("TimeoutException Throwed", System.DateTime.Now);
                     if (NumberOfRetries <= _countRetries) {
-                        
+
                         _countRetries = 0;
-                        LastError = "No Response from Modbus Slave";
+                        _log.Error("No Response from Modbus Slave");
                         return false;
                     }
                     else {
@@ -1494,7 +1421,7 @@ namespace ModeBusHandler
             }
 
             registers = new int[quantity];
-            
+
             for (int i = 0; i < quantity; i++) {
                 byte lowByte;
                 byte highByte;
@@ -1510,24 +1437,22 @@ namespace ModeBusHandler
             return true;
         }
 
-        public bool ReadSingle16bitRegister( int address, out ushort value, int functionCode = 0x03)
-        {
-            if ( ReadInputRegisters(address, 1 , out int[] response, functionCode)) {
-                value = (ushort) response[0];
+        public bool ReadSingle16bitRegister(int address, out ushort value, int functionCode = 0x03) {
+            if (ReadInputRegisters(address, 1, out int[] response, functionCode)) {
+                value = (ushort)response[0];
                 return true;
             }
             value = ushort.MaxValue;
             return false;
         }
 
-        public bool ReadSingle32bitRegister(int address, out int value, int functionCode = 0x03)
-        {
-            if (ReadInputRegisters(address, 2, out int[] response, functionCode) 
-                && ConvertRegistersToInt(response, out value)) {        
-                    return true;
+        public bool ReadSingle32bitRegister(int address, out int value, int functionCode = 0x03) {
+            if (ReadInputRegisters(address, 2, out int[] response, functionCode)
+                && ConvertRegistersToInt(response, out value)) {
+                return true;
             }
             value = int.MaxValue;
-           return false;
+            return false;
         }
 
         /// <summary>
@@ -1537,26 +1462,25 @@ namespace ModeBusHandler
         /// <param name="quantity">Number of input registers to be read</param>
         /// <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x03 by deafult.</param>
         /// <returns>Int Array which contains the input registers</returns>
-        public bool ReadInputRegisters(int startingAddress, int quantity, out int[] response, int functionCode = 0x03)
-        {
+        public bool ReadInputRegisters(int startingAddress, int quantity, out int[] response, int functionCode = 0x03) {
             response = null;
 
             _transactionIdentifierInternal++;
 
             if (_serialPort != null)
                 if (!_serialPort.IsOpen) {
-                    
-                    LastError = "serial port not opened";
+
+                    _log.Error("serial port not opened");
                     return false;
                 }
             if (_tcpClient == null & !_udpFlag & _serialPort == null) {
-                
-                LastError = "connection error";
+
+                _log.Error("connection error");
                 return false;
             }
             if (startingAddress > 65535 | quantity > 125) {
-                
-                LastError = "Starting address must be 0 - 65535; quantity must be 0 - 125";
+
+                _log.Error("Starting address must be 0 - 65535; quantity must be 0 - 125");
                 return false;
             }
 
@@ -1585,8 +1509,8 @@ namespace ModeBusHandler
             data[12] = _crc[0];
             data[13] = _crc[1];
             if (_serialPort != null) {
-                dataReceived = false;
-                bytesToRead = 5 + 2 * quantity;
+                _dataReceived = false;
+                _bytesToRead = 5 + 2 * quantity;
 
 
                 //               serialport.ReceivedBytesThreshold = bytesToRead;
@@ -1599,15 +1523,15 @@ namespace ModeBusHandler
 
                 }
                 data = new byte[2100];
-                readBuffer = new byte[256];
+                _readBuffer = new byte[256];
                 DateTime dateTimeSend = DateTime.Now;
                 byte receivedUnitIdentifier = 0xFF;
 
-                while (receivedUnitIdentifier != this._unitIdentifier & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout)) {
-                    while (dataReceived == false & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout))
+                while (receivedUnitIdentifier != this._unitIdentifier & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeoutMs)) {
+                    while (_dataReceived == false & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeoutMs))
                         System.Threading.Thread.Sleep(1);
                     data = new byte[2100];
-                    Array.Copy(readBuffer, 0, data, 6, readBuffer.Length);
+                    Array.Copy(_readBuffer, 0, data, 6, _readBuffer.Length);
                     receivedUnitIdentifier = data[6];
                 }
 
@@ -1642,41 +1566,26 @@ namespace ModeBusHandler
 
                         _receiveData = new byte[NumberOfBytes];
                         Array.Copy(data, 0, _receiveData, 0, NumberOfBytes);
-                        
+
                         ReceiveDataChanged(this);
                     }
 
                 }
             }
-            if (data[7] == 0x84 & data[8] == 0x01) {
-                
-                LastError = "Function code not supported by master";
-                return false;
-            }
-            if (data[7] == 0x84 & data[8] == 0x02) {
 
-                LastError = "Starting address invalid or starting address + quantity invalid";
+            if (ErrorDetected(response: data, functionCode: functionCode)) {
                 return false;
             }
-            if (data[7] == 0x84 & data[8] == 0x03) {
 
-                LastError = "quantity invalid";
-                return false;
-            }
-            if (data[7] == 0x84 & data[8] == 0x04) {
-                
-                LastError = "error reading";
-                return false;
-            }
             if (_serialPort != null) {
 
                 _crc = BitConverter.GetBytes(calculateCRC(data, (ushort)(data[8] + 3), 6));
-                
-                if ((_crc[0] != data[data[8] + 9] | _crc[1] != data[data[8] + 10]) & dataReceived) {
-                    
+
+                if ((_crc[0] != data[data[8] + 9] | _crc[1] != data[data[8] + 10]) & _dataReceived) {
+
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
-                        LastError = "Response CRC check failed";
+                        _log.Error("Response CRC check failed");
                         return false;
                     }
                     else {
@@ -1684,20 +1593,21 @@ namespace ModeBusHandler
                         return ReadInputRegisters(startingAddress, quantity, out response, functionCode);
                     }
                 }
-                else if (!dataReceived) {
-                    
+                else if (!_dataReceived) {
+
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
-                        LastError = "No Response from Modbus Slave";
+                        _log.Error("No Response from Modbus Slave");
                         return false;
                     }
                     else {
                         _countRetries++;
-                        return ReadInputRegisters(startingAddress, quantity, out response,functionCode);
+                        return ReadInputRegisters(startingAddress, quantity, out response, functionCode);
                     }
 
                 }
             }
+
             response = new int[quantity];
             for (int i = 0; i < quantity; i++) {
                 byte lowByte;
@@ -1722,28 +1632,18 @@ namespace ModeBusHandler
         /// <param name="startingAddress">Coil to be written</param>
         /// <param name="value">Coil Value to be written</param>
         /// <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x05 by deafult.</param>
-        public void WriteSingleCoil(int startingAddress, bool value, int functionCode = 0x05)
-        {
+        public bool WriteSingleCoil(int startingAddress, bool value, int functionCode = 0x05) {
 
-            // if (debug) StoreLogData.Instance.Store("FC5 (Write single coil to Master device), StartingAddress: "+ startingAddress+", Value: " + value, System.DateTime.Now);
             _transactionIdentifierInternal++;
-            if (_serialPort != null) {
-
-                if (!_serialPort.IsOpen) {
-                    // if (debug) StoreLogData.Instance.Store("SerialPortNotOpenedException Throwed", System.DateTime.Now);
-                    throw new ModeBusHandler.Exceptions.SerialPortNotOpenedException("serial port not opened");
-                }
-            }
-            if (_tcpClient == null & !_udpFlag & _serialPort == null) {
-                // if (debug) StoreLogData.Instance.Store("ConnectionException Throwed", System.DateTime.Now);
-                throw new ModeBusHandler.Exceptions.ConnectionException("connection error");
+            if (!ConnectionIsOpen()) {
+                return false;
             }
 
             byte[] coilValue = new byte[2];
             this._transactionIdentifier = BitConverter.GetBytes((uint)_transactionIdentifierInternal);
             this._protocolIdentifier = BitConverter.GetBytes((int)0x0000);
             this._length = BitConverter.GetBytes((int)0x0006);
-            this._functionCode = (byte) functionCode;
+            this._functionCode = (byte)functionCode;
             this._startingAddress = BitConverter.GetBytes(startingAddress);
 
             if (value == true) {
@@ -1774,28 +1674,34 @@ namespace ModeBusHandler
 
             if (_serialPort != null) {
 
-                dataReceived = false;
-                bytesToRead = 8;
-                //               serialport.ReceivedBytesThreshold = bytesToRead;
+                _dataReceived = false;
+                _bytesToRead = 8;
+
                 _serialPort.Write(data, 6, 8);
 
                 if (SendDataChanged != null) {
                     _sendData = new byte[8];
                     Array.Copy(data, 6, _sendData, 0, 8);
                     SendDataChanged(this);
-
                 }
 
                 data = new byte[2100];
-                readBuffer = new byte[256];
+                _readBuffer = new byte[256];
                 DateTime dateTimeSend = DateTime.Now;
                 byte receivedUnitIdentifier = 0xFF;
 
-                while (receivedUnitIdentifier != this._unitIdentifier & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout)) {
-                    while (dataReceived == false & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout))
+                while (receivedUnitIdentifier != this._unitIdentifier
+                      & !((DateTime.Now.Ticks - dateTimeSend.Ticks)
+                          > TimeSpan.TicksPerMillisecond * this._connectTimeoutMs)) {
+
+                    while (_dataReceived == false &
+                        !((DateTime.Now.Ticks - dateTimeSend.Ticks)
+                          > TimeSpan.TicksPerMillisecond * this._connectTimeoutMs))
+
                         System.Threading.Thread.Sleep(1);
+
                     data = new byte[2100];
-                    Array.Copy(readBuffer, 0, data, 6, readBuffer.Length);
+                    Array.Copy(_readBuffer, 0, data, 6, _readBuffer.Length);
                     receivedUnitIdentifier = data[6];
                 }
 
@@ -1829,56 +1735,42 @@ namespace ModeBusHandler
                     }
                     data = new Byte[2100];
                     int NumberOfBytes = stream.Read(data, 0, data.Length);
+
                     if (ReceiveDataChanged != null) {
+
                         _receiveData = new byte[NumberOfBytes];
                         Array.Copy(data, 0, _receiveData, 0, NumberOfBytes);
-                        // if (debug) StoreLogData.Instance.Store("Receive ModbusTCP-Data: " + BitConverter.ToString(receiveData), System.DateTime.Now);
                         ReceiveDataChanged(this);
                     }
                 }
             }
 
-            if (data[7] == 0x85 & data[8] == 0x01) {
-                // if (debug) StoreLogData.Instance.Store("FunctionCodeNotSupportedException Throwed", System.DateTime.Now);
-                throw new ModeBusHandler.Exceptions.FunctionCodeNotSupportedException("Function code not supported by master");
-            }
-
-            if (data[7] == 0x85 & data[8] == 0x02) {
-                // if (debug) StoreLogData.Instance.Store("StartingAddressInvalidException Throwed", System.DateTime.Now);
-                throw new ModeBusHandler.Exceptions.StartingAddressInvalidException("Starting address invalid or starting address + quantity invalid");
-            }
-
-            if (data[7] == 0x85 & data[8] == 0x03) {
-                // if (debug) StoreLogData.Instance.Store("QuantityInvalidException Throwed", System.DateTime.Now);
-                throw new ModeBusHandler.Exceptions.QuantityInvalidException("quantity invalid");
-            }
-
-            if (data[7] == 0x85 & data[8] == 0x04) {
-                // if (debug) StoreLogData.Instance.Store("ModbusException Throwed", System.DateTime.Now);
-                throw new ModeBusHandler.Exceptions.ModbusException("error reading");
+            if (ErrorDetected(response: data, functionCode: functionCode)) {
+                return false;
             }
 
             if (_serialPort != null) {
 
                 _crc = BitConverter.GetBytes(calculateCRC(data, 6, 6));
 
-                if ((_crc[0] != data[12] | _crc[1] != data[13]) & dataReceived) {
-                    // if (debug) StoreLogData.Instance.Store("CRCCheckFailedException Throwed", System.DateTime.Now);
+                if ((_crc[0] != data[12] | _crc[1] != data[13]) & _dataReceived) {
+
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
-                        throw new ModeBusHandler.Exceptions.CRCCheckFailedException("Response CRC check failed");
+                        _log.Error("Response CRC check failed");
+                        return false;
                     }
                     else {
                         _countRetries++;
                         WriteSingleCoil(startingAddress, value, functionCode);
                     }
                 }
-                else if (!dataReceived) {
+                else if (!_dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("TimeoutException Throwed", System.DateTime.Now);
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
-                        throw new TimeoutException("No Response from Modbus Slave");
-
+                        _log.Error("No Response from Modbus Slave");
+                        return false;
                     }
                     else {
                         _countRetries++;
@@ -1886,8 +1778,8 @@ namespace ModeBusHandler
                     }
                 }
             }
+            return true;
         }
-
 
 
         /// <summary>
@@ -1896,34 +1788,25 @@ namespace ModeBusHandler
         /// <param name="startingAddress">Register to be written</param>
         /// <param name="value">Register Value to be written</param>
         /// <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x06 by deafult.</param>
-        public bool WriteSingle16bitRegister(int startingAddress, ushort value, int functionCode = 0x06)
-        {
+        public bool WriteSingle16bitRegister(int startingAddress, ushort value, int functionCode = 0x06) {
             // if (debug) StoreLogData.Instance.Store("FC6 (Write single register to Master device), StartingAddress: "+ startingAddress+", Value: " + value, System.DateTime.Now);
             _transactionIdentifierInternal++;
 
-            if (_serialPort != null) {
-                if (!_serialPort.IsOpen) {
-                    LastError = "serial port not opened";
-                    return false;
-                }
-            }
-
-            if (_tcpClient == null & !_udpFlag & _serialPort == null) {
-                LastError = "connection error";
+            if (!ConnectionIsOpen()) {
                 return false;
             }
 
             byte[] registerValue = new byte[2];
-            this._transactionIdentifier = 
+            this._transactionIdentifier =
                 BitConverter.GetBytes((uint)_transactionIdentifierInternal);
-            this._protocolIdentifier = 
+            this._protocolIdentifier =
                 BitConverter.GetBytes((int)0x0000);
-            this._length = 
+            this._length =
                 BitConverter.GetBytes((int)0x0006);
-            this._functionCode = (byte) functionCode;
-            this._startingAddress = 
+            this._functionCode = (byte)functionCode;
+            this._startingAddress =
                 BitConverter.GetBytes(startingAddress);
-            registerValue = 
+            registerValue =
                 BitConverter.GetBytes(value);
 
             Byte[] data = new byte[]{   this._transactionIdentifier[1],
@@ -1948,9 +1831,9 @@ namespace ModeBusHandler
 
             if (_serialPort != null) {
 
-                dataReceived = false;
-                bytesToRead = 8;
-                //                serialport.ReceivedBytesThreshold = bytesToRead;
+                _dataReceived = false;
+                _bytesToRead = 8;
+                // serialport.ReceivedBytesThreshold = bytesToRead;
                 _serialPort.Write(data, 6, 8);
 
                 if (SendDataChanged != null) {
@@ -1960,22 +1843,22 @@ namespace ModeBusHandler
                 }
 
                 data = new byte[2100];
-                readBuffer = new byte[256];
+                _readBuffer = new byte[256];
                 DateTime dateTimeSend = DateTime.Now;
                 byte receivedUnitIdentifier = 0xFF;
 
-                while (receivedUnitIdentifier != this._unitIdentifier 
-                      & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > 
-                           TimeSpan.TicksPerMillisecond * this._connectTimeout)) {
+                while (receivedUnitIdentifier != this._unitIdentifier
+                      & !((DateTime.Now.Ticks - dateTimeSend.Ticks) >
+                           TimeSpan.TicksPerMillisecond * this._connectTimeoutMs)) {
 
-                    while (dataReceived == false 
-                           & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > 
-                                TimeSpan.TicksPerMillisecond * this._connectTimeout)) {
+                    while (_dataReceived == false
+                           & !((DateTime.Now.Ticks - dateTimeSend.Ticks) >
+                                TimeSpan.TicksPerMillisecond * this._connectTimeoutMs)) {
                         System.Threading.Thread.Sleep(1);
                     }
 
                     data = new byte[2100];
-                    Array.Copy(readBuffer, 0, data, 6, readBuffer.Length);
+                    Array.Copy(_readBuffer, 0, data, 6, _readBuffer.Length);
                     receivedUnitIdentifier = data[6];
                 }
 
@@ -2018,7 +1901,7 @@ namespace ModeBusHandler
                 }
             }
 
-            if ( !DataIsCosher(data) ) {
+            if (ErrorDetected(response: data, functionCode: functionCode)) {
                 return false;
             }
 
@@ -2026,11 +1909,11 @@ namespace ModeBusHandler
 
                 _crc = BitConverter.GetBytes(calculateCRC(data, 6, 6));
 
-                if ((_crc[0] != data[12] | _crc[1] != data[13]) & dataReceived) {
-                    // if (debug) StoreLogData.Instance.Store("CRCCheckFailedException Throwed", System.DateTime.Now);
+                if ((_crc[0] != data[12] | _crc[1] != data[13]) & _dataReceived) {
+
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
-                        LastError = "Response CRC check failed";
+                        _log.Error("Response CRC check failed");
                         return false;
                     }
                     else {
@@ -2038,11 +1921,11 @@ namespace ModeBusHandler
                         WriteSingle32bitRegister(startingAddress, value);
                     }
                 }
-                else if (!dataReceived) {
-                    // if (debug) StoreLogData.Instance.Store("TimeoutException Throwed", System.DateTime.Now);
+                else if (!_dataReceived) {
+
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
-                        LastError = "No Response from Modbus Slave";
+                        _log.Error("No Response from Modbus Slave");
                         return false;
                     }
                     else {
@@ -2055,44 +1938,45 @@ namespace ModeBusHandler
         }
 
 
-        internal bool DataIsCosher(byte[] data, bool useExceptions = false)
-        {
-            if (data[7] == 0x86) {
-                switch (data[8]) {
+        internal bool ErrorDetected(byte[] response, int functionCode, bool useExceptions = false) {
+            if (response[7] == _ErrorSignature + Convert.ToByte(functionCode)) {
+
+                switch (response[8]) {
                     case 0x01:
-                        LastError = "Function code not supported by master";
+                        _log.Error("Function code not supported by master");
                         if (useExceptions) {
                             throw new Exception(LastError);
                         }
-                        return false;
+                        return true;
 
                     case 0x02:
-                        LastError = "Starting address invalid or " +
-                            "starting address + quantity invalid";
+                        _log.Error("Starting address invalid or " +
+                            "starting address + quantity invalid");
                         if (useExceptions) {
                             throw new Exception(LastError);
                         }
-                        return false;
+                        return true;
 
                     case 0x03:
-                        LastError = "Quantity invalid.";
+                        _log.Error("Quantity invalid.");
                         if (useExceptions) {
                             throw new Exception(LastError);
                         }
-                        return false;
+                        return true;
 
                     case 0x04:
-                        LastError = "Error reading";
+                        _log.Error("Error reading");
                         if (useExceptions) {
                             throw new Exception(LastError);
                         }
-                        return false;
-
-                    default : 
                         return true;
+
+                    default:
+                        return false;
                 }
             }
-            return true;
+
+            return false;
         }
 
 
@@ -2102,23 +1986,11 @@ namespace ModeBusHandler
         /// <param name="startingAddress">Register to be written</param>
         /// <param name="value">Register Value to be written</param>
         /// <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x06 by deafult.</param>
-        public bool WriteSingle32bitRegister(int startingAddress, int value, int functionCode = 0x06)
-        {
+        public bool WriteSingle32bitRegister(int startingAddress, int value, int functionCode = 0x06) {
             // if (debug) StoreLogData.Instance.Store("FC6 (Write single register to Master device), StartingAddress: "+ startingAddress+", Value: " + value, System.DateTime.Now);
             _transactionIdentifierInternal++;
 
-            if (_serialPort != null) {
-
-                if (!_serialPort.IsOpen) {
-
-                    LastError = "serial port not opened";
-                    return false;
-                }
-            }
-
-            if (_tcpClient == null & !_udpFlag & _serialPort == null) {
-                
-                LastError = "connection error";
+            if (!ConnectionIsOpen()) {
                 return false;
             }
 
@@ -2152,8 +2024,8 @@ namespace ModeBusHandler
 
             if (_serialPort != null) {
 
-                dataReceived = false;
-                bytesToRead = 8;
+                _dataReceived = false;
+                _bytesToRead = 8;
                 //                serialport.ReceivedBytesThreshold = bytesToRead;
                 _serialPort.Write(data, 6, 8);
 
@@ -2165,19 +2037,19 @@ namespace ModeBusHandler
 
                 }
                 data = new byte[2100];
-                readBuffer = new byte[256];
+                _readBuffer = new byte[256];
                 DateTime dateTimeSend = DateTime.Now;
                 byte receivedUnitIdentifier = 0xFF;
 
-                while ( receivedUnitIdentifier != this._unitIdentifier & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout)) {
-                    
-                    while (dataReceived == false & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout)) { 
-                    
-                        System.Threading.Thread.Sleep(1); 
+                while (receivedUnitIdentifier != this._unitIdentifier & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeoutMs)) {
+
+                    while (_dataReceived == false & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeoutMs)) {
+
+                        System.Threading.Thread.Sleep(1);
                     }
-              
+
                     data = new byte[2100];
-                    Array.Copy(readBuffer, 0, data, 6, readBuffer.Length);
+                    Array.Copy(_readBuffer, 0, data, 6, _readBuffer.Length);
                     receivedUnitIdentifier = data[6];
                 }
 
@@ -2190,9 +2062,9 @@ namespace ModeBusHandler
                 }
             }
             else if (_tcpClient.Client.Connected | _udpFlag) {
-                
+
                 if (_udpFlag) {
-                
+
                     UdpClient udpClient = new UdpClient();
                     IPEndPoint endPoint = new IPEndPoint(System.Net.IPAddress.Parse(_ipAddress), _port);
                     udpClient.Send(data, data.Length - 2, endPoint);
@@ -2206,7 +2078,7 @@ namespace ModeBusHandler
                     stream.Write(data, 0, data.Length - 2);
 
                     if (SendDataChanged != null) {
-                    
+
                         _sendData = new byte[data.Length - 2];
                         Array.Copy(data, 0, _sendData, 0, data.Length - 2);
                         SendDataChanged(this);
@@ -2214,9 +2086,9 @@ namespace ModeBusHandler
 
                     data = new Byte[2100];
                     int NumberOfBytes = stream.Read(data, 0, data.Length);
-                    
+
                     if (ReceiveDataChanged != null) {
-                        
+
                         _receiveData = new byte[NumberOfBytes];
                         Array.Copy(data, 0, _receiveData, 0, NumberOfBytes);
                         ReceiveDataChanged(this);
@@ -2224,32 +2096,19 @@ namespace ModeBusHandler
                 }
             }
 
-            if (data[7] == 0x86 & data[8] == 0x01) {
-                LastError = "Function code not supported by master";
+            if (ErrorDetected(response: data, functionCode: functionCode)) {
                 return false;
             }
 
-            if (data[7] == 0x86 & data[8] == 0x02) {
-                LastError = "Starting address invalid or starting address + quantity invalid";
-                return false;
-            }
-
-            if (data[7] == 0x86 & data[8] == 0x03) {
-                LastError = "quantity invalid";
-            }
-            if (data[7] == 0x86 & data[8] == 0x04) {
-                LastError = "error reading";
-                return false;
-            }
             if (_serialPort != null) {
 
                 _crc = BitConverter.GetBytes(calculateCRC(data, 6, 6));
-               
-                if ((_crc[0] != data[12] | _crc[1] != data[13]) & dataReceived) {
+
+                if ((_crc[0] != data[12] | _crc[1] != data[13]) & _dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("CRCCheckFailedException Throwed", System.DateTime.Now);
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
-                        LastError = "Response CRC check failed";
+                        _log.Error("Response CRC check failed");
                         return false;
                     }
                     else {
@@ -2257,11 +2116,11 @@ namespace ModeBusHandler
                         WriteSingle32bitRegister(startingAddress, value);
                     }
                 }
-                else if (!dataReceived) {
+                else if (!_dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("TimeoutException Throwed", System.DateTime.Now);
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
-                        LastError = "No Response from Modbus Slave";
+                        _log.Error("No Response from Modbus Slave");
                         return false;
                     }
                     else {
@@ -2280,28 +2139,20 @@ namespace ModeBusHandler
         /// <param name="startingAddress">First coil to be written</param>
         /// <param name="values">Coil Values to be written</param>
         /// <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x0F by deafult.</param>
-        public bool WriteMultipleCoils(int startingAddress, bool[] values, int functionCode = 0x0F)
-        {
+        public bool WriteMultipleCoils(int startingAddress, bool[] values, int functionCode = 0x0F) {
             string debugString = "";
             for (int i = 0; i < values.Length; i++)
                 debugString = debugString + values[i] + " ";
             // if (debug) StoreLogData.Instance.Store("FC15 (Write multiple coils to Master device), StartingAddress: "+ startingAddress+", Values: " + debugString, System.DateTime.Now);
             _transactionIdentifierInternal++;
-            byte byteCount = (byte)((values.Length % 8 != 0 ? values.Length / 8 + 1: (values.Length / 8)));
+            byte byteCount = (byte)((values.Length % 8 != 0 ? values.Length / 8 + 1 : (values.Length / 8)));
             byte[] quantityOfOutputs = BitConverter.GetBytes((int)values.Length);
             byte singleCoilValue = 0;
-            if (_serialPort != null) {
-             
-                if (!_serialPort.IsOpen) {
-                   
-                    LastError = "serial port not opened";
-                    return false;
-                }
-            }
-            if (_tcpClient == null & !_udpFlag & _serialPort == null) {
-                LastError = "connection error";
+
+            if (!ConnectionIsOpen()) {
                 return false;
             }
+
             this._transactionIdentifier = BitConverter.GetBytes((uint)_transactionIdentifierInternal);
             this._protocolIdentifier = BitConverter.GetBytes((int)0x0000);
             this._length = BitConverter.GetBytes((int)(7 + (byteCount)));
@@ -2310,7 +2161,7 @@ namespace ModeBusHandler
 
 
 
-            Byte[] data = new byte[14 +2 + (values.Length % 8 != 0 ? values.Length/8 : (values.Length / 8)-1)];
+            Byte[] data = new byte[14 + 2 + (values.Length % 8 != 0 ? values.Length / 8 : (values.Length / 8) - 1)];
             data[0] = this._transactionIdentifier[1];
             data[1] = this._transactionIdentifier[0];
             data[2] = this._protocolIdentifier[1];
@@ -2348,30 +2199,34 @@ namespace ModeBusHandler
             data[data.Length - 1] = _crc[1];
 
             if (_serialPort != null) {
-            
-                dataReceived = false;
-                bytesToRead = 8;
-                //               serialport.ReceivedBytesThreshold = bytesToRead;
+
+                _dataReceived = false;
+                _bytesToRead = 8;
+                // serialport.ReceivedBytesThreshold = bytesToRead;
                 _serialPort.Write(data, 6, data.Length - 6);
 
                 if (SendDataChanged != null) {
-            
+
                     _sendData = new byte[data.Length - 6];
                     Array.Copy(data, 6, _sendData, 0, data.Length - 6);
                     SendDataChanged(this);
                 }
 
                 data = new byte[2100];
-                readBuffer = new byte[256];
+                _readBuffer = new byte[256];
                 DateTime dateTimeSend = DateTime.Now;
                 byte receivedUnitIdentifier = 0xFF;
-                
-                while (receivedUnitIdentifier != this._unitIdentifier & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout)) {
-                    while (dataReceived == false & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout)) {
+
+                var timeoutInTics = TimeSpan.TicksPerMillisecond * this._connectTimeoutMs;
+
+                while (receivedUnitIdentifier != this._unitIdentifier
+                    & ((DateTime.Now.Ticks - dateTimeSend.Ticks) <= timeoutInTics)) {
+                    while (_dataReceived == false
+                        & ((DateTime.Now.Ticks - dateTimeSend.Ticks) <= timeoutInTics)) {
                         System.Threading.Thread.Sleep(1);
                     }
                     data = new byte[2100];
-                    Array.Copy(readBuffer, 0, data, 6, readBuffer.Length);
+                    Array.Copy(_readBuffer, 0, data, 6, _readBuffer.Length);
                     receivedUnitIdentifier = data[6];
                 }
                 if (receivedUnitIdentifier != this._unitIdentifier)
@@ -2380,9 +2235,9 @@ namespace ModeBusHandler
                     _countRetries = 0;
             }
             else if (_tcpClient.Client.Connected | _udpFlag) {
-                
+
                 if (_udpFlag) {
-                
+
                     UdpClient udpClient = new UdpClient();
                     IPEndPoint endPoint = new IPEndPoint(System.Net.IPAddress.Parse(_ipAddress), _port);
                     udpClient.Send(data, data.Length - 2, endPoint);
@@ -2401,7 +2256,7 @@ namespace ModeBusHandler
                     }
                     data = new Byte[2100];
                     int NumberOfBytes = stream.Read(data, 0, data.Length);
-                    
+
                     if (ReceiveDataChanged != null) {
                         _receiveData = new byte[NumberOfBytes];
                         Array.Copy(data, 0, _receiveData, 0, NumberOfBytes);
@@ -2409,31 +2264,20 @@ namespace ModeBusHandler
                     }
                 }
             }
-            if (data[7] == 0x8F & data[8] == 0x01) {
-                LastError = "Function code not supported by master";
+
+            if (ErrorDetected(response: data, functionCode: functionCode)) {
                 return false;
             }
-            if (data[7] == 0x8F & data[8] == 0x02) {
-                LastError = "Starting address invalid or starting address + quantity invalid";
-                return false;
-            }
-            if (data[7] == 0x8F & data[8] == 0x03) {
-                LastError = "quantity invalid";
-                return false;
-            }
-            if (data[7] == 0x8F & data[8] == 0x04) {
-                LastError = "error reading";
-                return false;
-            }
+
             if (_serialPort != null) {
 
                 _crc = BitConverter.GetBytes(calculateCRC(data, 6, 6));
 
-                if ((_crc[0] != data[12] | _crc[1] != data[13]) & dataReceived) {
+                if ((_crc[0] != data[12] | _crc[1] != data[13]) & _dataReceived) {
 
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
-                        LastError = "Response CRC check failed";
+                        _log.Error("Response CRC check failed");
                         return false;
                     }
                     else {
@@ -2441,11 +2285,11 @@ namespace ModeBusHandler
                         WriteMultipleCoils(startingAddress, values);
                     }
                 }
-                else if (!dataReceived) {
-                    
+                else if (!_dataReceived) {
+
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
-                        LastError = "No Response from Modbus Slave";
+                        _log.Error("No Response from Modbus Slave");
                         return false;
                     }
                     else {
@@ -2463,31 +2307,26 @@ namespace ModeBusHandler
         /// <param name="startingAddress">First register to be written</param>
         /// <param name="values">register Values to be written</param>
         /// <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x10 by deafult.</param>
-        public void WriteMultipleRegisters(int startingAddress, int[] values, int functionCode = 0x10)
-        {
+        public bool WriteMultipleRegisters(int startingAddress, int[] values, int functionCode = 0x10) {
             string debugString = "";
             for (int i = 0; i < values.Length; i++)
                 debugString = debugString + values[i] + " ";
-            // if (debug) StoreLogData.Instance.Store("FC16 (Write multiple Registers to Server device), StartingAddress: "+ startingAddress+", Values: " + debugString, System.DateTime.Now);
+
             _transactionIdentifierInternal++;
             byte byteCount = (byte)(values.Length * 2);
             byte[] quantityOfOutputs = BitConverter.GetBytes((int)values.Length);
-            if (_serialPort != null)
-                if (!_serialPort.IsOpen) {
-                    // if (debug) StoreLogData.Instance.Store("SerialPortNotOpenedException Throwed", System.DateTime.Now);
-                    throw new ModeBusHandler.Exceptions.SerialPortNotOpenedException("serial port not opened");
-                }
-            if (_tcpClient == null & !_udpFlag & _serialPort == null) {
-                // if (debug) StoreLogData.Instance.Store("ConnectionException Throwed", System.DateTime.Now);
-                throw new ModeBusHandler.Exceptions.ConnectionException("connection error");
+
+            if (!ConnectionIsOpen()) {
+                return false;
             }
+
             this._transactionIdentifier = BitConverter.GetBytes((uint)_transactionIdentifierInternal);
             this._protocolIdentifier = BitConverter.GetBytes((int)0x0000);
             this._length = BitConverter.GetBytes((int)(7 + values.Length * 2));
-            this._functionCode = (byte) functionCode;
+            this._functionCode = (byte)functionCode;
             this._startingAddress = BitConverter.GetBytes(startingAddress);
 
-            Byte[] data = new byte[13+2 + values.Length*2];
+            Byte[] data = new byte[13 + 2 + values.Length * 2];
             data[0] = this._transactionIdentifier[1];
             data[1] = this._transactionIdentifier[0];
             data[2] = this._protocolIdentifier[1];
@@ -2512,8 +2351,8 @@ namespace ModeBusHandler
 
             if (_serialPort != null) {
 
-                dataReceived = false;
-                bytesToRead = 8;
+                _dataReceived = false;
+                _bytesToRead = 8;
 
                 //                serialport.ReceivedBytesThreshold = bytesToRead;
                 _serialPort.Write(data, 6, data.Length - 6);
@@ -2526,23 +2365,23 @@ namespace ModeBusHandler
                 }
 
                 data = new byte[2100];
-                readBuffer = new byte[256];
+                _readBuffer = new byte[256];
                 DateTime dateTimeSend = DateTime.Now;
                 byte receivedUnitIdentifier = 0xFF;
 
-                while (receivedUnitIdentifier != this._unitIdentifier 
-                       & !((DateTime.Now.Ticks - dateTimeSend.Ticks)  
-                           > TimeSpan.TicksPerMillisecond * this._connectTimeout)) {
+                while (receivedUnitIdentifier != this._unitIdentifier
+                       & !((DateTime.Now.Ticks - dateTimeSend.Ticks)
+                           > TimeSpan.TicksPerMillisecond * this._connectTimeoutMs)) {
 
-                    while (dataReceived == false
+                    while (_dataReceived == false
                         & !((DateTime.Now.Ticks - dateTimeSend.Ticks)
-                             > TimeSpan.TicksPerMillisecond * this._connectTimeout)) {
-                     
+                             > TimeSpan.TicksPerMillisecond * this._connectTimeoutMs)) {
+
                         System.Threading.Thread.Sleep(1);
                     }
 
                     data = new byte[2100];
-                    Array.Copy(readBuffer, 0, data, 6, readBuffer.Length);
+                    Array.Copy(_readBuffer, 0, data, 6, _readBuffer.Length);
                     receivedUnitIdentifier = data[6];
                 }
 
@@ -2554,9 +2393,9 @@ namespace ModeBusHandler
                 }
             }
             else if (_tcpClient.Client.Connected | _udpFlag) {
-               
+
                 if (_udpFlag) {
-                
+
                     UdpClient udpClient = new UdpClient();
                     IPEndPoint endPoint = new IPEndPoint(System.Net.IPAddress.Parse(_ipAddress), _port);
                     udpClient.Send(data, data.Length - 2, endPoint);
@@ -2576,7 +2415,7 @@ namespace ModeBusHandler
 
                     data = new Byte[2100];
                     int NumberOfBytes = stream.Read(data, 0, data.Length);
-                    
+
                     if (ReceiveDataChanged != null) {
                         _receiveData = new byte[NumberOfBytes];
                         Array.Copy(data, 0, _receiveData, 0, NumberOfBytes);
@@ -2586,40 +2425,32 @@ namespace ModeBusHandler
                 }
             }
 
-            if (data[7] == 0x90 & data[8] == 0x01) {
-                // if (debug) StoreLogData.Instance.Store("FunctionCodeNotSupportedException Throwed", System.DateTime.Now);
-                throw new ModeBusHandler.Exceptions.FunctionCodeNotSupportedException("Function code not supported by master");
+
+            if (ErrorDetected(response: data, functionCode: functionCode)) {
+                return false;
             }
-            if (data[7] == 0x90 & data[8] == 0x02) {
-                // if (debug) StoreLogData.Instance.Store("StartingAddressInvalidException Throwed", System.DateTime.Now);
-                throw new ModeBusHandler.Exceptions.StartingAddressInvalidException("Starting address invalid or starting address + quantity invalid");
-            }
-            if (data[7] == 0x90 & data[8] == 0x03) {
-                // if (debug) StoreLogData.Instance.Store("QuantityInvalidException Throwed", System.DateTime.Now);
-                throw new ModeBusHandler.Exceptions.QuantityInvalidException("quantity invalid");
-            }
-            if (data[7] == 0x90 & data[8] == 0x04) {
-                // if (debug) StoreLogData.Instance.Store("ModbusException Throwed", System.DateTime.Now);
-                throw new ModeBusHandler.Exceptions.ModbusException("error reading");
-            }
+
+
             if (_serialPort != null) {
                 _crc = BitConverter.GetBytes(calculateCRC(data, 6, 6));
-                if ((_crc[0] != data[12] | _crc[1] != data[13]) & dataReceived) {
+                if ((_crc[0] != data[12] | _crc[1] != data[13]) & _dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("CRCCheckFailedException Throwed", System.DateTime.Now);
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
-                        throw new ModeBusHandler.Exceptions.CRCCheckFailedException("Response CRC check failed");
+                        _log.Error("Response CRC check failed");
+                        return false;
                     }
                     else {
                         _countRetries++;
                         WriteMultipleRegisters(startingAddress, values);
                     }
                 }
-                else if (!dataReceived) {
+                else if (!_dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("TimeoutException Throwed", System.DateTime.Now);
                     if (NumberOfRetries <= _countRetries) {
                         _countRetries = 0;
-                        throw new TimeoutException("No Response from Modbus Slave");
+                        _log.Error("No Response from Modbus Slave");
+                        return false;
 
                     }
                     else {
@@ -2628,6 +2459,7 @@ namespace ModeBusHandler
                     }
                 }
             }
+            return true;
         }
 
         /// <summary>
@@ -2639,44 +2471,45 @@ namespace ModeBusHandler
         /// <param name="values">Values to write</param>
         /// <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x17 by deafult.</param>
         /// <returns>Int Array which contains the Holding registers</returns>
-        public int[] ReadWriteMultipleRegisters(int startingAddressRead, int quantityRead, 
-            int startingAddressWrite, int[] values, int functionCode = 0x17)
-        {
+        public int[] ReadWriteMultipleRegisters(int startingAddressRead, int quantityRead,
+            int startingAddressWrite, int[] values, int functionCode = 0x17) {
 
             string debugString = "";
             for (int i = 0; i < values.Length; i++)
                 debugString = debugString + values[i] + " ";
-            // if (debug) StoreLogData.Instance.Store("FC23 (Read and Write multiple Registers to Server device), StartingAddress Read: "+ startingAddressRead+ ", Quantity Read: "+quantityRead+", startingAddressWrite: " + startingAddressWrite +", Values: " + debugString, System.DateTime.Now);
+
             _transactionIdentifierInternal++;
-            byte [] startingAddressReadLocal = new byte[2];
-            byte [] quantityReadLocal = new byte[2];
+            byte[] startingAddressReadLocal = new byte[2];
+            byte[] quantityReadLocal = new byte[2];
             byte[] startingAddressWriteLocal = new byte[2];
             byte[] quantityWriteLocal = new byte[2];
             byte writeByteCountLocal = 0;
             if (_serialPort != null)
                 if (!_serialPort.IsOpen) {
-                    // if (debug) StoreLogData.Instance.Store("SerialPortNotOpenedException Throwed", System.DateTime.Now);
-                    throw new ModeBusHandler.Exceptions.SerialPortNotOpenedException("serial port not opened");
+
+                    _log.Error("serial port not opened");
+                    return null;
                 }
             if (_tcpClient == null & !_udpFlag & _serialPort == null) {
-                // if (debug) StoreLogData.Instance.Store("ConnectionException Throwed", System.DateTime.Now);
-                throw new ModeBusHandler.Exceptions.ConnectionException("connection error");
+                _log.Error("connection error");
+                return null;
             }
             if (startingAddressRead > 65535 | quantityRead > 125 | startingAddressWrite > 65535 | values.Length > 121) {
-                // if (debug) StoreLogData.Instance.Store("ArgumentException Throwed", System.DateTime.Now);
-                throw new ArgumentException("Starting address must be 0 - 65535; quantity must be 0 - 2000");
+
+                _log.Error("Starting address must be 0 - 65535; quantity must be 0 - 2000");
+                return null;
             }
             int[] response;
             this._transactionIdentifier = BitConverter.GetBytes((uint)_transactionIdentifierInternal);
             this._protocolIdentifier = BitConverter.GetBytes((int)0x0000);
             this._length = BitConverter.GetBytes((int)11 + values.Length * 2);
-            this._functionCode = (byte) functionCode;
+            this._functionCode = (byte)functionCode;
             startingAddressReadLocal = BitConverter.GetBytes(startingAddressRead);
             quantityReadLocal = BitConverter.GetBytes(quantityRead);
             startingAddressWriteLocal = BitConverter.GetBytes(startingAddressWrite);
             quantityWriteLocal = BitConverter.GetBytes(values.Length);
             writeByteCountLocal = Convert.ToByte(values.Length * 2);
-            Byte[] data = new byte[17 +2+ values.Length*2];
+            Byte[] data = new byte[17 + 2 + values.Length * 2];
             data[0] = this._transactionIdentifier[1];
             data[1] = this._transactionIdentifier[0];
             data[2] = this._protocolIdentifier[1];
@@ -2704,9 +2537,9 @@ namespace ModeBusHandler
             data[data.Length - 2] = _crc[0];
             data[data.Length - 1] = _crc[1];
             if (_serialPort != null) {
-                dataReceived = false;
-                bytesToRead = 5 + 2 * quantityRead;
-                //               serialport.ReceivedBytesThreshold = bytesToRead;
+                _dataReceived = false;
+                _bytesToRead = 5 + 2 * quantityRead;
+
                 _serialPort.Write(data, 6, data.Length - 6);
 
                 if (SendDataChanged != null) {
@@ -2715,14 +2548,21 @@ namespace ModeBusHandler
                     SendDataChanged(this);
                 }
                 data = new byte[2100];
-                readBuffer = new byte[256];
+                _readBuffer = new byte[256];
                 DateTime dateTimeSend = DateTime.Now;
+
                 byte receivedUnitIdentifier = 0xFF;
-                while (receivedUnitIdentifier != this._unitIdentifier & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout)) {
-                    while (dataReceived == false & !((DateTime.Now.Ticks - dateTimeSend.Ticks) > TimeSpan.TicksPerMillisecond * this._connectTimeout))
+                var timeoutInTics = TimeSpan.TicksPerMillisecond * this._connectTimeoutMs;
+
+                while (receivedUnitIdentifier !=
+                            _unitIdentifier
+                            & ((DateTime.Now.Ticks - dateTimeSend.Ticks) <= timeoutInTics)) {
+
+                    while (_dataReceived == false & ((DateTime.Now.Ticks - dateTimeSend.Ticks) <= timeoutInTics))
+
                         System.Threading.Thread.Sleep(1);
                     data = new byte[2100];
-                    Array.Copy(readBuffer, 0, data, 6, readBuffer.Length);
+                    Array.Copy(_readBuffer, 0, data, 6, _readBuffer.Length);
                     receivedUnitIdentifier = data[6];
                 }
                 if (receivedUnitIdentifier != this._unitIdentifier)
@@ -2731,6 +2571,7 @@ namespace ModeBusHandler
                     _countRetries = 0;
             }
             else if (_tcpClient.Client.Connected | _udpFlag) {
+
                 if (_udpFlag) {
                     UdpClient udpClient = new UdpClient();
                     IPEndPoint endPoint = new IPEndPoint(System.Net.IPAddress.Parse(_ipAddress), _port);
@@ -2755,28 +2596,19 @@ namespace ModeBusHandler
                     if (ReceiveDataChanged != null) {
                         _receiveData = new byte[NumberOfBytes];
                         Array.Copy(data, 0, _receiveData, 0, NumberOfBytes);
-                        // if (debug) StoreLogData.Instance.Store("Receive ModbusTCP-Data: " + BitConverter.ToString(receiveData), System.DateTime.Now);
                         ReceiveDataChanged(this);
                     }
                 }
             }
-            if (data[7] == 0x97 & data[8] == 0x01) {
-                // if (debug) StoreLogData.Instance.Store("FunctionCodeNotSupportedException Throwed", System.DateTime.Now);
-                throw new ModeBusHandler.Exceptions.FunctionCodeNotSupportedException("Function code not supported by master");
+
+
+            if (ErrorDetected(response: data, functionCode: functionCode)) {
+                return null;
             }
-            if (data[7] == 0x97 & data[8] == 0x02) {
-                // if (debug) StoreLogData.Instance.Store("StartingAddressInvalidException Throwed", System.DateTime.Now);
-                throw new ModeBusHandler.Exceptions.StartingAddressInvalidException("Starting address invalid or starting address + quantity invalid");
-            }
-            if (data[7] == 0x97 & data[8] == 0x03) {
-                // if (debug) StoreLogData.Instance.Store("QuantityInvalidException Throwed", System.DateTime.Now);
-                throw new ModeBusHandler.Exceptions.QuantityInvalidException("quantity invalid");
-            }
-            if (data[7] == 0x97 & data[8] == 0x04) {
-                // if (debug) StoreLogData.Instance.Store("ModbusException Throwed", System.DateTime.Now);
-                throw new ModeBusHandler.Exceptions.ModbusException("error reading");
-            }
+
+
             response = new int[quantityRead];
+
             for (int i = 0; i < quantityRead; i++) {
                 byte lowByte;
                 byte highByte;
@@ -2794,11 +2626,9 @@ namespace ModeBusHandler
         /// <summary>
         /// Close connection to Master Device.
         /// </summary>
-        public void Disconnect()
-        {
-            // if (debug) StoreLogData.Instance.Store("Disconnect", System.DateTime.Now);
+        public void Disconnect() {
             if (_serialPort != null) {
-                if (_serialPort.IsOpen & !this.receiveActive)
+                if (_serialPort.IsOpen & !this._receiveActive)
                     _serialPort.Close();
                 if (ConnectedChanged != null)
                     ConnectedChanged(this);
@@ -2817,9 +2647,7 @@ namespace ModeBusHandler
         /// <summary>
         /// Destructor - Close connection to Master Device.
         /// </summary>
-		~ModbusClient()
-        {
-            // if (debug) StoreLogData.Instance.Store("Destructor called - automatically disconnect", System.DateTime.Now);
+		~ModbusClient() {
             if (_serialPort != null) {
                 if (_serialPort.IsOpen)
                     _serialPort.Close();
@@ -2853,8 +2681,7 @@ namespace ModeBusHandler
             }
         }
 
-        public bool Available(int timeout)
-        {
+        public bool Available(int timeout) {
             // Ping's the local machine.
             System.Net.NetworkInformation.Ping pingSender = new System.Net.NetworkInformation.Ping();
             IPAddress address = System.Net.IPAddress.Parse(_ipAddress);
@@ -2971,10 +2798,10 @@ namespace ModeBusHandler
         /// </summary>
         public int ConnectionTimeout {
             get {
-                return _connectTimeout;
+                return _connectTimeoutMs;
             }
             set {
-                _connectTimeout = value;
+                _connectTimeoutMs = value;
             }
         }
 
@@ -2999,9 +2826,25 @@ namespace ModeBusHandler
                 _serialPort.Parity = _parity;
                 _serialPort.StopBits = _stopBits;
                 _serialPort.WriteTimeout = 10000;
-                _serialPort.ReadTimeout = _connectTimeout;
-                _serialPort.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
+                _serialPort.ReadTimeout = _connectTimeoutMs;
+                _serialPort.DataReceived +=
+                    new SerialDataReceivedEventHandler(DataReceivedHandler);
             }
+        }
+
+        private bool ConnectionIsOpen() {
+            if (_serialPort != null) {
+                if (!_serialPort.IsOpen) {
+                    _log.Error("serial port not opened");
+                    return false;
+                }
+            }
+            if (_tcpClient == null & !_udpFlag & _serialPort == null) {
+
+                _log.Error("connection error");
+                return false;
+            }
+            return true;
         }
     }
 }
