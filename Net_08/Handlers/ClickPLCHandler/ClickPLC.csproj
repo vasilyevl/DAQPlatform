@@ -14,7 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Libraries\HWControlCommon\HWControlCommon.csproj" />
-    <ProjectReference Include="..\ModBusClientHandlerBase\ModBusClient.csproj" />
+    <ProjectReference Include="..\ModBusClientHandler\ModBusClient.csproj" />
   </ItemGroup>
 
   <ItemGroup>
