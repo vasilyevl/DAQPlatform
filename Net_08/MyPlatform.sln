@@ -14,8 +14,14 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Testers", "Testers", "{ED28EE67-36CF-43A8-AB16-A0746A72D14E}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClickTester", "Testers\ClickTester\ClickTester.csproj", "{B0B15A03-70CE-4D57-9505-80B48A6CBE48}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E7567F7C-ACA1-46CB-83EB-8091D8C266B4} = {E7567F7C-ACA1-46CB-83EB-8091D8C266B4}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ClickPLC", "Handlers\ClickPLCHandler\ClickPLC.csproj", "{3BA6A399-E691-4839-B93F-A63EABBD24CF}"
+	ProjectSection(ProjectDependencies) = postProject
+		{7D3E3CE1-A276-4282-979D-EF539D166EE5} = {7D3E3CE1-A276-4282-979D-EF539D166EE5}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ModBusClient", "Handlers\ModBusClientHandler\ModBusClient.csproj", "{E7567F7C-ACA1-46CB-83EB-8091D8C266B4}"
 EndProject
@@ -26,7 +32,9 @@ Global
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{F988675D-ADD2-499A-ADFD-A70FC756D75A}.Debug|x64.ActiveCfg = Debug|x64
+		{F988675D-ADD2-499A-ADFD-A70FC756D75A}.Debug|x64.Build.0 = Debug|x64
 		{F988675D-ADD2-499A-ADFD-A70FC756D75A}.Release|x64.ActiveCfg = Release|x64
+		{F988675D-ADD2-499A-ADFD-A70FC756D75A}.Release|x64.Build.0 = Release|x64
 		{7D3E3CE1-A276-4282-979D-EF539D166EE5}.Debug|x64.ActiveCfg = Debug|x64
 		{7D3E3CE1-A276-4282-979D-EF539D166EE5}.Debug|x64.Build.0 = Debug|x64
 		{7D3E3CE1-A276-4282-979D-EF539D166EE5}.Release|x64.ActiveCfg = Release|x64
@@ -34,9 +42,11 @@ Global
 		{B0B15A03-70CE-4D57-9505-80B48A6CBE48}.Debug|x64.ActiveCfg = Debug|x64
 		{B0B15A03-70CE-4D57-9505-80B48A6CBE48}.Debug|x64.Build.0 = Debug|x64
 		{B0B15A03-70CE-4D57-9505-80B48A6CBE48}.Release|x64.ActiveCfg = Release|x64
+		{B0B15A03-70CE-4D57-9505-80B48A6CBE48}.Release|x64.Build.0 = Release|x64
 		{3BA6A399-E691-4839-B93F-A63EABBD24CF}.Debug|x64.ActiveCfg = Debug|x64
 		{3BA6A399-E691-4839-B93F-A63EABBD24CF}.Debug|x64.Build.0 = Debug|x64
 		{3BA6A399-E691-4839-B93F-A63EABBD24CF}.Release|x64.ActiveCfg = Release|x64
+		{3BA6A399-E691-4839-B93F-A63EABBD24CF}.Release|x64.Build.0 = Release|x64
 		{E7567F7C-ACA1-46CB-83EB-8091D8C266B4}.Debug|x64.ActiveCfg = Debug|x64
 		{E7567F7C-ACA1-46CB-83EB-8091D8C266B4}.Debug|x64.Build.0 = Debug|x64
 		{E7567F7C-ACA1-46CB-83EB-8091D8C266B4}.Release|x64.ActiveCfg = Release|x64

@@ -9,10 +9,10 @@
     <BaseOutputPath>..\..\bin</BaseOutputPath>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\Handlers\ClickPLCHandler\ClickPLC.csproj" />
+  <ItemGroup>   
     <ProjectReference Include="..\..\Libraries\Common\Common.csproj" />
     <ProjectReference Include="..\..\Libraries\HWControlCommon\HWControlCommon.csproj" />
+    <ProjectReference Include="..\..\Handlers\ClickPLCHandler\ClickPLC.csproj" />
   </ItemGroup>
 
 </Project>
