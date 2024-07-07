@@ -1,24 +1,17 @@
 ﻿using Grumpy.Common;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Security;
-using System.Text;
-using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 
 namespace LV.ClickPLCHandler
 {
-    public enum IOType {
-        Unknown, 
+    public enum IOType
+    {
+        Unknown,
         Input,
         InputRegister,
         Output,
         OutputRegister,
-        AnalogInput, 
+        AnalogInput,
         AnalogOutput,
         ControlRelay,
         RegisterInt16,
@@ -27,7 +20,7 @@ namespace LV.ClickPLCHandler
         RegisterFloat32,
         Timer,
         TimerRegister,
-        Counter, 
+        Counter,
         CounterRegister,
         SystemControlRelay,
         SystemRegister,
@@ -50,8 +43,8 @@ namespace LV.ClickPLCHandler
             where T : IEquatable<T>
     {
 
-        public const  int InvalidControlAddress = 0;
-        
+        public const int InvalidControlAddress = 0;
+
         protected static IReadOnlyDictionary<string, IOType> _ioTypes = new Dictionary<string, IOType>() {
 
             {"X", IOType.Input },
@@ -84,16 +77,14 @@ namespace LV.ClickPLCHandler
         };
 
 
-        public ChannelConfigurationBase() : base()
-        { }
+        public ChannelConfigurationBase() : base() { }
 
 
 
-        public static bool GetErrorDescription(int code, out string? errorDescription)
-        {
+        public static bool GetErrorDescription(int code, out string? errorDescription) {
             if (Enum.IsDefined(typeof(ErrorCode), code)) {
 
-                var cd = (ErrorCode) code;
+                var cd = (ErrorCode)code;
 
                 errorDescription = (_errorDescriptors?.ContainsKey(cd) ?? false) ?
                     (string)_errorDescriptors[cd].Clone() : null;
@@ -106,8 +97,7 @@ namespace LV.ClickPLCHandler
 
 
 
-        public override bool CopyFrom(object src)
-        {
+        public override bool CopyFrom(object src) {
             var s = src as ChannelConfigurationBase<T>;
 
             if (s == null) { return false; }
@@ -139,19 +129,17 @@ namespace LV.ClickPLCHandler
         public bool ShouldSerializeStartUpValue() => !ReadOnly();
 
 
-        internal virtual bool ReadOnly()
-        {
+        internal virtual bool ReadOnly() {
             var t = IOType;
-            return t == IOType.Input || 
+            return t == IOType.Input ||
                    t == IOType.InputRegister ||
-                   t == IOType.SystemControlRelay || 
+                   t == IOType.SystemControlRelay ||
                    t == IOType.SystemRegister;
         }
 
         public bool ShouldSerializeAlias() => !string.IsNullOrEmpty(_alias);
 
-        public virtual IOType IOType
-        {
+        public virtual IOType IOType {
             get {
                 var preffx = _GetControlNamePrefix();
                 return (string.IsNullOrEmpty(preffx) || !_ioTypes.ContainsKey(preffx)) ?
@@ -163,12 +151,12 @@ namespace LV.ClickPLCHandler
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected string _GetControlNamePrefix() {
-            
-                var res = ValidControlNamePreffixes.Where((x) => ControlName.StartsWith(x)).FirstOrDefault();
-                if ( res == null) {
-                    LastErrorCode = (int)ErrorCode.InvalidControlNamePreffix;
-                }
-                return res ?? string.Empty;           
+
+            var res = ValidControlNamePreffixes.Where((x) => ControlName.StartsWith(x)).FirstOrDefault();
+            if (res == null) {
+                LastErrorCode = (int)ErrorCode.InvalidControlNamePreffix;
+            }
+            return res ?? string.Empty;
         }
 
         protected bool _GetControlAddress(out int address) {
@@ -199,15 +187,14 @@ namespace LV.ClickPLCHandler
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public virtual bool IsValid()
-        {
+        public virtual bool IsValid() {
             LastErrorCode = (int)ErrorCode.NoError;
             return ControlNameIsValid();
         }
 
 
 
-        public override void Reset(){
+        public override void Reset() {
             _alias = null;
             _controlName = null;
         }

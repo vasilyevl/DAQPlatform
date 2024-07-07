@@ -14,123 +14,80 @@ namespace Grumpy.Common
 
     public abstract class EnumBase : IComparable
     {
-        protected EnumBase(string name, int id)
+        string? _name;
+        int _id;
+
+        protected EnumBase(string name, int id) 
         {
             Id = id;
             Name = name;
         }
 
-        public string Name { get; private set; }
+        public string Name { 
+            get => _name is null ? string.Empty : (string)_name.Clone(); 
+            private set => _name = value is null ? null : (string)value.Clone(); 
+        }
 
-        public int Id { get; private set; }
+        public int Id {
+            get => _id; 
+            private set => _id = value; }
 
-        public override string ToString() => Name;
+        public override string ToString() => $"{Name} ({Id})";
 
         public static explicit operator int(EnumBase a) => a.Id;
 
-        public static IEnumerable<T> GetAll<T>() where T : EnumBase
-        {
-            return typeof(T).GetFields( BindingFlags.Public 
-                                        | BindingFlags.Static 
-                                        | BindingFlags.DeclaredOnly)
-                            .Select(f => f.GetValue(null)).Cast<T>();
-        }
-
+        public static List<T> GetAllItems<T>() where T : EnumBase => 
+            typeof(T).GetFields( BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+                    .Select(f => f.GetValue(null)).Cast<T>()
+                    .ToList();
         public static List<string> GetAllNames<T>() where T : EnumBase
         {
-            var items =  EnumBase.GetAll<T>();
-            var names = new List<string>();
-
-            if (items.Count() > 0) {
-                foreach (var item in items) {
-                    names.Add(item.Name);
-                }
-            }
-            return names;
+            List<T> itemsAsList =  EnumBase.GetAllItems<T>();
+            return ((itemsAsList?.Count ?? 0) > 0) ? itemsAsList!.Select(item => item.Name).ToList() : [];
         }
 
         public static List<int> GetAllIndices<T>() where T : EnumBase
         {
-            var items =  EnumBase.GetAll<T>();
-            var indices = new List<int>();
-
-            if (items.Count() > 0) {
-                foreach (var item in items) {
-                    indices.Add(item.Id);
-                }
-            }
-            return indices;
+            List<T> itemsAsList =  EnumBase.GetAllItems<T>();
+            return (itemsAsList?.Count ?? 0) > 0 ? itemsAsList!.Select(item => item.Id).ToList() : [];
         }
 
-        public bool Equals(EnumBase other)
-        {
-            if (other is null) { return false; }
+        public bool Equals(EnumBase other) => other != null! && Id == other.Id && 
+                string.Equals( Name, other.Name, StringComparison.OrdinalIgnoreCase);
 
-            return Id == other.Id && 
-                string.Equals( Name, other.Name, 
-                               StringComparison.OrdinalIgnoreCase);
-        }
+        public override bool Equals(object? o) => 
+            (o != null) && o is EnumBase && Equals((EnumBase)o);
 
-        public override bool Equals(object? obj) 
-        {
-            if ( obj == null) { return false; }
+        public static bool operator == (EnumBase a, EnumBase b)  =>  
+            (a is null || b is null) ? Object.Equals(a, b): a.Equals(b);
 
-            var other  = obj as EnumBase;
+        public static bool operator != (EnumBase a, EnumBase b) =>
+            ((object?)a is null || (object?)b is null) ? !Object.Equals(a, b): !a.Equals(b);
+        
+        public override int GetHashCode() =>  Name.GetHashCode() + Id.GetHashCode();
 
-            if (other is null) { return false; }
+        public int CompareTo(object? comparable) => 
+            (comparable is null) ? 1 :Id.CompareTo(((EnumBase)comparable).Id);
             
-            return Equals (other);
-        }
+        public static T FromId<T>(int id) where T : EnumBase =>
+            Parse<T, int>(id, "ID", match => match.Id == id);
 
-        public static bool operator == (EnumBase a, EnumBase b)
+        public static T FromName<T>(string name) where T : EnumBase =>
+         Parse<T, string>(name, "Name", 
+                match => String.Equals( match.Name, name, StringComparison.OrdinalIgnoreCase));   
+
+        private static T Parse<T, K>(K parameterValue, string parameterDescription, 
+                                Func<T, bool> criterion) where T : EnumBase
         {
-            if (a is null || b is null) {
-                return Object.Equals(a, b);
+            T foundMatch = GetAllItems<T>().FirstOrDefault(criterion)!;
+
+            if (foundMatch == null!) {
+
+                throw new ApplicationException( $"\"{parameterValue}\" is not " +
+                    $"a valid {parameterDescription} in {typeof(T)}");
             }
-            return a.Equals(b);
-        }
 
-        public static bool operator !=(EnumBase a, EnumBase b)
-        {
-            if (((object?)a) is null || ((object?)b) is null) {
-                return !Object.Equals(a, b);
-            }
-            return !a.Equals(b);
-        }
-
-        public override int GetHashCode() => 
-            Name.GetHashCode() + Id.GetHashCode();
-
-        public int CompareTo(object? other) {
-               if (other == null) { return 1; }
-            return Id.CompareTo(((EnumBase)other).Id);
-        }
-            
-
-        public static T FromId<T>(int value) where T : EnumBase
-        {
-            var matchingItem = Parse<T, int>(value, "value", 
-                                     item => item.Id == value);
-            return matchingItem;
-        }
-
-        public static T FromName<T>(string name) where T : EnumBase
-        {
-            var matchingItem = Parse<T, string>(name, "value", 
-                item => String.Equals( item.Name, name, 
-                                       StringComparison.OrdinalIgnoreCase));
-            return matchingItem;
-        }
-
-        private static T Parse<T, K>(K value, string description, 
-                                Func<T, bool> predicate) where T : EnumBase
-        {
-            var matchingItem = GetAll<T>().FirstOrDefault(predicate)!;
-            if (matchingItem == null!) {
-                throw new ApplicationException( $"\"{value}\" is not " +
-                    $"a valid {description} in {typeof(T)}");
-            }
-            return matchingItem;
+            return foundMatch;
         }
     }
 }

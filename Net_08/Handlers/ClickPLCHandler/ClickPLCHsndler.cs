@@ -1,13 +1,9 @@
-﻿using Grumpy.ModeBusHandler;
-using Grumpy.Common;
+﻿using Grumpy.Common;
 using Grumpy.HWControl.Common;
+using Grumpy.HWControl.Configuration;
+using Grumpy.ModeBusHandler;
 
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 
 
@@ -59,7 +55,7 @@ namespace Grumpy.ClickPLC
 
         public static ClickHandler CreateHandler() => new ClickHandler();
 
-        public static bool CreateHandler( ClickHandlerConfiguration configuration, 
+        public static bool CreateHandler(ClickHandlerConfiguration configuration,
             out ClickHandler? handler) {
 
             handler = new ClickHandler();
@@ -69,12 +65,12 @@ namespace Grumpy.ClickPLC
             return handler is not null;
         }
 
-        public static bool CreateHandler(string configuration, 
+        public static bool CreateHandler(string configuration,
             out ClickHandler? handler) {
 
             handler = new ClickHandler();
-            if( !handler.Init(configuration)) {
-               handler = null;
+            if (!handler.Init(configuration)) {
+                handler = null;
             }
             return handler is not null;
         }
@@ -144,7 +140,7 @@ namespace Grumpy.ClickPLC
 
             _mbClient = new ModbusClient(_configuration.Interface.SerialPort);
             return _mbClient.Connect();
-        }   
+        }
 
         private bool _OpenTcpIp() {
 
@@ -173,15 +169,15 @@ namespace Grumpy.ClickPLC
 
             if (_mbClient != null && _mbClient.IsConnected) {
 
-                    try {
-                        _mbClient.Disconnect();
-                        return true;
-                    }
-                    catch (Exception ex) {
-                        _AddErrorRecord(callerMethodName,
-                                                       ErrorCode.CloseFailed, ex.Message);
-                        return false;
-                    }
+                try {
+                    _mbClient.Disconnect();
+                    return true;
+                }
+                catch (Exception ex) {
+                    _AddErrorRecord(callerMethodName,
+                                                   ErrorCode.CloseFailed, ex.Message);
+                    return false;
+                }
             }
 
             return true;
@@ -545,11 +541,11 @@ namespace Grumpy.ClickPLC
                 try {
 
                     if (_mbClient.ReadCoils(address,
-                        
+
                         Math.Max(1, numberOfIosToRead), out bool[]? data, functionCode)) {
-                        
+
                         if (data is not null) {
-                        
+
                             status =
                                 data.Select((st) => new SwitchState(st ? SwitchSt.On : SwitchSt.Off)).ToArray();
                             return true;

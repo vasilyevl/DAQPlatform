@@ -10,7 +10,7 @@ namespace Grumpy.ClickPLC
         System.Boolean Init(ClickHandlerConfiguration cnfg);
         System.Boolean Init(System.String configJsonString);
         System.Boolean Open();
-       // System.Boolean ReadDiscreteIO(System.String name, out SwitchSt status);
+        // System.Boolean ReadDiscreteIO(System.String name, out SwitchSt status);
         System.Boolean ReadDiscreteIO(System.String name, out SwitchState state);
         System.Boolean ReadDiscreteIOs(System.String name, System.Int32 numberOfIosToRead, out SwitchState[] status);
         System.Boolean ReadRegister(System.String name, out System.UInt16 value);

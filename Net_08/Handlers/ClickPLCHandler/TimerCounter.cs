@@ -15,9 +15,7 @@ namespace Grumpy.ClickPLC
                 RegisterInt16ControlRO counter,
                 RegisterInt16Control? setValueCtrl = null,
                 RelayControl? resetControl = null,
-                bool canWriteReset = false)
-
-        {
+                bool canWriteReset = false) {
             _timerCtrl = timerStateControl;
             _countsCtrl = counter;
             _setPointCtrl = setValueCtrl;
@@ -26,8 +24,7 @@ namespace Grumpy.ClickPLC
         }
 
 
-        public SwitchState GetState()
-        {
+        public SwitchState GetState() {
             if (_timerCtrl != null) {
 
                 if (_timerCtrl.Get(out SwitchState state)) {
@@ -38,8 +35,7 @@ namespace Grumpy.ClickPLC
             return new SwitchState(SwitchSt.Unknown);
         }
 
-        public bool GetCounts(out ushort counts)
-        {
+        public bool GetCounts(out ushort counts) {
             counts = ushort.MinValue;
 
             if (_countsCtrl != null) {
@@ -52,17 +48,17 @@ namespace Grumpy.ClickPLC
 
         public bool Reset() =>
              (_resetControl != null && _canWriteReset)
-                ? _resetControl.Set(SwitchCtrl.Off) 
-                    ? _resetControl.Set(SwitchCtrl.On) 
+                ? _resetControl.Set(SwitchCtrl.Off)
+                    ? _resetControl.Set(SwitchCtrl.On)
                     : false
                 : false;
 
         public bool SetSetPoint(ushort value) =>
 
-            (_setPointCtrl != null) 
+            (_setPointCtrl != null)
             ? _setPointCtrl.Set(value)
             : false;
-           
+
 
         public bool GetSetPoint(out ushort value) {
 
@@ -72,7 +68,7 @@ namespace Grumpy.ClickPLC
             value = 0;
             return false;
         }
-          
+
 
     }
 }

@@ -118,7 +118,8 @@ namespace Grumpy.Common
 
         public string GetSummary(){ 
  
-            if (string.IsNullOrEmpty(FileName)) {                
+            if (string.IsNullOrEmpty(FileName)) {     
+                
                 return this.ToString()!;
             }
             else {
@@ -126,10 +127,9 @@ namespace Grumpy.Common
             }
         }
 
-
-
         [JsonProperty]
         public string FileName { 
+
             get => (string) _fileName.Clone(); 
             set => _fileName = (string)(_fileName?.Clone() ?? null!); 
         }

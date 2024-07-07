@@ -9,7 +9,7 @@ using System;
 using System.IO.Ports;
 
 
-namespace Grumpy.HWControl.Common.Handlers
+namespace Grumpy.HWControl.Configuration
 {
 
 

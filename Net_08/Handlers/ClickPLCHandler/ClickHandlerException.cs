@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace Grumpy.ClickPLC
+﻿namespace Grumpy.ClickPLC
 {
     public enum ErrorCode
     {
@@ -31,8 +28,7 @@ namespace Grumpy.ClickPLC
         public ClickHandlerException(string name,
                                       ErrorCode error,
                                       string? details = null) :
-            base(string.IsNullOrEmpty(details) ? "N/A" : details)
-        {
+            base(string.IsNullOrEmpty(details) ? "N/A" : details) {
             MethodName = name;
             ErrorCode = error;
         }
@@ -45,10 +41,8 @@ namespace Grumpy.ClickPLC
 
     public static class ClickPlcHandlerErrors
     {
-        public static string GetErrorDescription(ErrorCode errorCode)
-        {
-            if (_errorDescriptors.ContainsKey(errorCode))
-            {
+        public static string GetErrorDescription(ErrorCode errorCode) {
+            if (_errorDescriptors.ContainsKey(errorCode)) {
 
                 return (string)_errorDescriptors[errorCode].Clone();
             }

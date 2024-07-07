@@ -1,9 +1,8 @@
 ﻿using Grumpy.Common;
+using Grumpy.HWControl.Common;
+using Grumpy.HWControl.Configuration;
 
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 
 namespace Grumpy.ClickPLC
@@ -25,7 +24,7 @@ namespace Grumpy.ClickPLC
         //  private List<OutputConfiguration> _outputs;
         // private List<ControlRelayConfiguration> _controlRelays;
 
-        public ClickHandlerConfiguration() : base() {}
+        public ClickHandlerConfiguration() : base() { }
 
         public ClickHandlerConfiguration(ClickHandlerConfiguration source) : this() {
 
@@ -38,10 +37,10 @@ namespace Grumpy.ClickPLC
 
             if (s == null) { return false; }
 
-            if (  s.Interface != null) {
+            if (s.Interface != null) {
 
                 _interface = null;
-                var tmp = new InterfaceConfiguration();                  
+                var tmp = new InterfaceConfiguration();
                 tmp.CopyFrom(s.Interface);
                 _interface = tmp;
             }

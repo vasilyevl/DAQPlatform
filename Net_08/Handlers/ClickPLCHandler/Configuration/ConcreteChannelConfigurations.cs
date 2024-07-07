@@ -9,8 +9,7 @@ namespace Grumpy.ClickPLC
     {
         public InputConfiguration() : base() { }
 
-        public override bool IsValid()
-        {
+        public override bool IsValid() {
             return base.IsValid() && IOType == IOType.Input;
         }
         public override bool IsReadOnly() => true;
@@ -21,8 +20,7 @@ namespace Grumpy.ClickPLC
     {
         public OutputConfiguration() : base() { }
 
-        public override bool IsValid()
-        {
+        public override bool IsValid() {
             return base.IsValid() && IOType == IOType.Output;
         }
     }
@@ -32,8 +30,7 @@ namespace Grumpy.ClickPLC
     {
         public ControlRelayConfiguration() : base() { }
 
-        public override bool IsValid()
-        {
+        public override bool IsValid() {
             return base.IsValid() && IOType == IOType.ControlRelay;
         }
     }

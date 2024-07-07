@@ -1,23 +1,19 @@
 ﻿using Grumpy.ClickPLC;
 using Grumpy.HWControl.Common;
-using Grumpy.HWControl.Common.Handlers;
-
-using Newtonsoft.Json;
 
 using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-
 namespace ClickTester
 {
-
     public enum TestType
     {
         SingleIO,
         IOArray
     }
+
     internal class Program
     {
         static  ClickHandler _handler = null!;
@@ -30,29 +26,19 @@ namespace ClickTester
         static int Main(string[] args) {
             int exitCode = 0;
 
-            
+            string config = "{\"Interface\":{" +
+                                             "\"Selector\":\"Network\"," +
+                                             "\"SerialPort\":null," +
+                                             "\"Network\":{\"Name\":\"ClickPLC\"," +
+                                                          "\"IpAddress\":\"192.168.1.22\"," +
+                                                          "\"Port\":502," +
+                                                          "\"Timeout\":15000}}}";
 
-            var configuration = new ClickHandlerConfiguration() {
-
-                Interface = new InterfaceConfiguration() {
-                    Selector = InterfaceSelector.Network,
-                    SerialPort = null,
-                    Network = new EthernetConnectionConfiguration() {
-                        Name = "ClickPLC",
-                        IpAddress = "192.168.1.22",
-                        Port = 502
-                    }
-                }
-            };
-
-            string cnfg = JsonConvert.SerializeObject(configuration);
-
-            if (!ClickHandler.CreateHandler(configuration, out _handler!)) {
+            if (!ClickHandler.CreateHandler(config, out _handler!)) {
                 Console.WriteLine("Failed to create handler.");
                 return -1;
             }
            
-
             if (!_handler.Open()) {
 
                 exitCode = -1;
@@ -65,6 +51,7 @@ namespace ClickTester
             Console.WriteLine("Starting simple single discrete IO test test.");
 
             if ((exitCode = DoSingleIO(_io)) != 0) {
+
                 Console.WriteLine($"Simple single discrete IO test failed" +
                     $" with exit code {exitCode} .");
                 goto Exit;
@@ -72,44 +59,49 @@ namespace ClickTester
 
             Console.WriteLine("Simple single discrete IO test complete.");
 
-
             Console.WriteLine("Starting discrete IO array test.");
 
             if ((exitCode = DoMultipleRelaysTest("C2", 8)) != 0) {
+
                 Console.WriteLine($"Discrete IO array test failed with exit " +
                     $"code {exitCode} .");
                 goto Exit;
             }
 
-
             Console.WriteLine("Discrete IO array test complete.");
             Thread.Sleep(1000);
 
             exitCode = DoSimpleCounterTest("CT1", "DS11", "C10", "C11", 25);
+
             if (exitCode != 0) {
+
                 Console.WriteLine($"Simple counter test failed with " +
                     $"exit code {exitCode} .");
                 goto Exit;
             }
+
             Console.WriteLine("Simple counter test complete.");
 
             Console.WriteLine("Starting simple timer test.");
+
             exitCode = DoSimpleTimerTest(_timer, _setPoint, _controlRelay, _setTimeMs);
+
             if (exitCode != 0) {
+
                 Console.WriteLine($"Simple timer test failed with exit " +
                     $"code {exitCode} .");
                 goto Exit;
             }
-            Console.WriteLine("Simple timer test complete.");
 
+            Console.WriteLine("Simple timer test complete.");
 
             Exit:
             Console.WriteLine($"Test complete with error code {exitCode}");
             Console.WriteLine("Click 'Enter' to exit.");
             Console.ReadLine();
+
             return exitCode;
         }
-
 
         private static int DoMultipleRelaysTest(string startRelay, int quantity) {
 
@@ -142,11 +134,11 @@ namespace ClickTester
             return errorCode;
         }
 
-
         private static int DoDiscreteIOs(string io, SwitchCtrl[] controls, 
             string startInput = "X1", int inputLen = 8, string startOutput = "Y1", int outpLen = 6) {
             
             try {
+
                 int startRelayIdx = int.Parse(Regex.Match(io, @"\d+").Value);
             }
             catch {
@@ -156,6 +148,7 @@ namespace ClickTester
             }
 
             if (!_handler.ReadDiscreteIOs(io, controls.Length, out SwitchState[] status)) {
+
                 Console.WriteLine($"Failed to read status of " +
                     $"{controls.Length} relays starting {io}.");
                 return -1;
@@ -243,7 +236,6 @@ namespace ClickTester
             return 0;
         }
 
-
         private static int DoSimpleTimerTest(string timer, string setRegister, string controlRelay, int timerTimeMs) {
 
             string timerCurrentValueRegister = timer.Replace("T", "TD");
@@ -306,7 +298,6 @@ namespace ClickTester
                 return -6;
             }
 
-
             if (_handler.WriteDiscreteControl(controlRelay, SwitchCtrl.On)) {
                 Console.WriteLine($"Control relay " +
                     $"{controlRelay} switched On.");
@@ -360,7 +351,6 @@ namespace ClickTester
                             return -9;
                         }
 
-
                     case SwitchSt.Off:
                         Console.WriteLine($"Timer is off at {timerValue} counts.");
                         break;
@@ -383,46 +373,53 @@ namespace ClickTester
             }
         }
 
-
-        private static int DoSimpleCounterTest(string counter, string setValueRegister, string controlRelay, string resetRelay, int setPoint) {
-
+        private static int DoSimpleCounterTest(string counter, string setValueRegister, 
+            string controlRelay, string resetRelay, int setPoint) {
 
             string counterCurrentValueRegister = counter.Replace("CT", "CTD");
 
             if (_handler.WriteDiscreteControl(controlRelay, SwitchCtrl.Off)) {
+
                 Console.WriteLine($"Control relay {controlRelay} " +
                     $"switched off.");
             }
             else {
+
                 Console.WriteLine($"Failed to switch control " +
                     $"relay {controlRelay} to off.");
                 return -1;
             }
 
             if (_handler.WriteRegister(setValueRegister, (ushort)setPoint)) {
+
                 Console.WriteLine($"Counter set point set " +
                     $"to {(ushort)setPoint}.");
             }
             else {
+
                 Console.WriteLine($"Failed to set counter set " +
                     $"point to {(ushort)setPoint}.");
                 return -2;
             }
 
             if (_handler.ReadRegister(setValueRegister, out ushort setPointValue)) {
+
                 Console.WriteLine($"Checking counter set value. " +
                     $"Readback says: {setPointValue}.");
             }
             else {
+
                 Console.WriteLine($"Failed to read current set " +
                     $"value from {setValueRegister}.");
                 return -3;
             }
 
             if (_handler.WriteDiscreteControl(resetRelay, SwitchCtrl.On)) {
+
                 Console.WriteLine($"Reset relay {resetRelay} switched On.");
             }
             else {
+
                 Console.WriteLine($"Failed to switch reset " +
                     $"relay {resetRelay} to On.");
                 return -4;
@@ -431,9 +428,11 @@ namespace ClickTester
             Thread.Sleep(100);
 
             if (_handler.WriteDiscreteControl(resetRelay, SwitchCtrl.Off)) {
+
                 Console.WriteLine($"Reset relay {resetRelay} switched Off.");
             }
             else {
+
                 Console.WriteLine($"Failed to switch reset " +
                     $"relay {resetRelay} to Off.");
                 return -5;
@@ -441,10 +440,12 @@ namespace ClickTester
 
 
             if (_handler.ReadRegister(counterCurrentValueRegister, out ushort counterValue)) {
+
                 Console.WriteLine($"Current timer counter " +
                     $"value: {counterValue}.");
             }
             else {
+
                 Console.WriteLine($"Failed to read current counter " +
                     $"value form {counterCurrentValueRegister}.");
                 return -6;
@@ -463,7 +464,6 @@ namespace ClickTester
 
             int ctr = 0;
             while (switchState.State != SwitchSt.On) {
-
 
                 Console.Write($"Toggling counter input using " +
                     $"{controlRelay}. Iteration # {++ctr}. ");
@@ -513,10 +513,7 @@ namespace ClickTester
                 return -5;
             }
 
-
-
             return 0;
-
         }
 
 
@@ -538,8 +535,6 @@ namespace ClickTester
                 $"{string.Join(" ,", status.Select((o) => o.ToString()).ToArray())}.");
 
             return 0;
-
         }
-
     }
 }

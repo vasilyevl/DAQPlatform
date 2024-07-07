@@ -1,10 +1,6 @@
 ﻿using Grumpy.Common;
 
 using Newtonsoft.Json;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 
 
@@ -56,13 +52,10 @@ namespace Grumpy.ClickPLC
                 {"TXT", IOType.Text}
             };
 
-        public static IReadOnlyDictionary<string, IOType> IoTypes
-        {
-            get
-            {
+        public static IReadOnlyDictionary<string, IOType> IoTypes {
+            get {
                 var res = new Dictionary<string, IOType>();
-                foreach (var kv in _ioTypes)
-                {
+                foreach (var kv in _ioTypes) {
                     res.Add((string)kv.Key.Clone(), kv.Value);
                 }
                 return res;
@@ -110,11 +103,9 @@ namespace Grumpy.ClickPLC
         private T? _startUpValue;
         private bool _setOnConnect;
 
-        public ChannelConfigurationBase() : base()
-        {}
+        public ChannelConfigurationBase() : base() { }
 
-        public static bool GetErrorDescription(int code, out string errorDescription)
-        {
+        public static bool GetErrorDescription(int code, out string errorDescription) {
             if (Enum.IsDefined(typeof(ErrorCode), code)) {
 
                 errorDescription =
@@ -130,22 +121,19 @@ namespace Grumpy.ClickPLC
             return false;
         }
 
-        public override bool CopyFrom(object src)
-        {
+        public override bool CopyFrom(object src) {
             var s = src as ChannelConfigurationBase<T>;
 
             if (s == null) { return false; }
 
-            try
-            {
+            try {
                 _alias = s._alias!;
                 _controlName = s._controlName!;
                 _startUpValue = s._startUpValue!;
                 _setOnConnect = s._setOnConnect!;
                 return true;
             }
-            catch
-            {
+            catch {
                 return false;
             }
         }
@@ -155,10 +143,9 @@ namespace Grumpy.ClickPLC
             _controlName = null;
             _startUpValue = default;
             _setOnConnect = false;
-        }   
+        }
 
-        public override object Clone()
-        {
+        public override object Clone() {
             var clone = new ChannelConfigurationBase<T>();
             clone.ControlName = _controlName!;
             clone.Alias = _alias!;
@@ -169,31 +156,27 @@ namespace Grumpy.ClickPLC
 
         #region JSON Properties
         [JsonProperty]
-        public string ControlName
-        {
+        public string ControlName {
             get => (string)_controlName?.Clone()! ?? string.Empty;
             set => _controlName = ((string)value?.Clone()! ?? null)?.ToUpper() ?? null;
         }
 
         [JsonProperty]
-        public string Alias
-        {
+        public string Alias {
             get => (string)_alias?.Clone()! ?? string.Empty;
             set => _alias = (string)value?.Clone()! ?? null;
         }
         public bool ShouldSerializeAlias() => !string.IsNullOrEmpty(_alias);
 
         [JsonProperty]
-        public bool SetOnConnect
-        {
+        public bool SetOnConnect {
             get => _setOnConnect && !IsReadOnly();
             set => _setOnConnect = value;
         }
         public bool ShouldSerializeSetOnConnect() => !IsReadOnly();
 
         [JsonProperty]
-        public T? StartUpValue
-        {
+        public T? StartUpValue {
             get => _startUpValue;
             set => _startUpValue = value;
         }
@@ -201,10 +184,8 @@ namespace Grumpy.ClickPLC
         #endregion JSON Properties
 
         [JsonIgnore]
-        public virtual IOType IOType
-        {
-            get
-            {
+        public virtual IOType IOType {
+            get {
                 String? preffx = _GetControlNamePreffix();
                 return (string.IsNullOrEmpty(preffx) || !_ioTypes.ContainsKey(preffx)) ?
                      IOType.Unknown :
@@ -216,14 +197,12 @@ namespace Grumpy.ClickPLC
         public bool ControlNameIsValid() => _GetControlAddress(out int address);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public virtual bool IsValid()
-        {
+        public virtual bool IsValid() {
             LastErrorCode = (int)ErrorCode.NoError;
             return ControlNameIsValid();
         }
 
-        public virtual bool IsReadOnly()
-        {
+        public virtual bool IsReadOnly() {
             var t = IOType;
             return t == IOType.Input ||
                    t == IOType.InputRegister ||
@@ -232,15 +211,13 @@ namespace Grumpy.ClickPLC
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TheSameChannel(ChannelConfigurationBase<T> other)
-        {
+        public bool TheSameChannel(ChannelConfigurationBase<T> other) {
             if (other == null) { return false; }
             return _controlName?.Equals(other._controlName) ?? false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected string _GetControlNamePreffix()
-        {
+        protected string _GetControlNamePreffix() {
 
             var res = ValidControlNamePreffixes.Where((x) => ControlName.StartsWith(x)).FirstOrDefault();
             if (res is null) {
@@ -249,27 +226,22 @@ namespace Grumpy.ClickPLC
             return string.Empty;
         }
 
-        protected bool _GetControlAddress(out int address)
-        {
+        protected bool _GetControlAddress(out int address) {
 
             address = InvalidControlAddress;
 
             var pref = _GetControlNamePreffix();
 
-            if (!string.IsNullOrEmpty(pref))
-            {
+            if (!string.IsNullOrEmpty(pref)) {
 
-                try
-                {
+                try {
                     address = Int32.Parse(ControlName.Substring(ControlName.IndexOf(pref), pref.Length));
 
-                    if (address <= 0)
-                    {
+                    if (address <= 0) {
                         LastErrorCode = (int)ErrorCode.InvalidControlAddress;
                     }
                 }
-                catch
-                {
+                catch {
                     LastErrorCode = (int)ErrorCode.InvalidControlName;
                     address = InvalidControlAddress;
                 }

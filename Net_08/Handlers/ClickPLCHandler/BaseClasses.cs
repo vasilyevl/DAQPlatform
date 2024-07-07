@@ -12,17 +12,16 @@
         private IOType _type;
 
 
-        public ControlBase(string name, IOType type, int len = 1, string? endName = null)
-        {
+        public ControlBase(string name, IOType type, int len = 1, string? endName = null) {
             _name = name;
             _type = type;
             _len = len;
             _endName = endName;
         }
 
-    
+
         public string Name => (string)_name?.Clone()! ?? string.Empty;
-               
+
 
 
         public string EndName => (string)_endName?.Clone()! ?? string.Empty;
@@ -39,8 +38,7 @@
     public class ReadOnlyControlBase<TRead> : ControlBase
     {
         public ReadOnlyControlBase(string name, Read<TRead> rd, IOType type, int len = 1, string? endName = null) :
-        base(name, type, len, endName)
-        {
+        base(name, type, len, endName) {
             Get = rd;
         }
 
@@ -51,8 +49,7 @@
     public class WriteOnlyControlBase<TWrite> : ControlBase
     {
         public WriteOnlyControlBase(string name, Write<TWrite> rd, IOType type, int len = 1, string? endName = null) :
-        base(name, type, len, endName)
-        {
+        base(name, type, len, endName) {
             Set = rd;
         }
 
@@ -63,8 +60,7 @@
     public class ReadWriteControlBase<TWrite, TRead> : ControlBase
     {
         public ReadWriteControlBase(string name, Write<TWrite> wrt, Read<TRead> rd, IOType type, int len = 1, string? endName = null) :
-            base(name, type, len, endName)
-        {
+            base(name, type, len, endName) {
             Set = wrt;
             Get = rd;
         }

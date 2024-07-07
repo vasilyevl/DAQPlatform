@@ -27,7 +27,8 @@ using System;
 using System.Net.Sockets;
 using System.Net;
 using System.IO.Ports;
-using Grumpy.HWControl.Common.Handlers;
+using Grumpy.HWControl.Common;
+using Grumpy.HWControl.Configuration;
 using System.Security;
 using Grumpy.ModeBusHandler.Exceptions;
 

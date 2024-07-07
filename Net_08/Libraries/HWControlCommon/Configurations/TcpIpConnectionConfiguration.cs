@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Grumpy.HWControl.Common.Handlers
+namespace Grumpy.HWControl.Configuration
 {
     public interface IEthernetConnectionConfiguration
     {

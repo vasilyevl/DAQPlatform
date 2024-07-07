@@ -1,6 +1,6 @@
 ﻿using Grumpy.Common;
 using Grumpy.HWControl.Common;
-using Grumpy.HWControl.Common.Handlers;
+using Grumpy.HWControl.Configuration;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -10,7 +10,7 @@ namespace Grumpy.ClickPLC
     public interface IInterfaceConfiguration
     {
         InterfaceSelector Selector { get; set; }
-        EthernetConnectionConfiguration? Network { get; set; }     
+        EthernetConnectionConfiguration? Network { get; set; }
         SerialPortConfiguration? SerialPort { get; set; }
     }
 
@@ -20,13 +20,13 @@ namespace Grumpy.ClickPLC
         private InterfaceSelector _selector;
         private SerialPortConfiguration? _serialPort;
         private EthernetConnectionConfiguration? _network;
-        public InterfaceConfiguration() : base() {}
+        public InterfaceConfiguration() : base() { }
 
         public InterfaceConfiguration(IInterfaceConfiguration src) : this() {
 
             Selector = src.Selector;
             SerialPort = src.SerialPort;
-            Network =  (src?.Network is not null) ? (src.Network.Clone() as EthernetConnectionConfiguration) : null;
+            Network = (src?.Network is not null) ? (src.Network.Clone() as EthernetConnectionConfiguration) : null;
         }
 
 
@@ -54,7 +54,7 @@ namespace Grumpy.ClickPLC
 
 
 
-        internal bool CopyFrom( IInterfaceConfiguration s) {
+        internal bool CopyFrom(IInterfaceConfiguration s) {
 
             Selector = s.Selector;
 
@@ -79,18 +79,18 @@ namespace Grumpy.ClickPLC
                     if (b2) { Network = net; }
                 }
                 return b1 && b2;
-            } 
+            }
             catch {
 
                 return false;
-            } 
+            }
         }
 
 
         public override bool CopyFrom(object src) {
             var s = src as IInterfaceConfiguration;
 
-            return  (s is null) ? false : CopyFrom(s);
+            return (s is null) ? false : CopyFrom(s);
         }
 
 
