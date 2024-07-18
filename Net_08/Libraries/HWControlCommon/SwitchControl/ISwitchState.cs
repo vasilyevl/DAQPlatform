@@ -1,4 +1,5 @@
-﻿namespace Grumpy.HWControl.Common
+﻿
+namespace Grumpy.HWControl.IO
 {
     public interface ISwitchState : IEquatable<Object?>, IEquatable<SwitchSt>
     {

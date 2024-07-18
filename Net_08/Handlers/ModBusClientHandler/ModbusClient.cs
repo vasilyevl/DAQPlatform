@@ -22,15 +22,15 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
+using Grumpy.HWControl.Configuration;
+using Grumpy.ModeBusHandler.Exceptions;
 
 using System;
 using System.Net.Sockets;
 using System.Net;
 using System.IO.Ports;
-using Grumpy.HWControl.Common;
-using Grumpy.HWControl.Configuration;
-using System.Security;
-using Grumpy.ModeBusHandler.Exceptions;
+
+
 
 namespace Grumpy.ModeBusHandler
 {
@@ -325,17 +325,21 @@ namespace Grumpy.ModeBusHandler
         /// </summary>
         /// <param name="registers">Two Register values received from Modbus</param>
         /// <returns>Connected float value</returns>
-        public  bool ConvertRegistersToFloat(int[] registers, out float result)
+        public static bool ConvertRegistersToFloat(int[]? registers, out float result, out string? error, RegisterOrder registerOrder = RegisterOrder.LowHigh)
         {
-            if (registers.Length != 2) {
+            if ((registers?.Length ?? 0) != 2) {
 
-                LastError = $"ModbusClient.{nameof(ConvertRegistersToFloat)}(). Input Array length invalid - Array length must be '2'";
+                error = $"ModbusClient.{nameof(ConvertRegistersToFloat)}(). Input Array length invalid - Array length must be '2'";
                 result = float.NaN;
                 return false;
             }
-                       
-            int highRegister = registers[1];
-            int lowRegister = registers[0];
+
+            int[] orderedRegisters = registerOrder == RegisterOrder.LowHigh ?[ registers[0], registers[1] ] : [registers[1], registers[0]];
+  
+            error = string.Empty;
+
+            int highRegister = orderedRegisters[1];
+            int lowRegister = orderedRegisters[0];
             byte[] highRegisterBytes = BitConverter.GetBytes(highRegister);
             byte[] lowRegisterBytes = BitConverter.GetBytes(lowRegister);
             byte[] floatBytes = {
@@ -355,7 +359,7 @@ namespace Grumpy.ModeBusHandler
         /// <param name="registers">Two Register values received from Modbus</param>
         /// <param name="registerOrder">Desired Word Order (Low Register first or High Register first</param>
         /// <returns>Connected float value</returns>
-        public  bool ConvertRegistersToFloat(int[] registers, 
+        public bool ConvertRegistersToFloat(int[] registers, 
             RegisterOrder registerOrder, out float result)
         {
 
@@ -363,7 +367,7 @@ namespace Grumpy.ModeBusHandler
             if (registerOrder == RegisterOrder.HighLow) {
                 swappedRegisters = new int[] { registers[1], registers[0] };
             }
-            return ConvertRegistersToFloat(swappedRegisters, out result);
+            return ModbusClient.ConvertRegistersToFloat(swappedRegisters, out result, out string? error);
         }
 
         /// <summary>
@@ -399,7 +403,7 @@ namespace Grumpy.ModeBusHandler
         /// </summary>
         /// <param name="registers">Two Register values received from Modbus</param>
         /// <param name="registerOrder">Desired Word Order (Low Register first or High Register first</param>
-        /// <returns>Connecteds 32 Bit Integer value</returns>
+        /// <returns>Connected 32 Bit Integer value</returns>
         public bool ConvertRegistersToInt(int[] registers, RegisterOrder registerOrder, out Int32 result)
         {
 
@@ -1179,8 +1183,8 @@ namespace Grumpy.ModeBusHandler
         /// <summary>
         /// Read Coils from Server device (FC1).
         /// </summary>
-        /// <param name="startingAddress">First coil to read</param>
-        /// <param name="quantity">Numer of coils to read</param>
+        /// <param name="startingAddress">First coil address to read</param>
+        /// <param name="quantity">Number of coils to read</param>
         ///  <param name="functionCode">Function code to be used in the ModBusTransaction. Optional. Set to 0x01 by deafult.</param>
         /// <returns>Boolean Array which contains the coils</returns>
         public bool ReadCoils(int startingAddress, int quantity, out bool[]? coils, int functionCode = 0x01)

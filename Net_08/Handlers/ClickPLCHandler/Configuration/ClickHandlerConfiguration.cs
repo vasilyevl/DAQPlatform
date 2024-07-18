@@ -1,6 +1,4 @@
 ﻿using Grumpy.Common;
-using Grumpy.HWControl.Common;
-using Grumpy.HWControl.Configuration;
 
 using Newtonsoft.Json;
 

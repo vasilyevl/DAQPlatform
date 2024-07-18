@@ -41,7 +41,7 @@ namespace Grumpy.Common
         public const uint MinCapacity = 2;
 
         private const uint _DefaultSize = 32;
-        private const string _DefaultNamePreffix = "Stack_";
+        private const string _DefaultNamePrefix = "Stack_";
 
         private static int _objectCounter = 0;
 
@@ -57,7 +57,7 @@ namespace Grumpy.Common
 
             _maxCapacity = _DefaultSize;
             _stack = new LinkedList<T>();
-            _name = $"{_DefaultNamePreffix}{_stackID}";
+            _name = $"{_DefaultNamePrefix}{_stackID}";
 
             _stackLock = new object();
         }

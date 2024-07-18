@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Grumpy.HWControl.Common
+namespace Grumpy.HWControl.IO
 {
 
     [JsonObject(MemberSerialization = MemberSerialization.OptIn)]

@@ -1,33 +1,36 @@
 ﻿using Grumpy.Common;
-using Grumpy.HWControl.Common;
-using Grumpy.HWControl.Configuration;
-using Grumpy.ModeBusHandler;
 
+using Grumpy.HWControl.Configuration;
+using Grumpy.HWControl.Interfaces;
+using Grumpy.HWControl.IO;
+using Grumpy.ModeBusHandler;
+using LV.ClickPLCHandler;
 using Newtonsoft.Json;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 
 
 namespace Grumpy.ClickPLC
 {
 
-    public class ClickHandler : IClickPLCHandler
-    {
+    public class ClickHandler : IPLCHandler {
         internal const string TimerPrefix = "T";
         internal const string CounterPrefix = "CT";
-        internal const string TimerCounterPrefix = "TD";
-        internal const string CounterCounterPrefix = "CTD";
+        internal const string TimerDataRegisterPrefix = "TD";
+        internal const string CounterDataRegisterPrefix = "CTD";
 
-        private Dictionary<IOType, int> _sartWriteAddresses =
+        private Dictionary<IOType, int> _startWriteAddresses =
             new Dictionary<IOType, int>() {
 
                 {IOType.Input, ClickAddressMap.XStartAddressHex},
                 {IOType.Output, ClickAddressMap.YStartAddressHex},
                 {IOType.ControlRelay, ClickAddressMap.CStartAddressHex},
                 {IOType.RegisterInt16, ClickAddressMap.DSStartAddressHex},
-                {IOType.Timer, ClickAddressMap.TStartAddressHex}
+                {IOType.Timer, ClickAddressMap.TStartAddressHex},
+                {IOType.RegisterFloat32, ClickAddressMap.DFStartAddressHex}
             };
 
-        private Dictionary<IOType, int> _sartReadAddresses =
+        private Dictionary<IOType, int> _startReadAddresses =
             new Dictionary<IOType, int>() {
 
                 {IOType.Input, ClickAddressMap.XStartAddressHex},
@@ -35,12 +38,13 @@ namespace Grumpy.ClickPLC
                 {IOType.ControlRelay, ClickAddressMap.CStartAddressHex},
                 {IOType.SystemControlRelay, ClickAddressMap.SCStartAddressHex},
                 {IOType.RegisterInt16, ClickAddressMap.DSStartAddressHex},
-                {IOType.Timer, ClickAddressMap.TStartAddressHex}
+                {IOType.Timer, ClickAddressMap.TStartAddressHex},
+                {IOType.RegisterFloat32, ClickAddressMap.DFStartAddressHex}
             };
 
         private Dictionary<string, object> Controls;
 
-        private StackBase<ClickHandlerException> _errorHistory;
+        private StackBase<ILogRecord> _history;
         private ModbusClient? _mbClient;
         private ClickHandlerConfiguration? _configuration;
 
@@ -48,8 +52,8 @@ namespace Grumpy.ClickPLC
 
             _mbClient = new ModbusClient();
             _configuration = null;
-            _errorHistory =
-                new StackBase<ClickHandlerException>("Error History") { };
+            _history =
+                new StackBase<ILogRecord>("Log History") { };
             Controls = new Dictionary<string, object>();
         }
 
@@ -76,13 +80,16 @@ namespace Grumpy.ClickPLC
         }
 
 
-        public bool Init(ClickHandlerConfiguration configuration) {
+        public bool Init(object cnfg) {
+
 
             if (IsOpen) {
                 _AddErrorRecord(nameof(Init),
                                        ErrorCode.ProhibitedWhenControllerIsConnected, "");
                 return false;
             }
+
+            var configuration = cnfg as ClickHandlerConfiguration;
 
             if (configuration == null) {
                 _AddErrorRecord(nameof(Init),
@@ -124,7 +131,7 @@ namespace Grumpy.ClickPLC
             }
             catch (Exception ex) {
                 _AddErrorRecord(nameof(Init),
-                     ErrorCode.ConfigDeserialisationError, ex.Message);
+                     ErrorCode.ConfigDeserializationError, ex.Message);
                 return false;
             }
         }
@@ -183,8 +190,6 @@ namespace Grumpy.ClickPLC
             return true;
         }
 
-
-
         public bool Open() {
 
             if (_configuration == null) {
@@ -228,6 +233,15 @@ namespace Grumpy.ClickPLC
         }
 
         public bool IsOpen => _mbClient?.IsConnected ?? false;
+
+        public ILogRecord? LastRecord {
+            get {
+                if (_history.Peek(out ILogRecord ex)) {
+                    return ex;
+                }
+                return null;
+            }
+        }
 
         public bool WriteDiscreteControl(string name, SwitchCtrl sw) {
 
@@ -346,184 +360,6 @@ namespace Grumpy.ClickPLC
         }
 
 
-        /*  public RelayControl GetRelayControlRW(string relayName) {
-
-              if (ClickAddressMap.GetModBusHexAddress(out int address,
-                  control: relayName,
-                  rtu: false) != ErrorCode.NoError) {
-
-                  return null;
-              }
-
-              if (!Controls.ContainsKey(relayName.ToUpper())) {
-
-                  Controls.Add(relayName.ToUpper(),
-                      new RelayControl(relayName,
-                      (v) => WriteDiscreteControl(relayName, v),
-                      (out SwitchState r) => ReadDiscreteIO(relayName, out r)));
-              }
-
-              return Controls[relayName.ToUpper()] as RelayControl;
-          }
-        */
-        /*
-        public RelayControlRO GetRelayControlRO(string relayName) {
-
-            if (ClickAddressMap.GetModAddress(out int address,
-                control: relayName,
-                rtu: false) != ErrorCode.NoError) {
-
-                return null;
-            }
-
-            if (!Controls.ContainsKey(relayName.ToUpper())) {
-
-                Controls.Add(relayName.ToUpper(),
-                    new RelayControlRO(relayName,
-                    (out SwitchState r) => ReadDiscreteIO(relayName, out r)));
-            }
-
-            return Controls[relayName.ToUpper()] as RelayControlRO;
-        }
-        */
-        /*
-        public RegisterInt16Control GetRegisterInt16Control(string registerName) {
-
-            if (ClickAddressMap.GetModAddress(out int address,
-                        control: registerName, rtu: false) != ErrorCode.NoError) {
-                return null;
-            }
-
-            if (!Controls.ContainsKey(registerName.ToUpper())) {
-
-                Controls.Add(registerName.ToUpper(),
-                    new RegisterInt16Control(registerName,
-                         (v) => WriteRegister(registerName, v),
-                         (out ushort r) => ReadRegister(registerName, out r)));
-            }
-
-            return Controls[registerName.ToUpper()] as RegisterInt16Control;
-        }
-        */
-        /*
-        public RegisterInt16ControlRO GetRegisterInt16ControlRO(
-                        string registerName) {
-
-            if (ClickAddressMap.GetModAddress(out int address,
-                    control: registerName, rtu: false) != ErrorCode.NoError) {
-
-                return null;
-            }
-
-            if (!Controls.ContainsKey(registerName.ToUpper())) {
-
-                Controls.Add(registerName.ToUpper(),
-                             new RegisterInt16ControlRO(registerName,
-                                                                                                                           (out ushort r) => ReadRegister(registerName, out r)));
-            }
-
-            return Controls[registerName.ToUpper()] as RegisterInt16ControlRO;
-        }
-        */
-        /*
-        public TimerCounter GetTimerCtrl(string timerName,
-                       string setPointName = null,
-                       string resetName = null,
-                       bool canWriteReset = false) =>
-              _GetTimerCounter(timerName, setPointName,
-                  resetName, canWriteReset, timer: true);
-
-        public TimerCounter GetCounterCtrl(string counterName,
-                       string setPointName = null,
-                       string resetName = null,
-                        bool canWriteReset = false) =>
-              _GetTimerCounter(counterName, setPointName,
-                  resetName, canWriteReset, timer: false);
-
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected TimerCounter _GetTimerCounter(string name,
-                       string setPointName = null,
-                       string resetName = null,
-                       bool canWriteReset = false,
-                       bool timer = true) {
-
-            if (string.IsNullOrEmpty(name)
-               || (timer && !name.StartsWith(TimerPrefix))
-               || (timer && name.StartsWith(TimerCounterPrefix))
-               || (!timer && !name.StartsWith(CounterPrefix))
-               || (!timer && name.StartsWith(CounterCounterPrefix))) {
-
-                _AddErrorRecord(nameof(_GetTimerCounter),
-                       ErrorCode.InvalidControlName, $"Invalid " +
-                       $"{(timer ? "timer" : "couner")} " +
-                       $"name \"{name}\" provided.");
-                
-                return null;
-            }
-
-            RelayControlRO timerCtrl = GetRelayControlRO(name);
-
-            
-            string counterRegisterName = timer
-                ? name.ToUpper().Replace(TimerPrefix, TimerCounterPrefix)
-                : name.ToUpper().Replace(CounterPrefix, CounterCounterPrefix);
-
-            RegisterInt16ControlRO counterCtrl =
-                GetRegisterInt16ControlRO(counterRegisterName);
-
-            RegisterInt16Control setPointCtrl =
-                string.IsNullOrEmpty(setPointName) ? 
-                        null : GetRegisterInt16Control(setPointName);
-
-            RelayControl resetCtrl =
-                string.IsNullOrEmpty(resetName) ? 
-                        null : GetRelayControlRW(resetName);
-
-
-
-            return new TimerCounter(timerCtrl, counterCtrl,
-                setPointCtrl, resetCtrl, canWriteReset);
-        }
-        */
-
-        public bool ReadRegister(string name, out ushort value) {
-
-            value = 0xFFFF;
-
-            if (!(_mbClient?.IsConnected ?? false)) {
-
-                _AddErrorRecord(nameof(ReadRegister),
-                    ErrorCode.NotConnected,
-                    $"Can't write when not connected.");
-                return false;
-            }
-
-            if (ClickAddressMap.GetModBusHexAddress(ioFunction: IoFunction.SingleControlRead,
-                control: name, out int address, out int functionCode) == ErrorCode.NoError) {
-
-                try {
-
-                    _mbClient.ReadInputRegisters(address, 1, out int[]? response, functionCode);
-                    value = (ushort)(response?[0] ?? 0xFFFF);
-                    return true;
-                }
-                catch (Exception ex) {
-
-                    _AddErrorRecord(nameof(ReadRegister),
-                                    ErrorCode.NotWritableControl,
-                                    $"\"{address}\" control is not " +
-                                    $"writable. {ex.Message}");
-                    return false;
-                }
-            }
-            else {
-                _AddErrorRecord(nameof(ReadRegister),
-                                ErrorCode.InvalidControlName,
-                                $"Invalid control name \"{name}\".");
-                return false;
-            }
-        }
 
         public bool ReadDiscreteIOs(string name, int numberOfIosToRead, out SwitchState[] status) {
 
@@ -570,7 +406,92 @@ namespace Grumpy.ClickPLC
             return false;
         }
 
-        public bool WriteRegister(string name, ushort value) {
+
+        public bool ReadInt16Register(string name, out int value) {
+
+            value = -1;
+
+            if (!(_mbClient?.IsConnected ?? false)) {
+
+                _AddErrorRecord(nameof(ReadInt16Register),
+                                       ErrorCode.NotConnected,
+                                                          $"Can't write when not connected.");
+                return false;
+            }
+
+            if (ClickAddressMap.GetModBusHexAddress(ioFunction: IoFunction.SingleControlRead,
+                               control: name, out int address, out int functionCode) == ErrorCode.NoError) {
+
+                try {
+
+                    _mbClient.ReadInputRegisters(address, 1, out int[]? response, functionCode);
+                    value = (short)(response?[0] ?? -1);
+                    return true;
+                }
+                catch (Exception ex) {
+
+                    _AddErrorRecord(nameof(ReadInt16Register),
+                                                           ErrorCode.NotWritableControl,
+                                                                                              $"\"{address}\" control is not " +
+                                                                                                                                 $"writable. {ex.Message}");
+                    return false;
+                }
+            }
+            else {
+                _AddErrorRecord(nameof(ReadInt16Register),
+                                                   ErrorCode.InvalidControlName,
+                                                                                  $"Invalid control name \"{name}\".");
+                return false;
+            }
+        }
+
+
+        public bool ReadUInt16Register(string name, out ushort value) {
+
+            if (ReadInt16Register(name, out int valueInt16)) {
+
+                value = (ushort)Math.Max(0, valueInt16);
+                return true;
+            }
+
+
+                value = 0xFFFF;
+
+            if (!(_mbClient?.IsConnected ?? false)) {
+
+                _AddErrorRecord(nameof(ReadUInt16Register),
+                    ErrorCode.NotConnected,
+                    $"Can't write when not connected.");
+                return false;
+            }
+
+            if (ClickAddressMap.GetModBusHexAddress(ioFunction: IoFunction.SingleControlRead,
+                control: name, out int address, out int functionCode) == ErrorCode.NoError) {
+
+                try {
+
+                    _mbClient.ReadInputRegisters(address, 1, out int[]? response, functionCode);
+                    value = (ushort)(response?[0] ?? 0xFFFF);
+                    return true;
+                }
+                catch (Exception ex) {
+
+                    _AddErrorRecord(nameof(ReadUInt16Register),
+                                    ErrorCode.NotWritableControl,
+                                    $"\"{address}\" control is not " +
+                                    $"writable. {ex.Message}");
+                    return false;
+                }
+            }
+            else {
+                _AddErrorRecord(nameof(ReadUInt16Register),
+                                ErrorCode.InvalidControlName,
+                                $"Invalid control name \"{name}\".");
+                return false;
+            }
+        }
+
+        public bool Write16BitRegister(string name, ushort value) {
 
             if (_DecodeControlName(name, out IOType ioType, out int address, write: true)) {
 
@@ -579,6 +500,54 @@ namespace Grumpy.ClickPLC
 
             return false;
         }
+
+
+        public bool WriteFloat32BitRegister(string name, float value) {
+
+            if (_DecodeControlName(name, out IOType ioType, out int address, write: true)) {
+                try {
+                    var res = ModbusClient.ConvertFloatToRegisters(value);
+                    _mbClient?.WriteMultipleRegisters(address, res);
+                    return true;    
+                }
+                catch (Exception ex) {
+                    _AddErrorRecord(nameof(WriteFloat32BitRegister),
+                                               ErrorCode.InvalidControlName, ex.Message);
+                    return false;
+                }
+            }
+
+             return false;   
+        }
+
+        public bool ReadFloat32BitRegister(string name, out float value) {
+
+            if (_DecodeControlName(name, out IOType ioType, out int address, write: false)) {
+                try {
+
+                    int[]? data = null;
+                    Boolean res = _mbClient?.ReadInputRegisters(address, 2, out data) ?? false;
+
+                    string? error = null;
+                    if (res && ModbusClient.ConvertRegistersToFloat(data, out value, out error)) {
+
+                        return true;
+                    }
+                    else {
+                        _AddErrorRecord(nameof(ReadFloat32BitRegister), ErrorCode.FailedTConvertRegistersToFloat,
+                                    $"{nameof(ReadFloat32BitRegister)}  {error ?? string.Empty}");
+                    }                                                
+                }
+                catch (Exception ex) {
+                    _AddErrorRecord(nameof(ReadFloat32BitRegister), ErrorCode.InvalidControlName, ex.Message);
+                }
+            }
+
+            value = float.NaN;
+            return false;
+        }   
+
+
 
 
 
@@ -596,19 +565,19 @@ namespace Grumpy.ClickPLC
 
             if (string.IsNullOrEmpty(preffix)) {
 
-                _AddErrorRecord(nameof(_DecodeControlName), ErrorCode.InvalidControlNamePreffix);
+                _AddErrorRecord(nameof(_DecodeControlName), ErrorCode.InvalidControlNamePrefix);
                 return false;
             }
 
             IOType tp = ChannelConstants.IoTypes[preffix];
-            var selector = write ? _sartWriteAddresses : _sartReadAddresses;
+            var selector = write ? _startWriteAddresses : _startReadAddresses;
 
             if (selector.ContainsKey(tp)) {
                 try {
 
                     address = selector[tp];
-                    int idx = name.IndexOf(preffix);
-                    address += Int32.Parse(name.ToUpper().Substring(idx + preffix.Length)) - 1;
+                    int idx = Int32.Parse(name.Substring(name.IndexOf(preffix) + preffix.Length));
+                    address +=_CalculateAddressOffst(tp, idx);
                     ioType = tp;
                     return true;
                 }
@@ -623,13 +592,23 @@ namespace Grumpy.ClickPLC
             return false;
         }
 
+        private static int _CalculateAddressOffst(IOType type, int idx) {
+
+            switch (type) {
+                case IOType.RegisterFloat32:
+                case IOType.RegisterInt32:
+                    return Math.Max(0, idx - 1) * 2;
+
+                default:
+                    return Math.Max(0, idx -1);
+            }
+        }
+
         private bool _AddErrorRecord(string methodName,
                                     ErrorCode code, string? details = null) {
             try {
-                _errorHistory.Push(
-                        new ClickHandlerException(methodName,
-                        ErrorCode.ConfigDeserialisationError,
-                        details), force: true);
+                _history.Push(
+                        new LogRecord(LogLevel.Error, methodName, details!,  (int) code, DateTime.Now));
                 return true;
             }
             catch (Exception ex) {

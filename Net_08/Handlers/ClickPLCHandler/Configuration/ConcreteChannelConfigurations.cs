@@ -1,5 +1,5 @@
-﻿using Grumpy.HWControl.Common;
-
+﻿
+using Grumpy.HWControl.IO;
 using Newtonsoft.Json;
 
 namespace Grumpy.ClickPLC

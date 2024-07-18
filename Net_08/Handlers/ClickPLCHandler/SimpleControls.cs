@@ -1,4 +1,5 @@
-﻿using Grumpy.HWControl.Common;
+﻿
+using Grumpy.HWControl.IO;
 
 namespace Grumpy.ClickPLC
 {

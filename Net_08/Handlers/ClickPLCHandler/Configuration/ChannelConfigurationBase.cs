@@ -13,8 +13,6 @@ namespace Grumpy.ClickPLC
         InputRegister,
         Output,
         OutputRegister,
-        AnalogInput,
-        AnalogOutput,
         ControlRelay,
         RegisterInt16,
         RegisterInt32,
@@ -221,7 +219,7 @@ namespace Grumpy.ClickPLC
 
             var res = ValidControlNamePreffixes.Where((x) => ControlName.StartsWith(x)).FirstOrDefault();
             if (res is null) {
-                LastErrorCode = (int)ErrorCode.InvalidControlNamePreffix;
+                LastErrorCode = (int)ErrorCode.InvalidControlNamePrefix;
             }
             return string.Empty;
         }

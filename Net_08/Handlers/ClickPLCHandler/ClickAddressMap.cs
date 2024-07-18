@@ -306,7 +306,7 @@
 
             if ((prefixes?.Count() ?? 0) < 1) {
 
-                return ErrorCode.InvalidControlNamePreffix;
+                return ErrorCode.InvalidControlNamePrefix;
             }
 
             String? prefix = prefixes?.First() ?? null;
@@ -317,7 +317,7 @@
             }
             else {
 
-                return ErrorCode.InvalidControlNamePreffix;
+                return ErrorCode.InvalidControlNamePrefix;
             }
 
 
