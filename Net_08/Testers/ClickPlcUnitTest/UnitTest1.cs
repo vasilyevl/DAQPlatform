@@ -178,5 +178,21 @@ namespace ClickPlcUnitTest
 
         }
 
+
+        [Fact]
+        public void Test4() {
+
+
+            int s = int.MinValue+1;
+            _testOutputHelper.WriteLine($"Short value {Convert.ToString(s,2)}.");
+            uint us = (uint) s;
+            _testOutputHelper.WriteLine($"UShort value {Convert.ToString(us, 2)}.");
+            int s2 = (int) us;
+            _testOutputHelper.WriteLine($"Short value {Convert.ToString(s2, 2)}.");
+            Assert.True(s == s2, "Failed to convert short to ushort and back.");
+
+
+        }
+        
     }
 }

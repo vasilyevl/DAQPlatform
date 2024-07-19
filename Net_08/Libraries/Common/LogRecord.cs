@@ -31,19 +31,27 @@ namespace Grumpy.Common
     public class LogRecord: ILogRecord {
 
 
-        public static ILogRecord CreateRecord(LogLevel level, string methodName, string message, int errorCode, DateTime time = default, ILogRecord nestedRecord = null) {
+        public static ILogRecord CreateRecord(LogLevel level, 
+            string methodName, string message, int errorCode, 
+            DateTime time = default, 
+            ILogRecord? nestedRecord = null) {
 
-            return new LogRecord(level, methodName, message, errorCode, time, nestedRecord);
+            return new LogRecord(level, methodName, message, 
+                errorCode, time, nestedRecord);
         }
 
 
-        public static ILogRecord CreateRecord(string methodName, Exception ex, int errorCode = -1, DateTime time = default(DateTime)) {
+        public static ILogRecord CreateRecord(string methodName, 
+            Exception ex, int errorCode = -1, 
+            DateTime time = default(DateTime)) {
 
             return new LogRecord(methodName, ex, errorCode, time);
         }
 
 
-        internal LogRecord(LogLevel level, string methodName, string message, int errorCode, DateTime time = default, ILogRecord? nestedRecord = null) {
+        internal LogRecord(LogLevel level, 
+            string methodName, string message, int errorCode, 
+            DateTime time = default, ILogRecord? nestedRecord = null) {
 
             MethodName = methodName;
             ErrorCode = errorCode;
@@ -52,7 +60,9 @@ namespace Grumpy.Common
             InternalRecord = nestedRecord;
         }
 
-        internal  LogRecord(string methodName,  Exception ex, int errorCode = -1, DateTime time = default(DateTime)) {
+        internal  LogRecord(string methodName,  
+            Exception ex, int errorCode = -1,
+            DateTime time = default(DateTime)) {
 
             MethodName = methodName;
             ErrorCode = errorCode;
@@ -74,9 +84,6 @@ namespace Grumpy.Common
             
             Details = sb.ToString();
         }
-
-
-
         public  DateTime Time { get; private set; }
         public LogLevel Level { get; private set; }
         public  string MethodName { get; private set; }

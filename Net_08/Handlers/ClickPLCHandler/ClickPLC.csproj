@@ -40,6 +40,7 @@
     <Compile Include="..\..\Libraries\HWControlCommon\SwitchControl\SwitchState.cs" Link="Misc\SwitchState.cs" />
     <Compile Include="..\ModBusClientHandler\Exceptions\Exceptions.cs" Link="ModBus\Exceptions.cs" />
     <Compile Include="..\ModBusClientHandler\ModbusClient.cs" Link="ModBus\ModbusClient.cs" />
+    <Compile Include="..\ModBusClientHandler\ModBusUtilities.cs" Link="ModBus\ModBusUtilities.cs" />
   </ItemGroup>
 
   <ItemGroup>

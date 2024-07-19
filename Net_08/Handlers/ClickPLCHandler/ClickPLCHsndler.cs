@@ -4,6 +4,7 @@ using Grumpy.HWControl.Configuration;
 using Grumpy.HWControl.Interfaces;
 using Grumpy.HWControl.IO;
 using Grumpy.ModeBusHandler;
+
 using LV.ClickPLCHandler;
 using Newtonsoft.Json;
 using System.Numerics;
@@ -506,7 +507,7 @@ namespace Grumpy.ClickPLC
 
             if (_DecodeControlName(name, out IOType ioType, out int address, write: true)) {
                 try {
-                    var res = ModbusClient.ConvertFloatToRegisters(value);
+                    var res = Utilities.ConvertFloatToRegisters(value);
                     _mbClient?.WriteMultipleRegisters(address, res);
                     return true;    
                 }
@@ -529,7 +530,7 @@ namespace Grumpy.ClickPLC
                     Boolean res = _mbClient?.ReadInputRegisters(address, 2, out data) ?? false;
 
                     string? error = null;
-                    if (res && ModbusClient.ConvertRegistersToFloat(data, out value, out error)) {
+                    if (res && Utilities.ConvertRegistersToFloat(data,  RegisterOrder.LowHigh , out value, out error)) {
 
                         return true;
                     }
@@ -611,18 +612,20 @@ namespace Grumpy.ClickPLC
                         new LogRecord(LogLevel.Error, methodName, details!,  (int) code, DateTime.Now));
                 return true;
             }
+#if !DEBUG
+            catch {
+                return false;
+            }
+#else
             catch (Exception ex) {
-
-#if DEBUG
                 string msg = $"Failed to add error record to the error " +
                     $"history stack. Exception: {ex.Message}";
                 Console.WriteLine(msg);
-#endif
-
-                return false;
+                      return false;
             }
+#endif
         }
 
-        #endregion Private Methods
+#endregion Private Methods
     }
 }
