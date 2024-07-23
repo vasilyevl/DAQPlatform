@@ -1,4 +1,26 @@
-﻿namespace Grumpy.ClickPLC
+﻿/*
+ * Copyright (c) 2024 Grumpy. Permission is hereby granted, 
+free of charge, to any person obtaining a copy of this software
+and associated documentation files (the "Software"),to deal in the Software 
+without restriction, including without limitation the rights to use, copy, 
+modify, merge, publish, distribute, sublicense, and/or sell copies of the 
+Software, and to permit persons to whom the Software is furnished to do so, 
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included 
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,FITNESS FOR A 
+PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
+OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+*/
+
+
+namespace Grumpy.ClickPLCHandler
 {
     public enum FunctionCode
     {
@@ -82,8 +104,12 @@
         public const int DFStartAddressHex = 0x7000;
         public const int XDStartAddress984 = 357344;
         public const int XDStartAddressHex = 0xE000;
+        public const int XDUStartAddress984 = 357345;
+        public const int XDUStartAddressHex = 0xE001;
         public const int YDStartAddress984 = 457856;
         public const int YDStartAddressHex = 0xE200;
+        public const int YDUStartAddress984 = 457857;
+        public const int YDUStartAddressHex = 0xE201;
         public const int TDStartAddress984 = 445056;
         public const int TDStartAddressHex = 0xB000;
         public const int CTDStartAddress984 = 449152;
@@ -200,14 +226,16 @@
                 {"DH", IOType.RegisterHex},
                 {"DF", IOType.RegisterFloat32},
                 {"XD", IOType.InputRegister},
+                {"XDU", IOType.InputRegister },
                 {"YD", IOType.OutputRegister},
+                {"YDU", IOType.OutputRegister },
                 {"TD", IOType.TimerRegister},
                 {"CTD", IOType.CounterRegister},
                 {"SD", IOType.SystemRegister},
                 {"TXT", IOType.Text}
             };
 
-        private static ErrorCode _GetModBusHexAddress(IoFunction function,
+        private static ClickErrorCode _GetModBusHexAddress(IoFunction function,
             IOType type, out int address, out int fuctionCode) {
 
             address = -1;
@@ -236,28 +264,28 @@
                         break;
                 }
 
-                return ErrorCode.NoError;
+                return ClickErrorCode.NoError;
             }
             else {
 
-                return ErrorCode.IoNotSupported;
+                return ClickErrorCode.IoNotSupported;
             }
         }
 
-        public static ErrorCode GetModBusHexAddress(IoFunction ioFunction, string control,
+        public static ClickErrorCode GetModBusHexAddress(IoFunction ioFunction, string control,
             out int address, out int functionCode) {
             address = -1;
             functionCode = -1;
 
-            ErrorCode err = _DecodeControlName(control,
+            ClickErrorCode err = _DecodeControlName(control,
                 out IOType type, out int nameAddress);
 
-            if (err == ErrorCode.NoError) {
+            if (err == ClickErrorCode.NoError) {
 
                 err = _GetModBusHexAddress(ioFunction, type,
                     out int baseAddress, out functionCode);
 
-                address = (err == ErrorCode.NoError)
+                address = (err == ClickErrorCode.NoError)
                     ? baseAddress + nameAddress
                     : -1;
             }
@@ -295,7 +323,7 @@
             return type == IOType.Text;
         }
 
-        private static ErrorCode _DecodeControlName(string name, out IOType ioType, out int nameAddress) {
+        private static ClickErrorCode _DecodeControlName(string name, out IOType ioType, out int nameAddress) {
             ioType = IOType.Unknown;
             nameAddress = -1;
 
@@ -306,7 +334,7 @@
 
             if ((prefixes?.Count() ?? 0) < 1) {
 
-                return ErrorCode.InvalidControlNamePrefix;
+                return ClickErrorCode.InvalidControlNamePrefix;
             }
 
             String? prefix = prefixes?.First() ?? null;
@@ -317,7 +345,7 @@
             }
             else {
 
-                return ErrorCode.InvalidControlNamePrefix;
+                return ClickErrorCode.InvalidControlNamePrefix;
             }
 
 
@@ -335,12 +363,12 @@
                     nameAddress = 0;
                 }
 
-                return ErrorCode.NoError;
+                return ClickErrorCode.NoError;
             }
             catch {
 
                 nameAddress = -1;
-                return ErrorCode.InvalidControlName;
+                return ClickErrorCode.InvalidControlName;
             }
         }
     }

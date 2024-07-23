@@ -1,4 +1,7 @@
-﻿/*Copyright (c) 2024 Grumpy. Permission is hereby granted, 
+﻿using System;
+/*
+ 
+Copyright (c) 2024 Grumpy. Permission is hereby granted, 
 free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"),to deal in the Software 
 without restriction, including without limitation the rights to use, copy, 
@@ -18,35 +21,30 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
+
 namespace Grumpy.ClickPLCHandler
 {
-    public interface IClickPLCHandler
+    public enum ClickErrorCode
     {
-        Boolean IsOpen { get; }
-        ILogRecord? LastRecord { get; }
-
-        Boolean Open();
-        Boolean Close();
-
-        Boolean Init(String configJsonString);
-
-        Boolean ReadDiscreteControl(String name, out SwitchState state);
-        Boolean WriteDiscreteControl(String name, SwitchCtrl sw);
-
-        Boolean ReadDiscreteControls(String name, int numberOfIosToRead, out SwitchState[] status);
-        Boolean WriteDiscreteControls(String startName, SwitchCtrl[] controls);
-
-        Boolean ReadInt16Register(String name, out short value);
-        Boolean WriteInt16Register(String name, short value);
-
-        Boolean ReadUInt16Register(String name, out ushort value);
-        Boolean WriteUint16Register(String name, ushort value);
-
-        Boolean ReadFloat32Register(String name, out float value);
-        Boolean WriteFloat32Register(String name, float value);
-
-
-
-
+        NoError = 0,
+        GenericError = -1,
+        ConfigurationNotSet = -2,
+        InvalidControlName = -3,
+        InvalidControlNamePrefix = -4,
+        InvalidControlAddress = -5,
+        OpenFailed = -6,
+        CloseFailed = -7,
+        ProhibitedWhenControllerIsConnected = -8,
+        ProhibitedWhenControllerIsNotConnected = -9,
+        ConfigDeserializationError = -10,
+        IoNotSupported = -11,
+        InvalidSwitchState = -12,
+        NotConnected = -13,
+        SingleIoWriteFailed = -14,
+        NoDataProvided = -15,
+        GroupIoWriteFailed = -16,
+        ConfigurationIsNotProvided = -17,
+        NotWritableControl = -18,
+        FailedTConvertRegistersToFloat = -19,
     }
 }

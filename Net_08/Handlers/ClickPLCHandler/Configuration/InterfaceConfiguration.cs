@@ -1,79 +1,65 @@
-﻿using Grumpy.Common;
-using Grumpy.HWControl.Configuration;
+﻿/*
+ * Copyright (c) 2024 Grumpy. Permission is hereby granted, 
+free of charge, to any person obtaining a copy of this software
+and associated documentation files (the "Software"),to deal in the Software 
+without restriction, including without limitation the rights to use, copy, 
+modify, merge, publish, distribute, sublicense, and/or sell copies of the 
+Software, and to permit persons to whom the Software is furnished to do so, 
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included 
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,FITNESS FOR A 
+PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
+OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+*/
+
 
 using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 
-namespace Grumpy.ClickPLC
+
+namespace Grumpy.ClickPLCHandler
 {
     public interface IInterfaceConfiguration
     {
-        InterfaceSelector Selector { get; set; }
-        EthernetConnectionConfiguration? Network { get; set; }
-        SerialPortConfiguration? SerialPort { get; set; }
+        TcpIpConnectionConfiguration? Network { get; set; }
+       
     }
 
     [JsonObject(MemberSerialization = MemberSerialization.OptIn)]
-    public class InterfaceConfiguration : ConfigurationBase, IInterfaceConfiguration
+    public class InterfaceConfiguration :  IInterfaceConfiguration
     {
-        private InterfaceSelector _selector;
-        private SerialPortConfiguration? _serialPort;
-        private EthernetConnectionConfiguration? _network;
+        private TcpIpConnectionConfiguration? _network;
         public InterfaceConfiguration() : base() { }
 
         public InterfaceConfiguration(IInterfaceConfiguration src) : this() {
 
-            Selector = src.Selector;
-            SerialPort = src.SerialPort;
-            Network = (src?.Network is not null) ? (src.Network.Clone() as EthernetConnectionConfiguration) : null;
-        }
-
-
-
-
-        [JsonProperty]
-        [JsonConverter(typeof(StringEnumConverter))]
-        public InterfaceSelector Selector {
-            get => _selector;
-            set => _selector = value;
+            Network = (src?.Network is not null) ? (src.Network.Clone() as TcpIpConnectionConfiguration) : null;
         }
 
         [JsonProperty]
-        public SerialPortConfiguration? SerialPort {
-            get => _serialPort;
-            set => _serialPort = value;
-        }
-
-        [JsonProperty]
-        public EthernetConnectionConfiguration? Network {
+        public TcpIpConnectionConfiguration? Network {
             get => _network;
             set => _network = value;
         }
 
 
-
-
         internal bool CopyFrom(IInterfaceConfiguration s) {
 
-            Selector = s.Selector;
-
-            SerialPort = null;
             Network = null;
             bool b1 = true;
             bool b2 = true;
 
             try {
 
-                if (s.SerialPort is not null) {
-
-                    var sp = new SerialPortConfiguration();
-                    b1 = sp.CopyFrom(s.SerialPort);
-                    if (b1) { SerialPort = sp; }
-                }
-
                 if (s.Network != null) {
 
-                    var net = new EthernetConnectionConfiguration();
+                    var net = new TcpIpConnectionConfiguration();
                     b2 = net.CopyFrom(s.Network);
                     if (b2) { Network = net; }
                 }
@@ -86,16 +72,14 @@ namespace Grumpy.ClickPLC
         }
 
 
-        public override bool CopyFrom(object src) {
+        public  bool CopyFrom(object src) {
             var s = src as IInterfaceConfiguration;
 
             return (s is null) ? false : CopyFrom(s);
         }
 
 
-        public override void Reset() {
-            Selector = InterfaceSelector.Auto;
-            SerialPort = null;
+        public void Reset() {
             Network = null;
         }
     }

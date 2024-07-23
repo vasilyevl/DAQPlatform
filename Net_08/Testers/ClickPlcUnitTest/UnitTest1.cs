@@ -79,13 +79,13 @@ namespace ClickPlcUnitTest
                 float writeValue =  ( cycles > 1) ?  increment * i : increment;
                 _testOutputHelper.WriteLine($"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")} Writing float value {writeValue} to Click PLC register {FloatRegister}.");
 
-                r = _handler.WriteFloat32BitRegister(FloatRegister, writeValue);
+                r = _handler.WriteFloat32Register(FloatRegister, writeValue);
 
                 Assert.True(r, "Failed to write float to Click PLC.");
 
                 _testOutputHelper.WriteLine($"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")} Float value {writeValue} written to Click PLC register {FloatRegister}.");
 
-                r = _handler.ReadFloat32BitRegister(FloatRegister, out readValue);
+                r = _handler.ReadFloat32Register(FloatRegister, out readValue);
 
                 Assert.True(r, "Failed to read float from Click PLC.");
 
@@ -145,22 +145,22 @@ namespace ClickPlcUnitTest
                     $"Writing float value {da1WriteValue} to {FloatRegisterDA1} and " +
                     $"{da2WriteValue} to {FloatRegisterDA2}.");
 
-                r = _handler.WriteFloat32BitRegister(FloatRegisterDA1, da1WriteValue);
+                r = _handler.WriteFloat32Register(FloatRegisterDA1, da1WriteValue);
 
                 Assert.True(r, $"Failed to write float to Click PLC register {FloatRegisterDA1}.");
 
-                r = _handler.WriteFloat32BitRegister(FloatRegisterDA2, da2WriteValue);
+                r = _handler.WriteFloat32Register(FloatRegisterDA2, da2WriteValue);
 
                 Assert.True(r, $"Failed to write float to Click PLC register {FloatRegisterDA1}");
 
                 _testOutputHelper.WriteLine($"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")} DAs updated.");
                 Thread.Sleep(100);
-                r = _handler.ReadFloat32BitRegister(FloatRegisterAD1, out readValue);
+                r = _handler.ReadFloat32Register(FloatRegisterAD1, out readValue);
 
                 Assert.True(r, $"Failed to read float from Click PLC register {FloatRegisterAD1}.");
 
                 _testOutputHelper.WriteLine($"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")} Float value {readValue} read from Click PLC register {FloatRegisterAD1}.");
-                r = _handler.ReadFloat32BitRegister(FloatRegisterAD2, out readValue);
+                r = _handler.ReadFloat32Register(FloatRegisterAD2, out readValue);
 
                 Assert.True(r, $"Failed to read float from Click PLC register {FloatRegisterAD2}.");
 

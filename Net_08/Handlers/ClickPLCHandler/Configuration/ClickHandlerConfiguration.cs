@@ -1,9 +1,9 @@
-﻿using Grumpy.Common;
+﻿
 
 using Newtonsoft.Json;
 
 
-namespace Grumpy.ClickPLC
+namespace Grumpy.ClickPLCHandler
 {
     public interface IClickHandlerConfiguration
     {
@@ -14,7 +14,7 @@ namespace Grumpy.ClickPLC
 
 
     [JsonObject(MemberSerialization = MemberSerialization.OptIn)]
-    public class ClickHandlerConfiguration : ConfigurationBase, IClickHandlerConfiguration, ICloneable
+    public class ClickHandlerConfiguration : IClickHandlerConfiguration, ICloneable
     {
         private InterfaceConfiguration? _interface;
         //private string _controlName;
@@ -29,7 +29,7 @@ namespace Grumpy.ClickPLC
             this.CopyFrom(source);
         }
 
-        public override bool CopyFrom(object src) {
+        public bool CopyFrom(object src) {
 
             var s = src as IClickHandlerConfiguration;
 
@@ -45,10 +45,10 @@ namespace Grumpy.ClickPLC
             return true;
         }
 
-        public override void Reset() {
+        public void Reset() {
             _interface = new InterfaceConfiguration();
         }
-        public override object Clone() {
+        public object Clone() {
             var clone = new ClickHandlerConfiguration();
             clone.CopyFrom(this);
             return clone;

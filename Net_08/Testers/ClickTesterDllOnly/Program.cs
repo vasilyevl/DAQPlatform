@@ -81,7 +81,8 @@ namespace ClickTester
 
             Console.WriteLine("Starting simple timer test.");
 
-            exitCode = DoSimpleTimerTest(_timer, _setPoint, _controlRelay, _setTimeMs);
+            exitCode = DoSimpleTimerTest(_timer, _setPoint, 
+                _controlRelay, _setTimeMs);
 
             if (exitCode != 0) {
 
@@ -108,9 +109,6 @@ namespace ClickTester
                 Console.WriteLine($"AIO test failed with exit code {exitCode} .");
                 goto Exit;
             }
-
-
-
 
             Exit:
             Console.WriteLine($"Test complete with error code {exitCode}");
