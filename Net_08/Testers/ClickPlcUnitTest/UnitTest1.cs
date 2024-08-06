@@ -1,4 +1,4 @@
-using Grumpy.ClickPLC;
+using Grumpy.ClickPLCHandler;
 using Microsoft.VisualBasic.FileIO;
 using System.Diagnostics;
 using System.Reflection.Metadata;
@@ -8,13 +8,14 @@ namespace ClickPlcUnitTest
 {
     public class UnitTest1
     {
-        static readonly string config = "{\"Interface\":{" +
-                                             "\"Selector\":\"Network\"," +
-                                             "\"SerialPort\":null," +
-                                             "\"Network\":{\"Name\":\"ClickPLC\"," +
-                                                          "\"IpAddress\":\"192.168.1.22\"," +
-                                                          "\"Port\":502," +
-                                                          "\"Timeout\":15000}}}";
+        static readonly string config = 
+            "{\"Interface\":{" +
+                   "\"Selector\":\"Network\"," +
+                   "\"SerialPort\":null," +
+                   "\"Network\":{\"Name\":\"ClickPLC\"," +
+                                "\"IpAddress\":\"192.168.1.22\"," +
+                                "\"Port\":502," +
+                                "\"Timeout\":15000}}}";
 
         private static ClickHandler _handler = null!;
         private readonly ITestOutputHelper _testOutputHelper;
@@ -77,23 +78,34 @@ namespace ClickPlcUnitTest
 
             for ( int i = 0; i < cycles; i++) {
                 float writeValue =  ( cycles > 1) ?  increment * i : increment;
-                _testOutputHelper.WriteLine($"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")} Writing float value {writeValue} to Click PLC register {FloatRegister}.");
+                _testOutputHelper.WriteLine(
+                    $"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")} " +
+                    $"Writing float value {writeValue} to Click PLC " +
+                    $"register {FloatRegister}.");
 
                 r = _handler.WriteFloat32Register(FloatRegister, writeValue);
 
                 Assert.True(r, "Failed to write float to Click PLC.");
 
-                _testOutputHelper.WriteLine($"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")} Float value {writeValue} written to Click PLC register {FloatRegister}.");
+                _testOutputHelper.WriteLine(
+                    $"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")} " +
+                    $"Float value {writeValue} written to Click PLC " +
+                    $"register {FloatRegister}.");
 
                 r = _handler.ReadFloat32Register(FloatRegister, out readValue);
 
                 Assert.True(r, "Failed to read float from Click PLC.");
 
-                Assert.True(Math.Abs(writeValue - readValue) < .0001f, $"Failed to read the same value back. Value received {readValue}");
+                Assert.True(Math.Abs(writeValue - readValue) < .0001f, 
+                    $"Failed to read the same value back. " +
+                    $"Value received {readValue}");
 
-                _testOutputHelper.WriteLine($"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")} Float value {readValue} read from Click PLC register {FloatRegister}.");
+                _testOutputHelper.WriteLine(
+                    $"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")} " +
+                    $"Float value {readValue} read from Click PLC " +
+                    $"register {FloatRegister}.");
 
-                Thread.Sleep(1000);
+                Thread.Sleep(500);
             }       
 
             r = _handler.Close();
@@ -103,7 +115,6 @@ namespace ClickPlcUnitTest
             _testOutputHelper.WriteLine("Connection closed.");
 
             _testOutputHelper.WriteLine("Test complete.");
-
         }
 
 
@@ -139,32 +150,49 @@ namespace ClickPlcUnitTest
 
             for ( int i = 0; i < steps; i++) {
 
-                float da1WriteValue = testValueMin + (( steps > 1) ?  increment * i : increment);
-                float da2WriteValue = testValueMax - (( steps > 1) ?  increment * i : increment);
-                _testOutputHelper.WriteLine($"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")} " +
+                float da1WriteValue = testValueMin + (( steps > 1) ?  
+                                            increment * i : increment);
+                float da2WriteValue = testValueMax - (( steps > 1) ?  
+                                            increment * i : increment);
+
+                _testOutputHelper.WriteLine(
+                    $"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")} " +
                     $"Writing float value {da1WriteValue} to {FloatRegisterDA1} and " +
                     $"{da2WriteValue} to {FloatRegisterDA2}.");
 
                 r = _handler.WriteFloat32Register(FloatRegisterDA1, da1WriteValue);
 
-                Assert.True(r, $"Failed to write float to Click PLC register {FloatRegisterDA1}.");
+                Assert.True(r, $"Failed to write float to " +
+                    $"Click PLC register {FloatRegisterDA1}.");
 
                 r = _handler.WriteFloat32Register(FloatRegisterDA2, da2WriteValue);
 
-                Assert.True(r, $"Failed to write float to Click PLC register {FloatRegisterDA1}");
+                Assert.True(r, $"Failed to write float to " +
+                    $"Click PLC register {FloatRegisterDA1}");
 
-                _testOutputHelper.WriteLine($"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")} DAs updated.");
+                _testOutputHelper.WriteLine(
+                    $"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")} " +
+                    $"DAs updated.");
+
                 Thread.Sleep(100);
                 r = _handler.ReadFloat32Register(FloatRegisterAD1, out readValue);
 
-                Assert.True(r, $"Failed to read float from Click PLC register {FloatRegisterAD1}.");
+                Assert.True(r, $"Failed to read float from Click " +
+                    $"PLC register {FloatRegisterAD1}.");
 
-                _testOutputHelper.WriteLine($"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")} Float value {readValue} read from Click PLC register {FloatRegisterAD1}.");
+                _testOutputHelper.WriteLine(
+                    $"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")} " +
+                    $"Float value {readValue} read from Click PLC " +
+                    $"register {FloatRegisterAD1}.");
                 r = _handler.ReadFloat32Register(FloatRegisterAD2, out readValue);
 
-                Assert.True(r, $"Failed to read float from Click PLC register {FloatRegisterAD2}.");
+                Assert.True(r, $"Failed to read float from Click " +
+                    $"PLC register {FloatRegisterAD2}.");
 
-                _testOutputHelper.WriteLine($"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")} Float value {readValue} read from Click PLC register {FloatRegisterAD2}.");
+                _testOutputHelper.WriteLine(
+                    $"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")}" +
+                    $" Float value {readValue} read from Click PLC " +
+                    $"register {FloatRegisterAD2}.");
               
             }       
 
@@ -182,7 +210,6 @@ namespace ClickPlcUnitTest
         [Fact]
         public void Test4() {
 
-
             int s = int.MinValue+1;
             _testOutputHelper.WriteLine($"Short value {Convert.ToString(s,2)}.");
             uint us = (uint) s;
@@ -190,8 +217,6 @@ namespace ClickPlcUnitTest
             int s2 = (int) us;
             _testOutputHelper.WriteLine($"Short value {Convert.ToString(s2, 2)}.");
             Assert.True(s == s2, "Failed to convert short to ushort and back.");
-
-
         }
         
     }

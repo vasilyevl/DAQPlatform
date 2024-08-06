@@ -7,6 +7,9 @@
     <Nullable>enable</Nullable>
     <Platforms>x64</Platforms>
     <BaseOutputPath>..\..\bin</BaseOutputPath>
+    <Version>1.0.0.0</Version>
+    <Authors>vasilyevl</Authors>
+    <Company>vasilyevl_Grumpy</Company>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -20,6 +23,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="libs\ClickPLC.deps.json" />
+    <None Remove="libs\ClickPLC.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.IO.Ports" Version="8.0.0" />
   </ItemGroup>
@@ -29,5 +37,13 @@
       <HintPath>libs\ClickPLC.dll</HintPath>
     </Reference>
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="libs\" />
+  </ItemGroup>
+
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <Exec Command="echo Configuration: $(Configuration)&#xD;&#xA;echo Ouput Diractory: $(OutDir)&#xD;&#xA;echo Copying output to the Tester Lib folder&#xD;&#xA;xcopy C:\Projects\Software\MyPlatformGit\Net_08\StandAlone\ClickPLC\bin\Release\net8.0 C:\Projects\Software\MyPlatformGit\Net_08\Testers\ClickTesterDllOnly\libs /d /y" />
+  </Target>
 
 </Project>

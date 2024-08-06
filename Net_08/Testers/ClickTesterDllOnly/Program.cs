@@ -45,18 +45,15 @@ namespace ClickTester
                 return exitCode;
             }
 
-            Console.WriteLine("Starting simple single discrete IO test test.");
+
+            Console.WriteLine("Handler opened.");
+
+
 
             if ((exitCode = DoSingleIO(_io)) != 0) {
-
-                Console.WriteLine($"Simple single discrete IO test failed" +
-                    $" with exit code {exitCode} .");
                 goto Exit;
             }
 
-            Console.WriteLine("Simple single discrete IO test complete.");
-
-            Console.WriteLine("Starting discrete IO array test.");
 
             if ((exitCode = DoMultipleRelaysTest("C2", 8)) != 0) {
 
@@ -65,53 +62,31 @@ namespace ClickTester
                 goto Exit;
             }
 
-            Console.WriteLine("Discrete IO array test complete.");
-            Thread.Sleep(1000);
+            Thread.Sleep(250);
 
-            exitCode = DoSimpleCounterTest("CT1", "DS11", "C10", "C11", 25);
-
-            if (exitCode != 0) {
-
-                Console.WriteLine($"Simple counter test failed with " +
-                    $"exit code {exitCode} .");
+            if ((exitCode = DoSimpleCounterTest("CT1", "DS11", "C10", "C11", 25)) != 0) {
                 goto Exit;
             }
 
-            Console.WriteLine("Simple counter test complete.");
-
-            Console.WriteLine("Starting simple timer test.");
-
-            exitCode = DoSimpleTimerTest(_timer, _setPoint, 
-                _controlRelay, _setTimeMs);
-
-            if (exitCode != 0) {
-
-                Console.WriteLine($"Simple timer test failed with exit " +
-                    $"code {exitCode} .");
+            if ((exitCode = DoSimpleTimerTest(_timer, _setPoint,
+                _controlRelay, _setTimeMs)) != 0) {
                 goto Exit;
             }
 
-            Console.WriteLine("Simple timer test complete.");
 
-            Console.WriteLine("Handler opened.");
-
-            if ((exitCode = FloatRegisterTest("DF10", 22.11f)) != 0) {
-
-                Console.WriteLine($"Float register test failed with exit code {exitCode} .");
+            if ((exitCode = FloatRegisterTest("DF10", 22.11f)) != 0) {              
                 goto Exit;
             }
 
-            Console.WriteLine("Float register test complete.");
 
 
             if ((exitCode = AIOTest()) != 0) {
 
-                Console.WriteLine($"AIO test failed with exit code {exitCode} .");
                 goto Exit;
             }
 
             Exit:
-            Console.WriteLine($"Test complete with error code {exitCode}");
+            Console.WriteLine($"\n\n All Tests complete with error code {exitCode}");
             Console.WriteLine("Click 'Enter' to exit.");
             Console.ReadLine();
 
@@ -120,6 +95,8 @@ namespace ClickTester
 
         private static int DoMultipleRelaysTest(string startRelay, int quantity) {
 
+
+            Console.WriteLine("\n\nStarting discrete IO array  read/write test.\n");
             SwitchCtrl[] controlArray = new SwitchCtrl[quantity];
 
             controlArray = controlArray.Select((x) => SwitchCtrl.On).ToArray();
@@ -131,21 +108,27 @@ namespace ClickTester
 
             int cntr = 0;
             controlArray = controlArray.Select((x) => (cntr++ % 2 == 0 ? SwitchCtrl.Off : SwitchCtrl.On)).ToArray();
-            Thread.Sleep(2000);
+            Thread.Sleep(200);
             if ((errorCode = DoDiscreteIOs(startRelay, controlArray)) != 0) {
                 return errorCode;
             }
 
             cntr = 0;
             controlArray = controlArray.Select((x) => (cntr++ % 2 == 0 ? SwitchCtrl.On : SwitchCtrl.Off)).ToArray();
-            Thread.Sleep(2000);
+            Thread.Sleep(200);
             if ((errorCode = DoDiscreteIOs(startRelay, controlArray)) != 0) {
                 return errorCode;
             }
-            Thread.Sleep(2000);
+            Thread.Sleep(200);
             controlArray = controlArray.Select((x) => SwitchCtrl.Off).ToArray();
             errorCode = DoDiscreteIOs(startRelay, controlArray);
 
+            if ( errorCode == 0) {
+                Console.WriteLine("\nDiscrete IO array read write test complete.\n");
+            }
+            else {
+                Console.WriteLine("\nDiscrete IO array read/write test failed.\n");
+            }
             return errorCode;
         }
 
@@ -230,12 +213,13 @@ namespace ClickTester
         }
 
         private static int DoSingleIO(string io, int repeats = 4) {
-
+            Console.WriteLine("\n\nStarting simple single discrete IO test.\n");
             for (int i = 0; i < repeats; i++) {
                 Thread.Sleep(100);
                 SwitchCtrl ctrl = (i % 2) == 0 ? SwitchCtrl.On : SwitchCtrl.Off;
 
                 if (!_handler.WriteDiscreteControl(io, ctrl)) {
+                    Console.WriteLine($"Simple single discrete IO test failed");
                     return -1;
                 }
 
@@ -248,18 +232,20 @@ namespace ClickTester
 
                 Console.WriteLine($"{io} relay status is {status}.");
             }
+            Console.WriteLine("\nSimple single discrete IO test complete.");
             return 0;
         }
 
         private static int DoSimpleTimerTest(string timer, string setRegister, string controlRelay, int timerTimeMs) {
 
+            Console.WriteLine("\n\nStarting timer test.\n");
             string timerCurrentValueRegister = timer.Replace("T", "TD");
 
             if (_handler.WriteDiscreteControl(controlRelay, SwitchCtrl.Off)) {
                 Console.WriteLine($"Control relay {controlRelay} switched off.");
             }
             else {
-                Console.WriteLine($"Failed to switch control relay " +
+                Console.WriteLine($"Timer test error. Failed to switch control relay " +
                     $"{controlRelay} to off.");
                 return -1;
             }
@@ -268,19 +254,19 @@ namespace ClickTester
                 Console.WriteLine($"Current timer set value {timerValue}.");
             }
             else {
-                Console.WriteLine($"Failed to read current set " +
-                    $"value from {setRegister}.");
+                Console.WriteLine($"Timer test error. Failed to read current set " +
+                    $"value from {setRegister}.\n");
                 return -2;
             }
 
-            Thread.Sleep(1000);
+            Thread.Sleep(200);
 
             if (_handler.WriteRegister(setRegister, (ushort)timerTimeMs)) {
                 Console.WriteLine($"Set timer value to {timerTimeMs}.");
             }
             else {
-                Console.WriteLine($"Failed to set register " +
-                    $"{setRegister} to {timerTimeMs}.");
+                Console.WriteLine($"Timer test error. Failed to set register " +
+                    $"{setRegister} to {timerTimeMs}.\n");
                 return -3;
             }
 
@@ -288,8 +274,8 @@ namespace ClickTester
                 Console.WriteLine($"Current timer set value: {timerValue}.");
             }
             else {
-                Console.WriteLine($"Failed to read current " +
-                    $"set value from {setRegister}.");
+                Console.WriteLine($"Timer test error. Failed to read current " +
+                    $"set value from {setRegister}.\n");
                 return -4;
             }
 
@@ -298,8 +284,8 @@ namespace ClickTester
                     $"value: {timerValue}.");
             }
             else {
-                Console.WriteLine($"Failed to read current timer " +
-                    $"counter value form {timerCurrentValueRegister}.");
+                Console.WriteLine($"Timer test error. Failed to read current timer " +
+                    $"counter value form {timerCurrentValueRegister}.\n");
                 return -5;
             }
 
@@ -308,8 +294,8 @@ namespace ClickTester
                 Console.WriteLine($"Current timer output state: {switchState}.");
             }
             else {
-                Console.WriteLine($"Failed to read current timer " +
-                    $"output state value form {timer}.");
+                Console.WriteLine($"Timer test error. Failed to read current timer " +
+                    $"output state value form {timer}.\n");
                 return -6;
             }
 
@@ -318,22 +304,22 @@ namespace ClickTester
                     $"{controlRelay} switched On.");
             }
             else {
-                Console.WriteLine($"Failed to switch control " +
-                    $"relay {controlRelay} to off.");
+                Console.WriteLine($"Timer test error. Failed to switch control " +
+                    $"relay {controlRelay} to off.\n");
                 return -1;
             }
 
             while (true) {
 
                 if (!_handler.ReadDiscreteIO(timer, out switchState)) {
-                    Console.WriteLine($"Failed to read timer " +
-                        $"{timer} state.");
+                    Console.WriteLine($"Timer test error. Failed to read timer " +
+                        $"{timer} state.\n");
                     return -7;
                 }
 
                 if (!_handler.ReadRegister(timerCurrentValueRegister, out timerValue)) {
-                    Console.WriteLine($"Failed to read timer " +
-                        $"current value from {timerCurrentValueRegister}.");
+                    Console.WriteLine($"Timer test error. Failed to read timer " +
+                        $"current value from {timerCurrentValueRegister}.\n");
                     return -8;
                 }
 
@@ -342,7 +328,7 @@ namespace ClickTester
                     case SwitchSt.On:
                         Console.WriteLine($"Timer tripped. Current " +
                             $"count value: {timerValue}.");
-                        Thread.Sleep(5000);
+                        Thread.Sleep(200);
                         if (_handler.WriteDiscreteControl(controlRelay, SwitchCtrl.Off)) {
                             Console.WriteLine($"Control relay " +
                                 $"{controlRelay} switched off.");
@@ -351,18 +337,18 @@ namespace ClickTester
                             if (_handler.WriteRegister(setRegister, 0)) {
                                 Console.WriteLine($"Timer set point cleared.");
                                 Thread.Sleep(2500);
+                                Console.WriteLine("\nTimer test complete.\n");
                                 return 0;
                             }
                             else {
-                                Console.WriteLine($"Failed to set timer " +
-                                    $"set pint register {setRegister} to 0.");
+                                Console.WriteLine($"Timer test error. Failed to set timer " +
+                                    $"set pint register {setRegister} to 0.\n");
                                 return -12;
                             }
-
                         }
                         else {
-                            Console.WriteLine($"Failed to switch " +
-                                $"control relay {controlRelay} to off.");
+                            Console.WriteLine($"Timer test error. Failed to switch " +
+                                $"control relay {controlRelay} to off.\n");
                             return -9;
                         }
 
@@ -372,20 +358,21 @@ namespace ClickTester
 
                     case SwitchSt.Unknown:
                         Console.WriteLine($"Error. Timer state is unknown " +
-                            $"at {timerValue} counts.");
+                            $"at {timerValue} counts.\n");
 
                         if (_handler.WriteDiscreteControl(controlRelay, SwitchCtrl.Off)) {
                             Console.WriteLine($"Control relay {controlRelay} switched off.");
                         }
                         else {
-                            Console.WriteLine($"Failed to switch control " +
-                                $"relay {controlRelay} to off.");
+                            Console.WriteLine($"Timer test error. Failed to switch control " +
+                                $"relay {controlRelay} to off.\n");
                             return -11;
                         }
                         return -10;
                 }
-                Thread.Sleep(250);
+                Thread.Sleep(100);
             }
+
         }
 
         private static int DoSimpleCounterTest(string counter, string setValueRegister,
@@ -506,7 +493,7 @@ namespace ClickTester
 
             Console.WriteLine($"Counter {counter} reached set value {setPointValue}.");
 
-            Thread.Sleep(5000);
+            Thread.Sleep(100);
 
             Console.WriteLine($"Resetting {counter} counter.");
 
@@ -518,7 +505,7 @@ namespace ClickTester
                 return -4;
             }
 
-            Thread.Sleep(5000);
+            Thread.Sleep(100);
 
             if (_handler.WriteDiscreteControl(resetRelay, SwitchCtrl.Off)) {
                 Console.WriteLine($"Reset relay {resetRelay} switched Off.");
@@ -528,6 +515,7 @@ namespace ClickTester
                 return -5;
             }
 
+            Console.WriteLine($"\nCounter test complete.\n");
             return 0;
         }
 
@@ -568,7 +556,7 @@ namespace ClickTester
                 (testValueMax - testValueMin)
                 : (testValueMax - testValueMin) / (steps - 1);
 
-            Console.WriteLine("AIO test started.");
+            Console.WriteLine("\n\nStarting Analog IO test.\n");
 
             for (int i = 0; i < steps; i++) {
 
@@ -616,35 +604,40 @@ namespace ClickTester
                     $"New AI1 and AI2 values: {readValue1}, {readValue2}.");
 
             }
-            Console.WriteLine("AIO test complete.");
+            Console.WriteLine("Analog IO test complete.");
             return 0;
 
         }
         internal static int FloatRegisterTest(string name, float value) {
 
-            if (!_handler.WriteFloatRegister(name, value)) {
 
-                Console.WriteLine($"Failed to write float register {name} with value {value}.");
-                return -11;
+            Console.WriteLine($"\n\nFloat register test started.\n");
+
+            for (int i = 0; i < 10; i++) {
+                if (!_handler.WriteFloatRegister(name, value + i)) {
+
+                    Console.WriteLine($"Float register test error. Failed to write float register {name} with value {value}.\n");
+                    return -11;
+                }
+
+                Console.WriteLine($"Wrote value {value+i} to float register {name}.");
+
+                if (!_handler.ReadFloatRegister(name, out float readValue)) {
+
+                    Console.WriteLine($"Float register test error. Failed to read float register {name}.\n");
+                    return -12;
+                }
+
+                Console.WriteLine($"Read value {readValue} from float register {name}.");
+
+                if (Math.Abs(value + i - readValue) > 0.001) {
+
+                    Console.WriteLine($"Float register test error. Read value {readValue} from float register {name} " +
+                                           $"does not match written value {value}.\n");
+                    return -13;
+                }
             }
-
-            Console.WriteLine($"Wrote value {value} to float register {name}.");
-
-            if (!_handler.ReadFloatRegister(name, out float readValue)) {
-
-                Console.WriteLine($"Failed to read float register {name}.");
-                return -12;
-            }
-
-            Console.WriteLine($"Read value {readValue} from float register {name}.");
-
-            if (Math.Abs(value - readValue) > 0.0001) {
-
-                Console.WriteLine($"Read value {readValue} from float register {name} " +
-                                       $"does not match written value {value}.");
-                return -13;
-            }
-
+            Console.WriteLine($"\nFloat register test complete.\n");
             return 0;
 
         }
