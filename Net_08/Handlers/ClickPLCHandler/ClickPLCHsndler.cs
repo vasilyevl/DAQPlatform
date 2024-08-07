@@ -134,8 +134,8 @@ namespace Grumpy.ClickPLCHandler
             }
 
             try {
-                _configuration =
-                    JsonConvert.DeserializeObject<ClickHandlerConfiguration>(configJsonString);
+
+                _configuration = JsonConvert.DeserializeObject<ClickHandlerConfiguration>(configJsonString);
                 return true;
             }
             catch (Exception ex) {
@@ -411,9 +411,9 @@ namespace Grumpy.ClickPLCHandler
             return false;
         }
 
-        public bool WriteUint16Register(string name, ushort value) {
+        public bool WriteUInt16Register(string name, ushort value) {
 
-            if (_CanReadWrite(nameof(WriteUint16Register))) {
+            if (_CanReadWrite(nameof(WriteUInt16Register))) {
 
                 int address = -1;
                 try {
@@ -422,7 +422,7 @@ namespace Grumpy.ClickPLCHandler
                            && (_mbClient?.WriteSingle16bitRegister(address, value) ?? false);
                 } 
                 catch (Exception ex) {
-                    _AddErrorRecord(nameof(WriteUint16Register),
+                    _AddErrorRecord(nameof(WriteUInt16Register),
                                   ClickErrorCode.NotWritableControl, 
                                   $"\"{name}\"\"{address}\" control is not " +
                                           $"writable. {ex.Message}");

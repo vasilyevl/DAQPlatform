@@ -1,5 +1,6 @@
-﻿using Grumpy.ClickPLC;
-using Grumpy.HWControl.IO;
+﻿
+using Grumpy.ClickPLCHandler;
+
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -145,7 +146,7 @@ namespace ClickTester
                 return -6;
             }
 
-            if (!_handler.ReadDiscreteIOs(io, controls.Length, out SwitchState[] status)) {
+            if (!_handler.ReadDiscreteControls(io, controls.Length, out SwitchState[] status)) {
 
                 Console.WriteLine($"Failed to read status of " +
                     $"{controls.Length} relays starting {io}.");
@@ -184,7 +185,7 @@ namespace ClickTester
                 $"set to {string.Join(" ,", controls)}.");
 
 
-            if (!_handler.ReadDiscreteIOs(io, controls.Length, out status)) {
+            if (!_handler.ReadDiscreteControls(io, controls.Length, out status)) {
                 Console.WriteLine($"Failed to read status of " +
                     $"relays {controls.Length} starting {io}.");
                 return -4;
@@ -226,7 +227,7 @@ namespace ClickTester
                 Console.WriteLine($"{io} relay set to {ctrl}.");
                 Thread.Sleep(100);
 
-                if (!_handler.ReadDiscreteIO(io, out SwitchState status)) {
+                if (!_handler.ReadDiscreteControl(io, out SwitchState status)) {
                     return -2;
                 }
 
@@ -250,7 +251,7 @@ namespace ClickTester
                 return -1;
             }
 
-            if (_handler.ReadRegister(setRegister, out ushort timerValue)) {
+            if (_handler.ReadUInt16Register(setRegister, out ushort timerValue)) {
                 Console.WriteLine($"Current timer set value {timerValue}.");
             }
             else {
@@ -261,7 +262,7 @@ namespace ClickTester
 
             Thread.Sleep(200);
 
-            if (_handler.WriteRegister(setRegister, (ushort)timerTimeMs)) {
+            if (_handler.WriteUInt16Register(setRegister, (ushort)timerTimeMs)) {
                 Console.WriteLine($"Set timer value to {timerTimeMs}.");
             }
             else {
@@ -270,7 +271,7 @@ namespace ClickTester
                 return -3;
             }
 
-            if (_handler.ReadRegister(setRegister, out timerValue)) {
+            if (_handler.ReadUInt16Register(setRegister, out timerValue)) {
                 Console.WriteLine($"Current timer set value: {timerValue}.");
             }
             else {
@@ -279,7 +280,7 @@ namespace ClickTester
                 return -4;
             }
 
-            if (_handler.ReadRegister(timerCurrentValueRegister, out timerValue)) {
+            if (_handler.ReadUInt16Register(timerCurrentValueRegister, out timerValue)) {
                 Console.WriteLine($"Current timer counter " +
                     $"value: {timerValue}.");
             }
@@ -290,7 +291,7 @@ namespace ClickTester
             }
 
 
-            if (_handler.ReadDiscreteIO(timer, out SwitchState switchState)) {
+            if (_handler.ReadDiscreteControl(timer, out SwitchState switchState)) {
                 Console.WriteLine($"Current timer output state: {switchState}.");
             }
             else {
@@ -311,13 +312,13 @@ namespace ClickTester
 
             while (true) {
 
-                if (!_handler.ReadDiscreteIO(timer, out switchState)) {
+                if (!_handler.ReadDiscreteControl(timer, out switchState)) {
                     Console.WriteLine($"Timer test error. Failed to read timer " +
                         $"{timer} state.\n");
                     return -7;
                 }
 
-                if (!_handler.ReadRegister(timerCurrentValueRegister, out timerValue)) {
+                if (!_handler.ReadUInt16Register(timerCurrentValueRegister, out timerValue)) {
                     Console.WriteLine($"Timer test error. Failed to read timer " +
                         $"current value from {timerCurrentValueRegister}.\n");
                     return -8;
@@ -333,8 +334,8 @@ namespace ClickTester
                             Console.WriteLine($"Control relay " +
                                 $"{controlRelay} switched off.");
 
-
-                            if (_handler.WriteRegister(setRegister, 0)) {
+                                _handler.WriteUInt16Register(setRegister, 0);
+                            if (_handler.WriteUInt16Register(setRegister, 0)) {
                                 Console.WriteLine($"Timer set point cleared.");
                                 Thread.Sleep(2500);
                                 Console.WriteLine("\nTimer test complete.\n");
@@ -392,7 +393,7 @@ namespace ClickTester
                 return -1;
             }
 
-            if (_handler.WriteRegister(setValueRegister, (ushort)setPoint)) {
+            if (_handler.WriteUInt16Register(setValueRegister, (ushort)setPoint)) {
 
                 Console.WriteLine($"Counter set point set " +
                     $"to {(ushort)setPoint}.");
@@ -404,7 +405,7 @@ namespace ClickTester
                 return -2;
             }
 
-            if (_handler.ReadRegister(setValueRegister, out ushort setPointValue)) {
+            if (_handler.ReadUInt16Register(setValueRegister, out ushort setPointValue)) {
 
                 Console.WriteLine($"Checking counter set value. " +
                     $"Readback says: {setPointValue}.");
@@ -441,7 +442,7 @@ namespace ClickTester
             }
 
 
-            if (_handler.ReadRegister(counterCurrentValueRegister, out ushort counterValue)) {
+            if (_handler.ReadUInt16Register(counterCurrentValueRegister, out ushort counterValue)) {
 
                 Console.WriteLine($"Current timer counter " +
                     $"value: {counterValue}.");
@@ -454,7 +455,7 @@ namespace ClickTester
             }
 
 
-            if (_handler.ReadDiscreteIO(counter, out SwitchState switchState)) {
+            if (_handler.ReadDiscreteControl(counter, out SwitchState switchState)) {
                 Console.WriteLine($"Current counter output " +
                     $"state: {switchState.State.ToString()}.");
             }
@@ -481,7 +482,7 @@ namespace ClickTester
                     return -9;
                 }
 
-                if (_handler.ReadDiscreteIO(counter, out switchState)) {
+                if (_handler.ReadDiscreteControl(counter, out switchState)) {
                     Console.WriteLine($"Current counter output state: {switchState}.");
                 }
                 else {
@@ -522,7 +523,7 @@ namespace ClickTester
 
         public static int ReadIOs(string startIO, int ioLen, string name) {
 
-            if (!_handler.ReadDiscreteIOs(startIO, ioLen, out SwitchState[] status)) {
+            if (!_handler.ReadDiscreteControls(startIO, ioLen, out SwitchState[] status)) {
                 Console.WriteLine($"Failed to read status of {ioLen} {name} starting {ioLen}.");
                 return -1;
             }
@@ -567,7 +568,7 @@ namespace ClickTester
 
 
 
-                if (!_handler.WriteFloatRegister(FloatRegisterDA1, da1WriteValue)) {
+                if (!_handler.WriteFloat32Register(FloatRegisterDA1, da1WriteValue)) {
 
                     Console.WriteLine($"AIO test. Failed to write float to Click PLC " +
                         $"register {FloatRegisterDA1}.");
@@ -576,7 +577,7 @@ namespace ClickTester
 
                 Console.WriteLine($"{DateTime.Now.ToString("yy/MM/dd HH:mm:ss:fff")} " +
                     $"New AO1 and AO2 set values: {da1WriteValue}, {da2WriteValue}.");
-                if (!_handler.WriteFloatRegister(FloatRegisterDA2, da2WriteValue)) {
+                if (!_handler.WriteFloat32Register(FloatRegisterDA2, da2WriteValue)) {
 
                     Console.WriteLine($"AIO test. Failed to write float to Click PLC " +
                         $"register {FloatRegisterDA1}.");
@@ -585,7 +586,7 @@ namespace ClickTester
 
                 Thread.Sleep(50);
 
-                if (!_handler.ReadFloatRegister(floatRegisterAD1, out float readValue1)) {
+                if (!_handler.ReadFloat32Register(floatRegisterAD1, out float readValue1)) {
 
                     Console.WriteLine($"AIO test. Failed to read float from Click PLC " +
                         $"register {floatRegisterAD1}.");
@@ -594,7 +595,7 @@ namespace ClickTester
 
 
 
-                if (!_handler.ReadFloatRegister(floatRegisterAD2, out float readValue2)) {
+                if (!_handler.ReadFloat32Register(floatRegisterAD2, out float readValue2)) {
                     Console.WriteLine($"AIO test. Failed to read float from Click PLC " +
                         $"register {floatRegisterAD2}.");
                     return -16;
@@ -614,7 +615,7 @@ namespace ClickTester
             Console.WriteLine($"\n\nFloat register test started.\n");
 
             for (int i = 0; i < 10; i++) {
-                if (!_handler.WriteFloatRegister(name, value + i)) {
+                if (!_handler.WriteFloat32Register(name, value + i)) {
 
                     Console.WriteLine($"Float register test error. Failed to write float register {name} with value {value}.\n");
                     return -11;
@@ -622,7 +623,7 @@ namespace ClickTester
 
                 Console.WriteLine($"Wrote value {value+i} to float register {name}.");
 
-                if (!_handler.ReadFloatRegister(name, out float readValue)) {
+                if (!_handler.ReadFloat32Register(name, out float readValue)) {
 
                     Console.WriteLine($"Float register test error. Failed to read float register {name}.\n");
                     return -12;

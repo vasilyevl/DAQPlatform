@@ -1,6 +1,4 @@
-﻿
-
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 
 
 namespace Grumpy.ClickPLCHandler
@@ -22,7 +20,10 @@ namespace Grumpy.ClickPLCHandler
         //  private List<OutputConfiguration> _outputs;
         // private List<ControlRelayConfiguration> _controlRelays;
 
-        public ClickHandlerConfiguration() : base() { }
+        public ClickHandlerConfiguration() : base() {
+
+            Interface = new InterfaceConfiguration();   
+        }
 
         public ClickHandlerConfiguration(ClickHandlerConfiguration source) : this() {
 

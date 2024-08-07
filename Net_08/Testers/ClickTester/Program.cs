@@ -305,7 +305,7 @@ namespace ClickTester
 
             Thread.Sleep(1000);
 
-            if (_handler.WriteUint16Register(setRegister, (ushort)timerTimeMs)) {
+            if (_handler.WriteUInt16Register(setRegister, (ushort)timerTimeMs)) {
                 Console.WriteLine($"Set timer value to {timerTimeMs}.");
             }
             else {
@@ -378,7 +378,7 @@ namespace ClickTester
                                 $"{controlRelay} switched off.");
 
 
-                            if (_handler.WriteUint16Register(setRegister, 0)) {
+                            if (_handler.WriteUInt16Register(setRegister, 0)) {
                                 Console.WriteLine($"Timer set point cleared.");
                                 Thread.Sleep(2500);
                                 return 0;
@@ -435,7 +435,7 @@ namespace ClickTester
                 return -1;
             }
 
-            if (_handler.WriteUint16Register(setValueRegister, (ushort)setPoint)) {
+            if (_handler.WriteUInt16Register(setValueRegister, (ushort)setPoint)) {
 
                 Console.WriteLine($"Counter set point set " +
                     $"to {(ushort)setPoint}.");

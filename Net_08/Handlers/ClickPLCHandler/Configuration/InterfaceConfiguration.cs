@@ -34,8 +34,13 @@ namespace Grumpy.ClickPLCHandler
     [JsonObject(MemberSerialization = MemberSerialization.OptIn)]
     public class InterfaceConfiguration :  IInterfaceConfiguration
     {
+
         private TcpIpConnectionConfiguration? _network;
-        public InterfaceConfiguration() : base() { }
+        public InterfaceConfiguration() : base() { 
+            
+            Network = new TcpIpConnectionConfiguration();
+        
+        }
 
         public InterfaceConfiguration(IInterfaceConfiguration src) : this() {
 

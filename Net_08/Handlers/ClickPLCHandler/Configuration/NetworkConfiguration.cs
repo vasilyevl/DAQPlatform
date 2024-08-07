@@ -40,10 +40,10 @@ namespace Grumpy.ClickPLCHandler
     public class TcpIpConnectionConfiguration : ITcpIpConnectionConfiguration, ICloneable
     {
         public const int DefaultTimeoutMs = 5000;
-        public const string DefaultIP = "0:0:0:0";
+        public const string DefaultIP = "1.1.1.1";
 
-        public const int DefaultPort = 0;
-
+        public const int DefaultPort = 502;
+        public const int DefaultMessagePort = 503;
 
         private string? _name;
         private string? _ipAddress;
@@ -54,6 +54,9 @@ namespace Grumpy.ClickPLCHandler
 
         public TcpIpConnectionConfiguration() {
             Timeout = DefaultTimeoutMs;
+            IpAddress = DefaultIP;
+            Port = DefaultPort;
+            MessagePort = DefaultPort;
         }
 
         [JsonProperty]

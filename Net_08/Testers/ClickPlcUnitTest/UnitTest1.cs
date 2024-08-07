@@ -10,8 +10,8 @@ namespace ClickPlcUnitTest
     {
         static readonly string config = 
             "{\"Interface\":{" +
-                   "\"Selector\":\"Network\"," +
-                   "\"SerialPort\":null," +
+           //        "\"Selector\":\"Network\"," +
+           //        "\"SerialPort\":null," +
                    "\"Network\":{\"Name\":\"ClickPLC\"," +
                                 "\"IpAddress\":\"192.168.1.22\"," +
                                 "\"Port\":502," +

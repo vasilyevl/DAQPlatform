@@ -40,7 +40,7 @@ namespace Grumpy.ClickPLCHandler
         Boolean WriteInt16Register(String name, short value);
 
         Boolean ReadUInt16Register(String name, out ushort value);
-        Boolean WriteUint16Register(String name, ushort value);
+        Boolean WriteUInt16Register(String name, ushort value);
 
         Boolean ReadFloat32Register(String name, out float value);
         Boolean WriteFloat32Register(String name, float value);

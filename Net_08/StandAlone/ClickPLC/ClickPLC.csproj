@@ -7,6 +7,7 @@
     <Version>1.0.0.0</Version>
     <Authors>vasilyevl</Authors>
     <Company>vasilyevl_Grumpy</Company>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
@@ -44,6 +45,10 @@
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Exec Command="echo Configuration: $(Configuration)&#xD;&#xA;echo Ouput Diractory: $(OutDir)&#xD;&#xA;" />
+  </Target>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="echo Deleting files in $(SolutionDir)Testers\ClickTesterDllOnly\libs\&#xD;&#xA;del $(SolutionDir)Testers\ClickTesterDllOnly\libs\*.* /q&#xD;&#xA;echo Copying output files from  $(OutDir) to $(SolutionDir)Testers\ClickTesterDllOnly\libs\&#xD;&#xA;xcopy $(OutDir) $(SolutionDir)Testers\ClickTesterDllOnly\libs" />
   </Target>
 
 </Project>
