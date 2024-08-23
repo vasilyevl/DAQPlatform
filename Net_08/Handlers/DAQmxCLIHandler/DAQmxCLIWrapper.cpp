@@ -31,14 +31,14 @@ namespace Grumpy{
 	namespace DAQmxCLIWrap {
 
 		int DAQmxCLIWrapper::CreateTask(String^ taskName, 
-			[Out] long long int% taskHandle) {
+			[Out] IntPtr% taskHandle) {
 
-			char* taskNameChar = GenerateCString(taskName);
+			char* taskNameChar = ConvertToCString(taskName);
 
 			TaskHandle taskHandleLocal;
 
 			int result = DAQmxCreateTask(taskNameChar, &taskHandleLocal);
-			taskHandle = (long long int)taskHandleLocal;
+			taskHandle = (IntPtr)taskHandleLocal;
 
 			FreeCString(taskNameChar);
 			return result;
@@ -51,20 +51,21 @@ namespace Grumpy{
 			return gcnew String(errorString);
 		};
 
-		int DAQmxCLIWrapper::CreateAIVoltageChannel(long long int taskHandle, 
+		int DAQmxCLIWrapper::CreateAIVoltageChannel(IntPtr taskHandle, 
 			String^ physicalChannel, String^ nameToAssignToChannel, 
-			int terminalConfig, double minVal, double maxVal, 
-			int units, String^ customScaleName) {
+			AiTermination terminalConfig, double minVal, double maxVal,
+			VoltageUnits units, String^ customScaleName) {
 
 			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 			
-			char* nameToAssignToChannelChar = GenerateCString(nameToAssignToChannel);
-			char* customScaleNameChar = GenerateCString(customScaleName);
-			char* physicalChannelChar = GenerateCString(physicalChannel);
+			char* nameToAssignToChannelChar = ConvertToCString(nameToAssignToChannel);
+			char* customScaleNameChar = ConvertToCString(customScaleName);
+			char* physicalChannelChar = ConvertToCString(physicalChannel);
 
 			int result = DAQmxCreateAIVoltageChan(taskHandleLocal, 
 				physicalChannelChar, nameToAssignToChannelChar, 
-				terminalConfig, minVal, maxVal, units, customScaleNameChar);
+				(int) terminalConfig, minVal, maxVal,
+				(int)units, customScaleNameChar);
 
 			FreeCString(nameToAssignToChannelChar);
 			FreeCString(customScaleNameChar);
@@ -73,7 +74,7 @@ namespace Grumpy{
 			return result;
 		};
 
-		int DAQmxCLIWrapper::CreateAOVoltageChannel(long long int taskHandle, 
+		int DAQmxCLIWrapper::CreateAOVoltageChannel(IntPtr taskHandle, 
 			String^ physicalChannel, String^ nameToAssignToChannel, 
 			double minVal, double maxVal, int units, 
 			String^ customScaleName) {
@@ -81,9 +82,9 @@ namespace Grumpy{
 			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 
 			char* nameToAssignToChannelChar = 
-				GenerateCString(nameToAssignToChannel);
-			char* customScaleNameChar = GenerateCString(customScaleName);
-			char* physicalChannelChar = GenerateCString(physicalChannel);
+				ConvertToCString(nameToAssignToChannel);
+			char* customScaleNameChar = ConvertToCString(customScaleName);
+			char* physicalChannelChar = ConvertToCString(physicalChannel);
 
 
 			int result = DAQmxCreateAOVoltageChan(taskHandleLocal, physicalChannelChar, 
@@ -96,15 +97,15 @@ namespace Grumpy{
 			return result;
 		};
 
-		int DAQmxCLIWrapper::CreateDOChannel(long long int taskHandle, 
+		int DAQmxCLIWrapper::CreateDOChannel(IntPtr taskHandle, 
 			String^ lines, String^ nameToAssignToLines, 
-			ChannelLineGrouping lineGrouping) {
+			DIOLineGrouping lineGrouping) {
 
 			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 
 			char* nameToAssignToLinesChar = 
-				GenerateCString(nameToAssignToLines);
-			char* linesChar = GenerateCString(lines);
+				ConvertToCString(nameToAssignToLines);
+			char* linesChar = ConvertToCString(lines);
 
 
 			int result = DAQmxCreateDOChan(taskHandleLocal, linesChar, 
@@ -116,14 +117,14 @@ namespace Grumpy{
 			return result;
 		};
 
-		int DAQmxCLIWrapper::CreateDIChannel(long long int taskHandle, 
+		int DAQmxCLIWrapper::CreateDIChannel(IntPtr taskHandle, 
 			String^ lines, String^ nameToAssignToLines, 
-			ChannelLineGrouping lineGrouping) {
+			DIOLineGrouping lineGrouping) {
 
 			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 
-			char* nameToAssignToLinesChar = GenerateCString(nameToAssignToLines);
-			char* linesChar = GenerateCString(lines);
+			char* nameToAssignToLinesChar = ConvertToCString(nameToAssignToLines);
+			char* linesChar = ConvertToCString(lines);
 
 			int result = DAQmxCreateDIChan(taskHandleLocal, 
 				linesChar, nameToAssignToLinesChar, (int) lineGrouping);
@@ -134,9 +135,9 @@ namespace Grumpy{
 			return result;
 		};
 
-		int DAQmxCLIWrapper::ReadDigitalLines(long long int taskHandle,
+		int DAQmxCLIWrapper::ReadDigitalLines(IntPtr taskHandle,
 			uInt32 numSamplesPerChan, double timeout,
-			ChannelInterleaveMode interleaveMode,
+			ReadbacklFillMode interleaveMode,
 			array<Byte>^ data, uInt32 bufferSize,
 			[Out] int% sampsPerChanRead, [Out] int% bytesPerSample) {
 
@@ -154,7 +155,7 @@ namespace Grumpy{
 			return result;
 		};
 
-		int DAQmxCLIWrapper::ReadDigitalScalarU32(long long int taskHandle,
+		int DAQmxCLIWrapper::ReadDigitalScalarU32(IntPtr taskHandle,
 							  double timeout,[Out] UInt32% data) {
 
 			uInt32 dataLocal;
@@ -164,9 +165,9 @@ namespace Grumpy{
 			return result;
 		}
 
-		int DAQmxCLIWrapper::ReadDigitU32(long long int taskHandle,
+		int DAQmxCLIWrapper::ReadDigitU32(IntPtr taskHandle,
 			int samplesPerChannel, double timeout,
-			ChannelInterleaveMode interleaveMode, array<uInt32>^ data, 
+			ReadbacklFillMode interleaveMode, array<uInt32>^ data, 
 			uInt32 arraySize, [Out] int% sampsPerChanRead) {
 
 			pin_ptr<uInt32> dataPtr = &data[0];
@@ -181,9 +182,9 @@ namespace Grumpy{
 			return result;
 		}
 
-		int DAQmxCLIWrapper::ReadDigitU16(long long int taskHandle,
+		int DAQmxCLIWrapper::ReadDigitU16(IntPtr taskHandle,
 			int samplesPerChannel, double timeout,
-			ChannelInterleaveMode interleaveMode, array<uInt16>^ data, 
+			ReadbacklFillMode interleaveMode, array<uInt16>^ data, 
 			uInt32 arraySize, [Out] int% sampsPerChanRead) {
 
 			pin_ptr<uInt16> dataPtr = &data[0];
@@ -197,9 +198,9 @@ namespace Grumpy{
 			return result;
 		}
 
-		int DAQmxCLIWrapper::ReadDigitU8(long long int taskHandle,
+		int DAQmxCLIWrapper::ReadDigitU8(IntPtr taskHandle,
 			int samplesPerChannel, double timeout,
-			ChannelInterleaveMode interleaveMode, array<uInt8>^ data, 
+			ReadbacklFillMode interleaveMode, array<uInt8>^ data, 
 			uInt32 arraySize, [Out] int% sampsPerChanRead) {
 
 			pin_ptr<uInt8> dataPtr = &data[0];
@@ -216,12 +217,9 @@ namespace Grumpy{
 
 
 
-
-
-
-		int DAQmxCLIWrapper::WriteDigitalLines(long long int taskHandle,
+		int DAQmxCLIWrapper::WriteDigitalLines(IntPtr taskHandle,
 			int32 numSampsPerChan, bool autoStart, double timeout,
-			ChannelInterleaveMode interleaveMode,
+			ReadbacklFillMode interleaveMode,
 			array<Byte>^ data,
 			[Out] int% sampsPerChanWritten) {
 
@@ -235,15 +233,15 @@ namespace Grumpy{
 		}
 
 
-		int DAQmxCLIWrapper::WriteDigitalScalarU32(long long int taskHandle,
+		int DAQmxCLIWrapper::WriteDigitalScalarU32(IntPtr taskHandle,
 			bool autostart, double timeout, uInt32 data) {
 
 			return DAQmxWriteDigitalScalarU32((TaskHandle)taskHandle,
 				autostart, timeout, data, NULL);
 		}
 
-		int DAQmxCLIWrapper::WriteDigitalU32(long long int taskHandle, int32 numSampsPerChan,
-			bool autoStart, double timeout, ChannelInterleaveMode interleaveMode,
+		int DAQmxCLIWrapper::WriteDigitalU32(IntPtr taskHandle, int32 numSampsPerChan,
+			bool autoStart, double timeout, ReadbacklFillMode interleaveMode,
 			array<uInt32>^ data, [Out] int% samplesPerChannelWritten) {	
 		
 			pin_ptr<uInt32> dataPtr = &data[0];
@@ -258,8 +256,8 @@ namespace Grumpy{
 		}
 
 
-		int DAQmxCLIWrapper::WriteDigitalU16(long long int taskHandle, int32 numSampsPerChan,
-			bool autoStart, double timeout, ChannelInterleaveMode interleaveMode,
+		int DAQmxCLIWrapper::WriteDigitalU16(IntPtr taskHandle, int32 numSampsPerChan,
+			bool autoStart, double timeout, ReadbacklFillMode interleaveMode,
 			array<uInt16>^ data, [Out] int% samplesPerChannelWritten) {
 
 			pin_ptr<uInt16> dataPtr = &data[0];
@@ -274,8 +272,8 @@ namespace Grumpy{
 		}
 
 
-		int DAQmxCLIWrapper::WriteDigitalU8(long long int taskHandle, int32 numSampsPerChan,
-			bool autoStart, double timeout, ChannelInterleaveMode interleaveMode,
+		int DAQmxCLIWrapper::WriteDigitalU8(IntPtr taskHandle, int32 numSampsPerChan,
+			bool autoStart, double timeout, ReadbacklFillMode interleaveMode,
 			array<uInt8>^ data, [Out] int% samplesPerChannelWritten) {
 
 			pin_ptr<uInt8> dataPtr = &data[0];
@@ -295,28 +293,28 @@ namespace Grumpy{
 			SamplingMode sampleMode, long long sampsPerChan) {
 		
 			return DAQmxCfgSampClkTiming((TaskHandle)taskHandle,
-				GenerateCString(source), rate, (int)activeEdge,
+				ConvertToCString(source), rate, (int)activeEdge,
 				(int)sampleMode, sampsPerChan);
 		}
 
 
-		int DAQmxCLIWrapper::ReadAnalogF64(long long int taskHandle,
+		int DAQmxCLIWrapper::ReadAnalogF64(IntPtr taskHandle,
 			int32 sampsPerChan, double timeout,
-			ChannelGroup groupMode,
-			array<double>^ data, uInt32 bufferSizeInSamples,
-			[Out] int% sampsPerChanRead) {
+			ReadbacklFillMode groupMode,
+			array<double>^ data,
+			[Out] int% samplsPerChanRead) {
 
 			pin_ptr<float64> dataPtr = &data[0];
 			int32 sampsPerChanReadLocal;
 			int result = DAQmxReadAnalogF64((TaskHandle) taskHandle, 
 				 sampsPerChan, timeout, (bool32) groupMode, 
-				dataPtr, bufferSizeInSamples, &sampsPerChanReadLocal, NULL);
-			sampsPerChanRead = sampsPerChanReadLocal;
+				dataPtr, data->Length, &sampsPerChanReadLocal, NULL);
+			samplsPerChanRead = sampsPerChanReadLocal;
 			return result;
 		}
 
 
-		int DAQmxCLIWrapper::ReadAnalogScalarF64(long long int taskHandle,
+		int DAQmxCLIWrapper::ReadAnalogScalarF64(IntPtr taskHandle,
 			double timeout, [Out] double% data) {
 
 			float64 localValue;
@@ -326,9 +324,9 @@ namespace Grumpy{
 			return result;
 		}
 
-		int DAQmxCLIWrapper::ReadBinaryI16(long long int taskHandle,
+		int DAQmxCLIWrapper::ReadBinaryI16(IntPtr taskHandle,
 			int32 sampsPerChan, double timeout,
-			ChannelGroup groupMode, array<int16>^ data,
+			ReadbacklFillMode groupMode, array<int16>^ data,
 			uInt32 bufferSizeInSamples, [Out] int% sampsPerChanRead)
 		{
 			pin_ptr<int16> dataPtr = &data[0];
@@ -340,9 +338,9 @@ namespace Grumpy{
 			return result;
 		}
 
-		int DAQmxCLIWrapper::ReadBinaryI32(long long int taskHandle,
+		int DAQmxCLIWrapper::ReadBinaryI32(IntPtr taskHandle,
 			int32 sampsPerChan, double timeout,
-			ChannelGroup groupMode, array<int32>^ dat,
+			ReadbacklFillMode groupMode, array<int32>^ dat,
 			uInt32 bufferSizeInSamples, [Out] int% sampsPerChanRead)
 		{
 			pin_ptr<int32> dataPtr = &dat[0];
@@ -354,9 +352,9 @@ namespace Grumpy{
 			return result;
 		}
 
-		int DAQmxCLIWrapper::ReadBinaryUI16(long long int taskHandle,
+		int DAQmxCLIWrapper::ReadBinaryUI16(IntPtr taskHandle,
 			int32 sampsPerChan, double timeout,
-			ChannelGroup groupMode, array<uInt16>^ dat,
+			ReadbacklFillMode groupMode, array<uInt16>^ dat,
 			uInt32 bufferSizeInSamples, [Out] int% sampsPerChanRead)
 		{
 			pin_ptr<uInt16> dataPtr = &dat[0];
@@ -369,9 +367,9 @@ namespace Grumpy{
 		}
 
 
-		int DAQmxCLIWrapper::ReadBinaryUI32(long long int taskHandle,
+		int DAQmxCLIWrapper::ReadBinaryUI32(IntPtr taskHandle,
 			int32 sampsPerChan, double timeout,
-			ChannelGroup groupMode, array<uInt32>^ dat,
+			ReadbacklFillMode groupMode, array<uInt32>^ dat,
 			uInt32 bufferSizeInSamples, [Out] int% sampsPerChanRead)
 		{
 			pin_ptr<uInt32> dataPtr = &dat[0];
@@ -385,17 +383,16 @@ namespace Grumpy{
 
 
 		int DAQmxCLIWrapper::CreateCOPulseFrequencyChannel(
-			long long int taskHandle, 
+			IntPtr taskHandle, 
 			String^ counter, String^ nameToAssignToChannel, 
 			int units, int idleState, double initialDelay, 
 			double freq, double dutyCycle) {
 
-			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 			char* nameToAssignToChannelChar = 
-				GenerateCString(nameToAssignToChannel);
-			char* counterChar = GenerateCString(counter);
+				ConvertToCString(nameToAssignToChannel);
+			char* counterChar = ConvertToCString(counter);
 
-			int result = DAQmxCreateCOPulseChanFreq(taskHandleLocal, 
+			int result = DAQmxCreateCOPulseChanFreq((TaskHandle)taskHandle,
 				counterChar, nameToAssignToChannelChar, 
 				units, idleState, 
 				initialDelay, freq, dutyCycle);
@@ -406,16 +403,15 @@ namespace Grumpy{
 			return result;
 		};
 
-		int DAQmxCLIWrapper::CreateCOPulseChanTime(long long int taskHandle, 
+		int DAQmxCLIWrapper::CreateCOPulseChanTime(IntPtr taskHandle, 
 			String^ counter, String^ nameToAssignToChannel, int units, 
 			int idleState, double initialDelay, 
 			double lowTime, double highTime) {
 
-			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 			char* nameToAssignToChannelChar = 
-				GenerateCString(nameToAssignToChannel);
-			char* counterChar = GenerateCString(counter);
-			int result = DAQmxCreateCOPulseChanTime(taskHandleLocal, 
+				ConvertToCString(nameToAssignToChannel);
+			char* counterChar = ConvertToCString(counter);
+			int result = DAQmxCreateCOPulseChanTime((TaskHandle)taskHandle,
 				counterChar, nameToAssignToChannelChar, units, idleState, 
 				initialDelay, lowTime, highTime);
 
@@ -425,16 +421,15 @@ namespace Grumpy{
 			return result;
 		};
 		
-		int DAQmxCLIWrapper::CreateCICountEdgesChan(long long int taskHandle, 
+		int DAQmxCLIWrapper::CreateCICountEdgesChan(IntPtr taskHandle, 
 			String^ counter, String^ nameToAssignToChannel, int edge, 
 			int initialCount, int countDirection) {
 
-			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 			char* nameToAssignToChannelChar =
-				GenerateCString(nameToAssignToChannel);
-			char* counterChar = GenerateCString(counter);
+				ConvertToCString(nameToAssignToChannel);
+			char* counterChar = ConvertToCString(counter);
 
-			int result = DAQmxCreateCICountEdgesChan(taskHandleLocal, 
+			int result = DAQmxCreateCICountEdgesChan((TaskHandle)taskHandle,
 				counterChar, nameToAssignToChannelChar, edge, 
 				initialCount, countDirection);
 
@@ -444,18 +439,17 @@ namespace Grumpy{
 			return result;
 		};
 
-		int DAQmxCLIWrapper::CreateCIFreqChan(long long int taskHandle, 
+		int DAQmxCLIWrapper::CreateCIFreqChan(IntPtr taskHandle, 
 			String^ counter, String^ nameToAssignToChannel, double minVal, 
 			double maxVal, int units, int edge, int measMethod, 
 			double measTime, UInt32 divisor, String^ customScaleName) {
 
-			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 			char* nameToAssignToChannelChar = 
-				GenerateCString(nameToAssignToChannel);
-			char* counterChar = GenerateCString(counter);
-			char* customScaleNameChar = GenerateCString(customScaleName);
+				ConvertToCString(nameToAssignToChannel);
+			char* counterChar = ConvertToCString(counter);
+			char* customScaleNameChar = ConvertToCString(customScaleName);
 
-			int result = DAQmxCreateCIFreqChan(taskHandleLocal, counterChar, 
+			int result = DAQmxCreateCIFreqChan((TaskHandle)taskHandle, counterChar,
 				nameToAssignToChannelChar, minVal, maxVal, units, edge, 
 				measMethod, measTime, divisor, customScaleNameChar);
 
@@ -466,18 +460,17 @@ namespace Grumpy{
 			return result;
 		};
 
-		int DAQmxCLIWrapper::CreateCIPeriodChan(long long int taskHandle, 
+		int DAQmxCLIWrapper::CreateCIPeriodChan(IntPtr taskHandle, 
 			String^ counter, String^ nameToAssignToChannel, double minVal, 
 			double maxVal, int units, int edge, int measMethod, 
 			double measTime, UInt32 divisor, String^ customScaleName) {
 
-			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 			char* nameToAssignToChannelChar = 
-				GenerateCString(nameToAssignToChannel);
-			char* counterChar = GenerateCString(counter);
-			char* customScaleNameChar = GenerateCString(customScaleName);
+				ConvertToCString(nameToAssignToChannel);
+			char* counterChar = ConvertToCString(counter);
+			char* customScaleNameChar = ConvertToCString(customScaleName);
 
-			int result = DAQmxCreateCIPeriodChan(taskHandleLocal, 
+			int result = DAQmxCreateCIPeriodChan((TaskHandle)taskHandle,
 				counterChar, nameToAssignToChannelChar, minVal, maxVal, 
 				units, edge, measMethod, measTime, divisor, 
 				customScaleNameChar);
@@ -489,17 +482,16 @@ namespace Grumpy{
 			return result;
 		};
 
-		int DAQmxCLIWrapper::CreateCISemiPeriodChan(long long int taskHandle, 
+		int DAQmxCLIWrapper::CreateCISemiPeriodChan(IntPtr taskHandle, 
 			String^ counter, String^ nameToAssignToChannel, double minVal, 
 			double maxVal, int units, String^ customScaleName){
 
-			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 			char* nameToAssignToChannelChar = 
-				GenerateCString(nameToAssignToChannel);
-			char* counterChar = GenerateCString(counter);
-			char* customScaleNameChar = GenerateCString(customScaleName);
+				ConvertToCString(nameToAssignToChannel);
+			char* counterChar = ConvertToCString(counter);
+			char* customScaleNameChar = ConvertToCString(customScaleName);
 
-			int result = DAQmxCreateCISemiPeriodChan(taskHandleLocal, 
+			int result = DAQmxCreateCISemiPeriodChan((TaskHandle)taskHandle,
 				counterChar, nameToAssignToChannelChar, 
 				minVal, maxVal, units, customScaleNameChar);
 
@@ -510,57 +502,65 @@ namespace Grumpy{
 			return result;
 		};
 
-		int DAQmxCLIWrapper::LoadTask(long long int taskHandle, 
+		int DAQmxCLIWrapper::LoadTask(IntPtr taskHandle, 
 									  String^ taskName) {
 			
-			char* taskNameChar = GenerateCString(taskName);
+			char* taskNameChar = ConvertToCString(taskName);
 			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 			int result = DAQmxLoadTask(taskNameChar, &taskHandleLocal);
-			taskHandle = (long long int)taskHandleLocal;
+			taskHandle = (IntPtr)taskHandleLocal;
 			FreeCString(taskNameChar);
 			return result;
 		};
 
-		int DAQmxCLIWrapper::AddGlobalChansToTask(long long int taskHandle, 
+		int DAQmxCLIWrapper::AddGlobalChansToTask(IntPtr taskHandle, 
 				String^ channelNames) {
 
-			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
-			char* channelNamesChar = GenerateCString(channelNames);
-			int result = DAQmxAddGlobalChansToTask(taskHandleLocal, 
+			char* channelNamesChar = ConvertToCString(channelNames);
+			int result = DAQmxAddGlobalChansToTask((TaskHandle)taskHandle,
 												   channelNamesChar);
 			FreeCString(channelNamesChar);
 			return result;
 		};
 
 
-		int DAQmxCLIWrapper::IsTaskDone(long long int taskHandle, 
+		int DAQmxCLIWrapper::IsTaskDone(IntPtr taskHandle, 
 										[Out] bool% isTaskDone) {
 			 
-			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 			bool32 isTaskDoneLocal;
-			int result = DAQmxIsTaskDone(taskHandleLocal, &isTaskDoneLocal);
+			int result = DAQmxIsTaskDone((TaskHandle)taskHandle, &isTaskDoneLocal);
 			isTaskDone = (bool) isTaskDoneLocal;
 			return result;
 		};
 		
-		int DAQmxCLIWrapper::GetNthTaskChannel(long long int taskHandle,	
+		int DAQmxCLIWrapper::GetNthTaskChannel(IntPtr taskHandle,	
 									uInt32 index, [Out] String^% buffer) {
-			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 			char bufferChar[ErrorBufferSize];
-			int result = DAQmxGetNthTaskChannel(taskHandleLocal,	
+			int result = DAQmxGetNthTaskChannel((TaskHandle)taskHandle,
 									index, bufferChar, ErrorBufferSize);
 			buffer = gcnew String(bufferChar);
 			return result;
 		};
 
-		int DAQmxCLIWrapper::GetNthTaskDevice(long long int taskHandle,
+		int DAQmxCLIWrapper::GetNthTaskDevice(IntPtr taskHandle,
 									uInt32 index, [Out] String^% buffer) {
-			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+	
 			char bufferChar[ErrorBufferSize];
-			int result = DAQmxGetNthTaskDevice(taskHandleLocal, 
+			int result = DAQmxGetNthTaskDevice((TaskHandle)taskHandle,
 								index, bufferChar, ErrorBufferSize);
 			buffer = gcnew String(bufferChar);
 			return result;
 		};
+
+		int DAQmxCLIWrapper::ExportSignal(IntPtr taskHandle, 
+			ExportableSignal signal, String^ outputTerminal) {
+
+			char * cString = ConvertToCString(outputTerminal);
+			int result = DAQmxExportSignal((TaskHandle) taskHandle, 
+				(int)signal, cString);
+			FreeCString(cString);
+			return result;
+
+		}
 	}
 }
