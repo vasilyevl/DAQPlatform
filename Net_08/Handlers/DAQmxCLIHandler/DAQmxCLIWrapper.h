@@ -25,8 +25,14 @@ using namespace System::Runtime::InteropServices;
 namespace Grumpy{
 
 	namespace DAQmxCLIWrap {
-		
+
+
+
+#pragma unmanaged
 		#include <NIDAQmx.h>
+
+#pragma managed
+		
 
 		public enum class AiTermination
 		{
@@ -94,6 +100,112 @@ namespace Grumpy{
 			ChangeDetectionEvent = DAQmx_Val_ChangeDetectionEvent,  //Signal that a static DIO device generates when the device detects a rising or falling edge on any of the lines or ports you selected when you configured change detection timing.
 			WDTExpiredEvent = DAQmx_Val_WDTExpiredEvent     // Signal that a static DIO device generates when the watchdog timer expires.
 		};
+
+
+		public delegate int32 DAQmxCallbackDelegate(IntPtr taskHandle, int32 status, IntPtr% callbackData);
+
+		public ref class CallbackContainer
+		{
+			public:
+				CallbackContainer( IntPtr taskHandle, DAQmxCallbackDelegate^ del, Object^ data, bool autoRegister) {
+					
+					_taskHandle = taskHandle;
+					_managedDelegate = del;
+
+					_managedDataPointer = nullptr;
+
+					_gcCallbackHandle = GCHandle::Alloc(_managedDelegate);
+					if (data != nullptr) {
+
+						_managedDataPointer = data;
+						_gcDataHandle = GCHandle::Alloc(_managedDataPointer);
+					}
+
+					if (autoRegister) {
+						int r = Register();
+					}
+
+				}
+				~CallbackContainer(){
+
+					FreeResources();
+				}
+
+			private:
+				bool _registered;
+				IntPtr _taskHandle;
+				DAQmxCallbackDelegate^ _managedDelegate;
+				Object^ _managedDataPointer;
+				GCHandle _gcCallbackHandle;
+				GCHandle _gcDataHandle;
+
+
+			public:
+				
+				int Register() {
+					
+					if (!_registered) {
+					
+						IntPtr delegatePointer = Marshal::GetFunctionPointerForDelegate(_managedDelegate);
+						DAQmxDoneEventCallbackPtr cbp = static_cast<DAQmxDoneEventCallbackPtr>(delegatePointer.ToPointer());
+						int r = 0;
+						if (_managedDataPointer != nullptr) {
+
+							IntPtr dp = GCHandle::ToIntPtr(_gcDataHandle);
+							r = DAQmxRegisterDoneEvent((TaskHandle)_taskHandle, 0, cbp, dp.ToPointer());
+						}
+						else {
+							r = DAQmxRegisterDoneEvent((TaskHandle)_taskHandle, 0, cbp, NULL);
+						}
+						
+						if (r != 0)
+						{
+							FreeResources();
+						}
+						_registered = (r == 0);
+						return r;
+					}
+
+					return 0;
+				}
+
+				IntPtr GetFunctionPointer()
+				{
+					if (_managedDelegate != nullptr)
+					{
+						return Marshal::GetFunctionPointerForDelegate(_managedDelegate);
+					}
+					return IntPtr::Zero;
+				}
+
+			private:
+				void FreeResources() {
+					_managedDelegate = nullptr;
+					_managedDelegate = nullptr;
+
+					if (_gcCallbackHandle.IsAllocated) {
+						_gcCallbackHandle.Free();
+					}
+					if (_gcDataHandle.IsAllocated) {
+						_gcDataHandle.Free();
+					}
+					GC::Collect();
+				}
+
+		};
+
+
+		public ref class CallbackHandler
+		{
+
+		public:
+			static void Callback(int taskHandle)
+			{
+				Console::WriteLine("Callback function called");
+			}
+		};
+
+
 
 		public ref class DAQmxCLIWrapper
 		{
@@ -294,6 +406,15 @@ namespace Grumpy{
 
 			static int ExportSignal(IntPtr taskHandle, ExportableSignal signal, 
 				String^ outputTerminal);
+
+
+			static int32 MyCallback(int value) {
+				
+				Console::WriteLine("Callback function called");
+				return 0;
+			}
+
+
 
 protected:
 
