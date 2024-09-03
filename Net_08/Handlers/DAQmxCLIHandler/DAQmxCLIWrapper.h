@@ -102,111 +102,6 @@ namespace Grumpy{
 		};
 
 
-		public delegate int32 DAQmxCallbackDelegate(IntPtr taskHandle, int32 status, IntPtr% callbackData);
-
-		public ref class CallbackContainer
-		{
-			public:
-				CallbackContainer( IntPtr taskHandle, DAQmxCallbackDelegate^ del, Object^ data, bool autoRegister) {
-					
-					_taskHandle = taskHandle;
-					_managedDelegate = del;
-
-					_managedDataPointer = nullptr;
-
-					_gcCallbackHandle = GCHandle::Alloc(_managedDelegate);
-					if (data != nullptr) {
-
-						_managedDataPointer = data;
-						_gcDataHandle = GCHandle::Alloc(_managedDataPointer);
-					}
-
-					if (autoRegister) {
-						int r = Register();
-					}
-
-				}
-				~CallbackContainer(){
-
-					FreeResources();
-				}
-
-			private:
-				bool _registered;
-				IntPtr _taskHandle;
-				DAQmxCallbackDelegate^ _managedDelegate;
-				Object^ _managedDataPointer;
-				GCHandle _gcCallbackHandle;
-				GCHandle _gcDataHandle;
-
-
-			public:
-				
-				int Register() {
-					
-					if (!_registered) {
-					
-						IntPtr delegatePointer = Marshal::GetFunctionPointerForDelegate(_managedDelegate);
-						DAQmxDoneEventCallbackPtr cbp = static_cast<DAQmxDoneEventCallbackPtr>(delegatePointer.ToPointer());
-						int r = 0;
-						if (_managedDataPointer != nullptr) {
-
-							IntPtr dp = GCHandle::ToIntPtr(_gcDataHandle);
-							r = DAQmxRegisterDoneEvent((TaskHandle)_taskHandle, 0, cbp, dp.ToPointer());
-						}
-						else {
-							r = DAQmxRegisterDoneEvent((TaskHandle)_taskHandle, 0, cbp, NULL);
-						}
-						
-						if (r != 0)
-						{
-							FreeResources();
-						}
-						_registered = (r == 0);
-						return r;
-					}
-
-					return 0;
-				}
-
-				IntPtr GetFunctionPointer()
-				{
-					if (_managedDelegate != nullptr)
-					{
-						return Marshal::GetFunctionPointerForDelegate(_managedDelegate);
-					}
-					return IntPtr::Zero;
-				}
-
-			private:
-				void FreeResources() {
-					_managedDelegate = nullptr;
-					_managedDelegate = nullptr;
-
-					if (_gcCallbackHandle.IsAllocated) {
-						_gcCallbackHandle.Free();
-					}
-					if (_gcDataHandle.IsAllocated) {
-						_gcDataHandle.Free();
-					}
-					GC::Collect();
-				}
-
-		};
-
-
-		public ref class CallbackHandler
-		{
-
-		public:
-			static void Callback(int taskHandle)
-			{
-				Console::WriteLine("Callback function called");
-			}
-		};
-
-
-
 		public ref class DAQmxCLIWrapper
 		{
 		public:
@@ -416,7 +311,7 @@ namespace Grumpy{
 
 
 
-protected:
+		protected:
 
 			static inline char* ConvertToCString(String^ inputString) {
 			
@@ -431,5 +326,20 @@ protected:
 				}
 			}
 		};
+
+		public enum class EventType
+		{
+			Done = 0,
+			EveryNSamplesReceived = 1,
+			EveryNSamplesTransferred = 2
+		};
+
+
+
+
+
+
+
+	
 	};
 }

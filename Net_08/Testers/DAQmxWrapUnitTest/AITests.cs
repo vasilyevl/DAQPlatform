@@ -312,9 +312,9 @@ namespace Grumpy.DAQmxWrapUnitTest
 
             _testOutputHelper.WriteLine($"Timing verified.");
 
-            DAQmxCallbackDelegate cbhandle = new DAQmxCallbackDelegate(EventCallback);
+            DAQmxDoneCallbackDelegate cbhandle = new DAQmxDoneCallbackDelegate(EventCallback);
 
-            CallbackContainer callbackContainer = new CallbackContainer(handle, cbhandle, this, true);
+            CallbackHandle callbackHandler = CallbackService.RegisterDoneEvent(handle, cbhandle, this);
 
             StartTime = DateTime.Now;
             result = DAQmx.StartTask(handle);
