@@ -251,5 +251,10 @@ namespace Grumpy.Utilities.MMTimer
         [DllImport("winmm.dll", SetLastError = true,
             EntryPoint = "timeEndPeriod")]
         public static extern uint EndPeriod(uint uMilliseconds);
+
+
+
+
+
     }
 }
