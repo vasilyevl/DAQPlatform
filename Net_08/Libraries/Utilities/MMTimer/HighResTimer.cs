@@ -18,12 +18,12 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace Grumpy.Utilities.MMTimer
+namespace Grumpy.Utilities.HighResTimer
 {
 
-    public class MMTimerException : System.Exception {
+    public class HighResTimerException : System.Exception {
 
-        public MMTimerException(string message) : base(message) { }
+        public HighResTimerException(string message) : base(message) { }
     }   
 
     public enum TimerMode {
@@ -87,29 +87,46 @@ namespace Grumpy.Utilities.MMTimer
     /// <param name="time">The precise date and time when the event 
     /// was triggered.</param>
     /// 
-    public delegate void MMTimerProc( int timerID, ulong tickNumber, DateTime time);
+    public delegate void TimerProc( int timerID, ulong tickNumber, DateTime time);
 
     /// <summary>
     /// Represents a multimedia timer that can trigger 
     /// events at specified intervals.
     /// </summary>
-    public class MMTimer {
+    public class HighResTimer {
 
         private static TimerCaps _systemsCaps;
-        private MMTimerProc? _userTimerProc;
+        private TimerProc? _userTimerProc;
 
         int _timerId;
         uint _periodMs;
         uint _resolutionMs;
-        private ulong _tickCounter = 0;
-        private ulong _lockCounter = 0;
-        private ulong _eventCounter = 0;
-        private TimerMode _mode = TimerMode.Periodic;
-        private string _lastError = string.Empty;
-
-        static MMTimer() {
+        
+        private ulong _tickCounter;
+        private ulong _lockCounter;
+        private ulong _eventCounter;
+        private TimerMode _mode;
+        private string _lastError;
+        private object _lockCounterLock;
+        private ManualResetEvent? _waitHandle;
+        static HighResTimer() {
 
             NativeMMTimerWrap.GetTimerCaps(out _systemsCaps);
+        }
+
+
+        public HighResTimer() {
+
+            _timerId = 0;
+            _periodMs = 0;
+            _resolutionMs = 0;
+            _tickCounter = 0;
+            _lockCounter = 0;
+            _eventCounter = 0;
+            _mode = TimerMode.Periodic;
+            _lastError = string.Empty;
+            _lockCounterLock = new object();
+            _waitHandle = null;
         }
 
 
@@ -120,7 +137,7 @@ namespace Grumpy.Utilities.MMTimer
 
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MMTimer"/> 
+        /// Initializes a new instance of the <see cref="HighResTimer"/> 
         /// class with the specified settings.
         /// </summary>
         /// <param name="periodMs">The timer period in milliseconds.</param>
@@ -134,12 +151,14 @@ namespace Grumpy.Utilities.MMTimer
         /// start automatically.</param>
         /// <exception cref="ArgumentOutOfRangeException">Thrown when 
         /// the period or resolution is out of range.</exception>
-        /// <exception cref="MMTimerException">Thrown when the timer 
+        /// <exception cref="HighResTimerException">Thrown when the timer 
         /// fails to start.</exception>
         ///
-        public MMTimer(uint periodMs, uint resolutionMs = 0, 
-            MMTimerProc? userCallback = null, 
-            TimerMode operatingMode = TimerMode.Periodic, bool autoStart = true) {
+        public HighResTimer(uint periodMs, uint resolutionMs = 0, 
+            TimerProc? userCallback = null, 
+            TimerMode operatingMode = TimerMode.Periodic, bool autoStart = true): 
+                this() 
+        {
 
             if (  periodMs > _systemsCaps.PeriodMax 
                 || periodMs < _systemsCaps.PeriodMin) {
@@ -171,10 +190,42 @@ namespace Grumpy.Utilities.MMTimer
 
                 if (!Start()) {
 
-                    throw new MMTimerException(LastError);
+                    throw new HighResTimerException(LastError);
                 }
             }
         }
+
+        /// <summary>
+        /// Waits for the specified duration and returns a boolean indicating success.
+        /// </summary>
+        /// <param name="duration">The duration to wait for in milliseconds.</param>
+        /// <returns>
+        /// Returns <c>true</c> if the wait completed within the specified time; 
+        /// otherwise, <c>false</c> if the wait timed out or was interrupted.
+        /// </returns>
+        /// <remarks>
+        /// This function uses a multimedia timer to trigger an event after the specified 
+        /// duration, and waits for the event with a timeout of twice the duration.
+        /// If the event is triggered before the timeout, the function returns <c>true</c>.
+        /// </remarks>
+
+        public bool Wait( uint duration) {
+
+            _timerId = NativeMMTimerWrap.SetEvent(duration,
+                               _systemsCaps.PeriodMin,
+                               WaitCallback,
+                               0,
+                               (uint)MMTimerMode.OneShot);
+
+            _waitHandle = new ManualResetEvent(false);
+            Boolean r = _waitHandle.WaitOne((int)duration * 2);
+            _waitHandle.Close();
+            _waitHandle = null;
+
+            return r;
+        }
+
+
 
         /// <summary>
         /// Starts the multimedia timer.
@@ -184,8 +235,9 @@ namespace Grumpy.Utilities.MMTimer
         public bool Start() {
             try {
 
-                _timerId = NativeMMTimerWrap.SetEvent(_resolutionMs,
-                    _periodMs, TimerCallback,
+                _timerId = NativeMMTimerWrap.SetEvent(_periodMs,
+                    _resolutionMs,
+                    TimerCallback,
                     0,
                     _mode == TimerMode.OneShot ?
                        (uint)MMTimerMode.OneShot :
@@ -204,6 +256,10 @@ namespace Grumpy.Utilities.MMTimer
                 return false;
             }
         }
+
+
+
+
 
         /// <summary>
         /// Stops the multimedia timer.
@@ -292,6 +348,14 @@ namespace Grumpy.Utilities.MMTimer
             }
         }
 
+
+        private void WaitCallback(int id, int msg, int user, 
+                       int dw1, int dw2) {
+
+            var r = _waitHandle?.Set();
+        }
+
+
         private object _tickLock = new object();
 
         /// <summary>
@@ -309,7 +373,7 @@ namespace Grumpy.Utilities.MMTimer
             }
         }
 
-        private object _lockCounterLock = new object();
+
         /// <summary>
         /// Gets the count of missed ticks (ticks for which the timer
         /// failed to call callback and/or event handler).

@@ -20,7 +20,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 using System.Runtime.InteropServices;
 
-namespace Grumpy.Utilities.MMTimer
+namespace Grumpy.Utilities.HighResTimer
 {
     [Flags]
     internal enum MMTimerMode : uint
