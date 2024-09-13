@@ -1,4 +1,8 @@
-﻿using Newtonsoft.Json;
+﻿
+
+
+using Grumpy.HWControl.Configuration;
+using Newtonsoft.Json;
 
 
 namespace Grumpy.ClickPLCHandler
@@ -7,9 +11,6 @@ namespace Grumpy.ClickPLCHandler
     {
         IInterfaceConfiguration? Interface { get; set; }
     }
-
-
-
 
     [JsonObject(MemberSerialization = MemberSerialization.OptIn)]
     public class ClickHandlerConfiguration : IClickHandlerConfiguration, ICloneable

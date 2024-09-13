@@ -20,6 +20,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 using Grumpy.ClickPLCHandler.ModBus;
+using Grumpy.HWControl.Configuration;
 using Newtonsoft.Json;
 
 using System.Runtime.CompilerServices;
@@ -182,6 +183,23 @@ namespace Grumpy.ClickPLCHandler
             return _mbClient.Connect();
         }
 
+
+
+
+        private bool _OpenSerial() {
+
+            if (_configuration?.Interface?.SerialPort is null) {
+                _AddErrorRecord(nameof(Open),
+                                       ClickErrorCode.OpenFailed,
+                                                          "Serial port configuration is not provided.");
+                return false;
+            }
+
+            _mbClient = new ModbusClient(_configuration.Interface.SerialPort);
+            return _mbClient.Connect();
+        }
+
+
         private bool _DisconnectIfConnected([CallerMemberName] string callerMethodName = "") {
 
             if (_mbClient != null && _mbClient.IsConnected) {
@@ -202,16 +220,40 @@ namespace Grumpy.ClickPLCHandler
 
         public bool Open() {
 
-            if (_configuration == null) {
+            if (_configuration?.Interface is null) {
                 _AddErrorRecord(nameof(Open),
                     ClickErrorCode.ConfigurationNotSet);
                 return false;
             }
-            return _OpenTcpIp();
+
+            switch(_configuration.Interface.ActiveInterface) {
+                
+                case InterfaceSelector.Auto:
+                    if (!(_OpenTcpIp())) {
+                        return _OpenSerial();
+                    }
+                    return true;
+
+                case InterfaceSelector.Serial:
+                    return _OpenSerial();
+
+                case InterfaceSelector.Network:
+                    return _OpenTcpIp();
+
+                default:
+                    _AddErrorRecord(nameof(Open),
+                        ClickErrorCode.OpenFailed,
+                        $"Interface type " +
+                        $"\"{_configuration.Interface.ActiveInterface}\" " +
+                        $"is not supported.");
+                    return false;
+            }
         }
 
         public bool Close() {
+
             try {
+
                 _mbClient?.Disconnect();
                 return true;
             }
@@ -229,7 +271,9 @@ namespace Grumpy.ClickPLCHandler
 
         public ILogRecord? LastRecord {
             get {
+
                 if (_history.Peek(out ILogRecord ex)) {
+
                     return ex;
                 }
                 return null;

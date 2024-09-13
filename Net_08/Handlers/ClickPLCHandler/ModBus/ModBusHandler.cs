@@ -26,16 +26,31 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 using System.Net.Sockets;
 using System.Net;
 using System.IO.Ports;
+using Grumpy.HWControl.Configuration;
 
 
 
 namespace Grumpy.ClickPLCHandler.ModBus
 {
+
+
+
+
     /// <summary>
     /// Implements a ModbusClient.
     /// </summary>
     public partial class ModbusClient
     {
+
+
+
+        private const string _DefaultIP = "127.0.0.1";
+        private const int _DefaultPort = 502;
+        private const int _DefaultBaudRate = 9600;
+        private const int _DefaultConnectTimeout = 1000;
+        private const int _ReadBufferSize = 256;
+        private const Parity _DefaultParity = Parity.Even;
+        private const StopBits _DefaultStopBits = StopBits.One;
         public enum RegisterOrder
         {
             LowHigh = 0,
@@ -45,42 +60,143 @@ namespace Grumpy.ClickPLCHandler.ModBus
         //private int actualPositionToRead = 0;
         // private DateTime? dateTimeLastRead;
 
-        private bool dataReceived = false;
-        private bool receiveActive = false;
-        private byte[]? readBuffer = new byte[256];
-        private int bytesToRead = 0;
+        private bool dataReceived ;
+        private bool receiveActive;
+        private byte[]? readBuffer;
+        private int bytesToRead;
 
         //private bool debug=false;
         private TcpClient? _tcpClient;
-        private string? _ipAddress = "127.0.0.1";
-        private int _port = 502;
+        private string? _ipAddress;
+        private int _port;
 
         private uint _transactionIdentifierInternal = 0;
 
-        private byte[]? _transactionIdentifier = new byte[2];
-        private byte[]? _protocolIdentifier = new byte[2];
-        private byte[]? _crc = new byte[2];
-        private byte[]? _length = new byte[2];
+        private byte[]? _transactionIdentifier;
+        private byte[]? _protocolIdentifier;
+        private byte[]? _crc;
+        private byte[]? _length;
         private byte _unitIdentifier = 0x01;
         private byte _functionCode;
-        private byte[]? _startingAddress = new byte[2];
-        private byte[]? _quantity = new byte[2];
+        private byte[]? _startingAddress;
+        private byte[]? _quantity;
 
-        private bool _udpFlag = false;
+        private bool _udpFlag;
         private int _portOut;
-        private int _baudRate = 9600;
-        private int _connectTimeout = 1000;
+        private int _baudRate;
+        private int _connectTimeout;
         public byte[]? _receiveData;
         public byte[]? _sendData;
         private SerialPort? _serialPort;
-        private Parity _parity = Parity.Even;
-        private StopBits _stopBits = StopBits.One;
-        private bool _connected = false;
-        private int _countRetries = 0;
-        public int MaxNumberOfRetries { get; set; } = 3;
+        private Parity _parity;
+        private StopBits _stopBits;
+        private bool _connected;
+        private int _retriesCounter;
+       
+        private object _lastErrorLock;
+        private string? _lastError;
 
-        private object _lastErrorLock = new object();
-        private string? _lastError = null;
+        public delegate void ReceiveDataChangedHandler(object sender);
+        public event ReceiveDataChangedHandler? ReceiveDataChanged;
+
+        public delegate void SendDataChangedHandler(object sender);
+        public event SendDataChangedHandler? SendDataChanged;
+
+        public delegate void ConnectedChangedHandler(object sender);
+        public event ConnectedChangedHandler? ConnectedChanged;
+
+        NetworkStream? stream;
+
+        /// <summary>
+        /// Parameterless constructor
+        /// </summary>
+        public ModbusClient() {
+
+            _lastErrorLock = new object();
+            _lastError = null;
+
+            dataReceived = false;
+            receiveActive = false;
+
+            readBuffer = new byte[_ReadBufferSize];
+            bytesToRead = 0;
+
+            _ipAddress = _DefaultIP;
+            _port = _DefaultPort;
+
+            _transactionIdentifierInternal = 0;
+
+            _transactionIdentifier = new byte[2];
+            _protocolIdentifier = new byte[2];
+            _crc = new byte[2];
+            _length = new byte[2];
+
+            _unitIdentifier = 0x01;
+
+            _startingAddress = new byte[2];
+            _quantity = new byte[2];
+
+            _udpFlag = false;
+
+            _baudRate = _DefaultBaudRate;
+            _connectTimeout = _DefaultConnectTimeout;
+
+            _parity = _DefaultParity;
+            _stopBits = _DefaultStopBits;
+            _connected = false;
+            _retriesCounter = 0;
+            
+            _lastErrorLock = new object();
+            _lastError = null;
+
+            MaxNumberOfRetries = 3;
+        }
+
+        /// <summary>
+        /// Constructor which determines the Master ip-address and the Master Port.
+        /// </summary>
+        /// <param name="ipAddress">IP-Address of the Master device</param>
+        /// <param name="port">Listening port of the Master device (should be 502)</param>
+        public ModbusClient(string? ipAddress, int port) : this() {
+            this._ipAddress = (string)(ipAddress?.Clone() ?? string.Empty);
+            this._port = port;
+        }
+
+        /// <summary>
+        /// Constructor which determines the Serial-Port
+        /// </summary>
+        /// <param name="serialPort">Serial-Port Name e.G. "COM1"</param>
+        public ModbusClient(string serialPort) : this() {
+            this._serialPort = new SerialPort();
+            _serialPort.PortName = (string)(serialPort?.Clone() ?? string.Empty); ;
+            _serialPort.BaudRate = _baudRate;
+            _serialPort.Parity = _parity;
+            _serialPort.StopBits = _stopBits;
+            _serialPort.WriteTimeout = 10000;
+            _serialPort.ReadTimeout = _connectTimeout;
+
+            _serialPort.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
+        }
+
+        public ModbusClient( SerialPortConfiguration sp) : this() {
+            _baudRate = sp.BaudRate;
+            _parity = sp.Parity;                        
+            _stopBits = sp.StopBits;
+
+            _serialPort = new SerialPort();
+
+            _serialPort.PortName = sp.Name;
+            _connectTimeout = sp.ConnectTimeoutMs;            
+            _serialPort.BaudRate = _baudRate;
+            _serialPort.Parity = _parity;
+            _serialPort.StopBits = _stopBits;
+            _serialPort.WriteTimeout = sp.WriteTimeoutMs;
+            _serialPort.ReadTimeout = sp.ReadTimeoutMs;
+
+            _serialPort.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
+        }
+
+        public bool IsConnected => _connected;
 
         public string LastError {
             get {
@@ -95,66 +211,8 @@ namespace Grumpy.ClickPLCHandler.ModBus
             }
         }
 
-        public bool IsConnected => _connected;
+        public int MaxNumberOfRetries { get; set; }
 
-        public delegate void ReceiveDataChangedHandler(object sender);
-        public event ReceiveDataChangedHandler? ReceiveDataChanged;
-
-        public delegate void SendDataChangedHandler(object sender);
-        public event SendDataChangedHandler? SendDataChanged;
-
-        public delegate void ConnectedChangedHandler(object sender);
-        public event ConnectedChangedHandler? ConnectedChanged;
-
-        NetworkStream? stream;
-
-        /// <summary>
-        /// Constructor which determines the Master ip-address and the Master Port.
-        /// </summary>
-        /// <param name="ipAddress">IP-Address of the Master device</param>
-        /// <param name="port">Listening port of the Master device (should be 502)</param>
-        public ModbusClient(string? ipAddress, int port) {
-            this._ipAddress = (string)(ipAddress?.Clone() ?? string.Empty);
-            this._port = port;
-        }
-
-        /// <summary>
-        /// Constructor which determines the Serial-Port
-        /// </summary>
-        /// <param name="serialPort">Serial-Port Name e.G. "COM1"</param>
-        public ModbusClient(string serialPort) {
-            this._serialPort = new SerialPort();
-            _serialPort.PortName = (string)(serialPort?.Clone() ?? string.Empty); ;
-            _serialPort.BaudRate = _baudRate;
-            _serialPort.Parity = _parity;
-            _serialPort.StopBits = _stopBits;
-            _serialPort.WriteTimeout = 10000;
-            _serialPort.ReadTimeout = _connectTimeout;
-
-            _serialPort.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
-        }
-
-        /*  public ModbusClient( SerialPortConfiguration sp)
-          {
-              _serialPort = new SerialPort();
-
-              _baudRate = sp.BaudRate;
-              _parity = sp.Parity;
-              _stopBits = sp.StopBits;
-              _connectTimeout = sp.WriteTimeoutMs;
-              _serialPort.PortName = sp.Name;
-              _serialPort.BaudRate = _baudRate;
-              _serialPort.Parity = _parity;
-              _serialPort.StopBits = _stopBits;
-              _serialPort.WriteTimeout = sp.WriteTimeoutMs;
-              _serialPort.ReadTimeout = sp.ReadTimeoutMs;
-          }
-        */
-
-        /// <summary>
-        /// Parameterless constructor
-        /// </summary>
-        public ModbusClient() { }
 
         /// <summary>
         /// Establish connection to Master device in case of Modbus TCP. Opens COM-Port in case of Modbus RTU
@@ -534,7 +592,7 @@ namespace Grumpy.ClickPLCHandler.ModBus
                 if (receivedUnitIdentifier != this._unitIdentifier)
                     data = new byte[2100];
                 else
-                    _countRetries = 0;
+                    _retriesCounter = 0;
             }
             else if (_tcpClient!.Client.Connected | _udpFlag) {
 
@@ -583,25 +641,25 @@ namespace Grumpy.ClickPLCHandler.ModBus
 
                 if ((_crc[0] != data[data[8] + 9] | _crc[1] != data[data[8] + 10]) & dataReceived) {
 
-                    if (MaxNumberOfRetries <= _countRetries) {
-                        _countRetries = 0;
+                    if (MaxNumberOfRetries <= _retriesCounter) {
+                        _retriesCounter = 0;
                         LastError = $"ModbusClient.{nameof(ReadDiscreteInputs)}().Response CRC check failed";
                         return false;
                     }
                     else {
-                        _countRetries++;
+                        _retriesCounter++;
                         return ReadDiscreteInputs(startingAddress, quantity, out response, functionCode);
                     }
                 }
                 else if (!dataReceived) {
 
-                    if (MaxNumberOfRetries <= _countRetries) {
-                        _countRetries = 0;
+                    if (MaxNumberOfRetries <= _retriesCounter) {
+                        _retriesCounter = 0;
                         LastError = $"ModbusClient.{nameof(ReadDiscreteInputs)}(). No Response from Modbus Slave";
                         return false;
                     }
                     else {
-                        _countRetries++;
+                        _retriesCounter++;
                         return ReadDiscreteInputs(startingAddress, quantity, out response, functionCode);
                     }
                 }
@@ -705,7 +763,7 @@ namespace Grumpy.ClickPLCHandler.ModBus
                 if (receivedUnitIdentifier != this._unitIdentifier)
                     data = new byte[2100];
                 else
-                    _countRetries = 0;
+                    _retriesCounter = 0;
             }
             else if ((_tcpClient?.Client?.Connected ?? false) | _udpFlag) {
                 if (_udpFlag) {
@@ -772,24 +830,24 @@ namespace Grumpy.ClickPLCHandler.ModBus
 
                 if ((_crc[0] != data[data[8] + 9] | _crc[1] != data[data[8] + 10]) & dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("CRCCheckFailedException Throwed", System.DateTime.Now);
-                    if (MaxNumberOfRetries <= _countRetries) {
-                        _countRetries = 0;
+                    if (MaxNumberOfRetries <= _retriesCounter) {
+                        _retriesCounter = 0;
                         throw new CRCCheckFailedException("Response CRC check failed");
                     }
                     else {
-                        _countRetries++;
+                        _retriesCounter++;
                         return ReadCoils(startingAddress, quantity, out coils, functionCode);
                     }
                 }
                 else if (!dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("TimeoutException Throwed", System.DateTime.Now);
-                    if (MaxNumberOfRetries <= _countRetries) {
-                        _countRetries = 0;
+                    if (MaxNumberOfRetries <= _retriesCounter) {
+                        _retriesCounter = 0;
                         LastError = "No Response from Modbus Slave";
                         return false;
                     }
                     else {
-                        _countRetries++;
+                        _retriesCounter++;
                         return ReadCoils(startingAddress, quantity, out coils, functionCode);
                     }
                 }
@@ -887,7 +945,7 @@ namespace Grumpy.ClickPLCHandler.ModBus
                 if (receivedUnitIdentifier != this._unitIdentifier)
                     data = new byte[2100];
                 else
-                    _countRetries = 0;
+                    _retriesCounter = 0;
             }
             else if ((_tcpClient?.Client?.Connected ?? false) | _udpFlag) {
 
@@ -949,27 +1007,27 @@ namespace Grumpy.ClickPLCHandler.ModBus
 
                 if ((_crc[0] != data[data[8] + 9] | _crc[1] != data[data[8] + 10]) & dataReceived) {
 
-                    if (MaxNumberOfRetries <= _countRetries) {
+                    if (MaxNumberOfRetries <= _retriesCounter) {
 
-                        _countRetries = 0;
+                        _retriesCounter = 0;
                         LastError = "Response CRC check failed";
                         return false;
                     }
                     else {
-                        _countRetries++;
+                        _retriesCounter++;
                         return ReadHoldingRegisters(startingAddress, quantity, out registers);
                     }
                 }
                 else if (!dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("TimeoutException Throwed", System.DateTime.Now);
-                    if (MaxNumberOfRetries <= _countRetries) {
+                    if (MaxNumberOfRetries <= _retriesCounter) {
 
-                        _countRetries = 0;
+                        _retriesCounter = 0;
                         LastError = "No Response from Modbus Slave";
                         return false;
                     }
                     else {
-                        _countRetries++;
+                        _retriesCounter++;
                         return ReadHoldingRegisters(startingAddress, quantity, out registers);
                     }
                 }
@@ -1095,7 +1153,7 @@ namespace Grumpy.ClickPLCHandler.ModBus
                 if (receivedUnitIdentifier != this._unitIdentifier)
                     data = new byte[2100];
                 else
-                    _countRetries = 0;
+                    _retriesCounter = 0;
             }
             else if ((_tcpClient?.Client?.Connected ?? false) | _udpFlag) {
                 if (_udpFlag) {
@@ -1159,25 +1217,25 @@ namespace Grumpy.ClickPLCHandler.ModBus
 
                 if ((_crc[0] != data[data[8] + 9] | _crc[1] != data[data[8] + 10]) & dataReceived) {
 
-                    if (MaxNumberOfRetries <= _countRetries) {
-                        _countRetries = 0;
+                    if (MaxNumberOfRetries <= _retriesCounter) {
+                        _retriesCounter = 0;
                         LastError = "Response CRC check failed";
                         return false;
                     }
                     else {
-                        _countRetries++;
+                        _retriesCounter++;
                         return ReadInputRegisters(startingAddress, quantity, out response, functionCode);
                     }
                 }
                 else if (!dataReceived) {
 
-                    if (MaxNumberOfRetries <= _countRetries) {
-                        _countRetries = 0;
+                    if (MaxNumberOfRetries <= _retriesCounter) {
+                        _retriesCounter = 0;
                         LastError = "No Response from Modbus Slave";
                         return false;
                     }
                     else {
-                        _countRetries++;
+                        _retriesCounter++;
                         return ReadInputRegisters(startingAddress, quantity, out response, functionCode);
                     }
 
@@ -1286,7 +1344,7 @@ namespace Grumpy.ClickPLCHandler.ModBus
                 if (receivedUnitIdentifier != this._unitIdentifier)
                     data = new byte[2100];
                 else
-                    _countRetries = 0;
+                    _retriesCounter = 0;
 
             }
             else if ((_tcpClient?.Client?.Connected ?? false) | _udpFlag) {
@@ -1348,24 +1406,24 @@ namespace Grumpy.ClickPLCHandler.ModBus
 
                 if ((_crc[0] != data[12] | _crc[1] != data[13]) & dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("CRCCheckFailedException Throwed", System.DateTime.Now);
-                    if (MaxNumberOfRetries <= _countRetries) {
-                        _countRetries = 0;
+                    if (MaxNumberOfRetries <= _retriesCounter) {
+                        _retriesCounter = 0;
                         throw new CRCCheckFailedException("Response CRC check failed");
                     }
                     else {
-                        _countRetries++;
+                        _retriesCounter++;
                         WriteSingleCoil(startingAddress, value, functionCode);
                     }
                 }
                 else if (!dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("TimeoutException Throwed", System.DateTime.Now);
-                    if (MaxNumberOfRetries <= _countRetries) {
-                        _countRetries = 0;
+                    if (MaxNumberOfRetries <= _retriesCounter) {
+                        _retriesCounter = 0;
                         throw new TimeoutException("No Response from Modbus Slave");
 
                     }
                     else {
-                        _countRetries++;
+                        _retriesCounter++;
                         WriteSingleCoil(startingAddress, value, functionCode);
                     }
                 }
@@ -1466,7 +1524,7 @@ namespace Grumpy.ClickPLCHandler.ModBus
                     data = new byte[2100];
                 }
                 else {
-                    _countRetries = 0;
+                    _retriesCounter = 0;
                 }
             }
             else if ((_tcpClient?.Client?.Connected ?? false) | _udpFlag) {
@@ -1511,25 +1569,25 @@ namespace Grumpy.ClickPLCHandler.ModBus
 
                 if ((_crc[0] != data[12] | _crc[1] != data[13]) & dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("CRCCheckFailedException Throwed", System.DateTime.Now);
-                    if (MaxNumberOfRetries <= _countRetries) {
-                        _countRetries = 0;
+                    if (MaxNumberOfRetries <= _retriesCounter) {
+                        _retriesCounter = 0;
                         LastError = "Response CRC check failed";
                         return false;
                     }
                     else {
-                        _countRetries++;
+                        _retriesCounter++;
                         WriteSingle32bitRegister(startingAddress, value);
                     }
                 }
                 else if (!dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("TimeoutException Throwed", System.DateTime.Now);
-                    if (MaxNumberOfRetries <= _countRetries) {
-                        _countRetries = 0;
+                    if (MaxNumberOfRetries <= _retriesCounter) {
+                        _retriesCounter = 0;
                         LastError = "No Response from Modbus Slave";
                         return false;
                     }
                     else {
-                        _countRetries++;
+                        _retriesCounter++;
                         WriteSingle32bitRegister(startingAddress, value);
                     }
                 }
@@ -1667,7 +1725,7 @@ namespace Grumpy.ClickPLCHandler.ModBus
                     data = new byte[2100];
                 }
                 else {
-                    _countRetries = 0;
+                    _retriesCounter = 0;
                 }
             }
             else if ((_tcpClient?.Client?.Connected ?? false) | _udpFlag) {
@@ -1728,25 +1786,25 @@ namespace Grumpy.ClickPLCHandler.ModBus
 
                 if ((_crc[0] != data[12] | _crc[1] != data[13]) & dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("CRCCheckFailedException Throwed", System.DateTime.Now);
-                    if (MaxNumberOfRetries <= _countRetries) {
-                        _countRetries = 0;
+                    if (MaxNumberOfRetries <= _retriesCounter) {
+                        _retriesCounter = 0;
                         LastError = "Response CRC check failed";
                         return false;
                     }
                     else {
-                        _countRetries++;
+                        _retriesCounter++;
                         WriteSingle32bitRegister(startingAddress, value);
                     }
                 }
                 else if (!dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("TimeoutException Throwed", System.DateTime.Now);
-                    if (MaxNumberOfRetries <= _countRetries) {
-                        _countRetries = 0;
+                    if (MaxNumberOfRetries <= _retriesCounter) {
+                        _retriesCounter = 0;
                         LastError = "No Response from Modbus Slave";
                         return false;
                     }
                     else {
-                        _countRetries++;
+                        _retriesCounter++;
                         WriteSingle32bitRegister(startingAddress, value);
                     }
                 }
@@ -1857,7 +1915,7 @@ namespace Grumpy.ClickPLCHandler.ModBus
                 if (receivedUnitIdentifier != this._unitIdentifier)
                     data = new byte[2100];
                 else
-                    _countRetries = 0;
+                    _retriesCounter = 0;
             }
             else if ((_tcpClient?.Client?.Connected ?? false) | _udpFlag) {
 
@@ -1911,25 +1969,25 @@ namespace Grumpy.ClickPLCHandler.ModBus
 
                 if ((_crc[0] != data[12] | _crc[1] != data[13]) & dataReceived) {
 
-                    if (MaxNumberOfRetries <= _countRetries) {
-                        _countRetries = 0;
+                    if (MaxNumberOfRetries <= _retriesCounter) {
+                        _retriesCounter = 0;
                         LastError = "Response CRC check failed";
                         return false;
                     }
                     else {
-                        _countRetries++;
+                        _retriesCounter++;
                         WriteMultipleCoils(startingAddress, values);
                     }
                 }
                 else if (!dataReceived) {
 
-                    if (MaxNumberOfRetries <= _countRetries) {
-                        _countRetries = 0;
+                    if (MaxNumberOfRetries <= _retriesCounter) {
+                        _retriesCounter = 0;
                         LastError = "No Response from Modbus Slave";
                         return false;
                     }
                     else {
-                        _countRetries++;
+                        _retriesCounter++;
                         WriteMultipleCoils(startingAddress, values);
                     }
                 }
@@ -2010,8 +2068,8 @@ namespace Grumpy.ClickPLCHandler.ModBus
                 byte receivedUnitIdentifier = 0xFF;
 
                 while (receivedUnitIdentifier != this._unitIdentifier
-                       & !((DateTime.Now.Ticks - dateTimeSend.Ticks)
-                           > TimeSpan.TicksPerMillisecond * this._connectTimeout)) {
+                       & ((DateTime.Now.Ticks - dateTimeSend.Ticks)
+                           <= TimeSpan.TicksPerMillisecond * 30000/* this._connectTimeout */)) {
 
                     while (dataReceived == false
                         & !((DateTime.Now.Ticks - dateTimeSend.Ticks)
@@ -2029,7 +2087,7 @@ namespace Grumpy.ClickPLCHandler.ModBus
                     data = new byte[2100];
                 }
                 else {
-                    _countRetries = 0;
+                    _retriesCounter = 0;
                 }
             }
             else if ((_tcpClient?.Client?.Connected ?? false) | _udpFlag) {
@@ -2085,24 +2143,24 @@ namespace Grumpy.ClickPLCHandler.ModBus
                 _crc = BitConverter.GetBytes(Utilities.CalculateCRC(data, 6, 6));
                 if ((_crc[0] != data[12] | _crc[1] != data[13]) & dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("CRCCheckFailedException Throwed", System.DateTime.Now);
-                    if (MaxNumberOfRetries <= _countRetries) {
-                        _countRetries = 0;
+                    if (MaxNumberOfRetries <= _retriesCounter) {
+                        _retriesCounter = 0;
                         throw new CRCCheckFailedException("Response CRC check failed");
                     }
                     else {
-                        _countRetries++;
+                        _retriesCounter++;
                         WriteMultipleRegisters(startingAddress, values);
                     }
                 }
                 else if (!dataReceived) {
                     // if (debug) StoreLogData.Instance.Store("TimeoutException Throwed", System.DateTime.Now);
-                    if (MaxNumberOfRetries <= _countRetries) {
-                        _countRetries = 0;
+                    if (MaxNumberOfRetries <= _retriesCounter) {
+                        _retriesCounter = 0;
                         throw new TimeoutException("No Response from Modbus Slave");
 
                     }
                     else {
-                        _countRetries++;
+                        _retriesCounter++;
                         WriteMultipleRegisters(startingAddress, values);
                     }
                 }
@@ -2206,7 +2264,7 @@ namespace Grumpy.ClickPLCHandler.ModBus
                 if (receivedUnitIdentifier != this._unitIdentifier)
                     data = new byte[2100];
                 else
-                    _countRetries = 0;
+                    _retriesCounter = 0;
             }
             else if ((_tcpClient?.Client?.Connected ?? false) | _udpFlag) {
                 if (_udpFlag) {

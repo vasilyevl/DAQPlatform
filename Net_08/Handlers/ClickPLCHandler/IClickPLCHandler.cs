@@ -44,9 +44,5 @@ namespace Grumpy.ClickPLCHandler
 
         Boolean ReadFloat32Register(String name, out float value);
         Boolean WriteFloat32Register(String name, float value);
-
-
-
-
     }
 }

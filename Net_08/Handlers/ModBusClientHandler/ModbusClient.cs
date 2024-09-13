@@ -30,6 +30,8 @@ using System.Net.Sockets;
 using System.Net;
 using System.IO.Ports;
 
+using Grumpy.HWControl.Configuration;
+
 
 
 namespace Grumpy.ModeBusHandler
@@ -39,14 +41,11 @@ namespace Grumpy.ModeBusHandler
     /// </summary>
     public partial class ModbusClient
     {
-        public enum RegisterOrder
-        {
-            LowHigh = 0,
-            HighLow = 1
-        };
+
+        private const string _DefaultPort = "Com1";
 
         //private int actualPositionToRead = 0;
-       // private DateTime? dateTimeLastRead;
+        // private DateTime? dateTimeLastRead;
 
         private bool dataReceived = false;
         private bool receiveActive = false;
@@ -122,39 +121,22 @@ namespace Grumpy.ModeBusHandler
             this._port = port;
         }
 
-        /// <summary>
-        /// Constructor which determines the Serial-Port
-        /// </summary>
-        /// <param name="serialPort">Serial-Port Name e.G. "COM1"</param>
-        public ModbusClient(string serialPort)
-        {
-            this._serialPort = new SerialPort();
-            _serialPort.PortName = (string)(serialPort?.Clone() ?? string.Empty); ;
-            _serialPort.BaudRate = _baudRate;
-            _serialPort.Parity = _parity;
-            _serialPort.StopBits = _stopBits;
-            _serialPort.WriteTimeout = 10000;
-            _serialPort.ReadTimeout = _connectTimeout;
 
-            _serialPort.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
-        }
-
-      /*  public ModbusClient( SerialPortConfiguration sp)
+        public ModbusClient( SerialPortConfiguration sp)
         {
             _serialPort = new SerialPort();
-
             _baudRate = sp.BaudRate;
             _parity = sp.Parity;
             _stopBits = sp.StopBits;
             _connectTimeout = sp.WriteTimeoutMs;
-            _serialPort.PortName = sp.Name;
+            _serialPort.PortName = (string) (sp.Name?.Clone() ?? _DefaultPort.Clone());
             _serialPort.BaudRate = _baudRate;
             _serialPort.Parity = _parity;
             _serialPort.StopBits = _stopBits;
             _serialPort.WriteTimeout = sp.WriteTimeoutMs;
             _serialPort.ReadTimeout = sp.ReadTimeoutMs;
         }
-      */
+     
 
         /// <summary>
         /// Parameterless constructor

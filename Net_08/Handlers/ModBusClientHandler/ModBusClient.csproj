@@ -21,8 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Libraries\Common\Common.csproj" />
-    <ProjectReference Include="..\..\Libraries\HWControlCommon\HWControlCommon.csproj" />
+    <ProjectReference Include="..\..\Libraries\HWControlCommon\HWControlUtilities.csproj" />
   </ItemGroup>
 
 </Project>

@@ -17,20 +17,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Handlernterfaces\**" />
+    <EmbeddedResource Remove="Handlernterfaces\**" />
+    <None Remove="Handlernterfaces\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Serilog" Version="4.0.0" />
     <PackageReference Include="Serilog.Sinks.Async" Version="2.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
     <PackageReference Include="System.IO.Ports" Version="8.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Common\Common.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Handlernterfaces\" />
   </ItemGroup>
 
 </Project>

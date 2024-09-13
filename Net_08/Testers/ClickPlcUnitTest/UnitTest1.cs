@@ -10,12 +10,22 @@ namespace ClickPlcUnitTest
     {
         static readonly string config = 
             "{\"Interface\":{" +
-           //        "\"Selector\":\"Network\"," +
-           //        "\"SerialPort\":null," +
-                   "\"Network\":{\"Name\":\"ClickPLC\"," +
-                                "\"IpAddress\":\"192.168.1.22\"," +
-                                "\"Port\":502," +
-                                "\"Timeout\":15000}}}";
+                    "\"ActiveInterface\":\"Serial\"," +
+                    "\"SerialPort\":{" +
+                        "\"Name\": \"COM5\"," +
+                        "\"BaudRate\": 38400," +
+                        "\"Bits\": 8," +
+                        "\"Parity\": \"Odd\"," +
+                        "\"HandShake\": \"None\"," +
+                        "\"StopBits\": \"One\"," +
+                        "\"ReadTimeoutMs\": 200," +
+                        "\"WriteTimeoutMs\": 200," +
+                        "\"MinTimeBetweenTransactionsMs\": 100," +
+                        "\"DelayBetweenTransactions\": 100}," +
+                   "\"Network\":{\"Name\": \"ClickPLC\"," +
+                                "\"IpAddress\": \"192.168.1.22\"," +
+                                "\"Port\": 502," +
+                                "\"Timeout\": 15000}}}";
 
         private static ClickHandler _handler = null!;
         private readonly ITestOutputHelper _testOutputHelper;

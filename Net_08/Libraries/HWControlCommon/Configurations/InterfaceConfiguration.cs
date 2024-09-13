@@ -16,35 +16,54 @@ PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGH
 HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 */
 
-
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
-
-namespace Grumpy.ClickPLCHandler
+namespace Grumpy.HWControl.Configuration
 {
+
     public interface IInterfaceConfiguration
     {
+        InterfaceSelector ActiveInterface { get; set; }
         TcpIpConnectionConfiguration? Network { get; set; }
-       
+        SerialPortConfiguration? SerialPort { get; set; }
+
     }
 
     [JsonObject(MemberSerialization = MemberSerialization.OptIn)]
     public class InterfaceConfiguration :  IInterfaceConfiguration
     {
 
+        private const InterfaceSelector _DefaultInterface = 
+                                        InterfaceSelector.Auto;
+
+
         private TcpIpConnectionConfiguration? _network;
+        private SerialPortConfiguration? _serialPort;
+        private InterfaceSelector _activeInterface;
+
+
         public InterfaceConfiguration() : base() { 
-            
-            Network = new TcpIpConnectionConfiguration();
-        
+
+            ActiveInterface = _DefaultInterface;
+            Network = null;
+            SerialPort = null;
         }
 
         public InterfaceConfiguration(IInterfaceConfiguration src) : this() {
 
-            Network = (src?.Network is not null) ? (src.Network.Clone() as TcpIpConnectionConfiguration) : null;
+            Network = (src?.Network is not null) ? 
+                (src.Network.Clone() as TcpIpConnectionConfiguration) : 
+                null;
+        }
+
+        [JsonProperty]
+        [JsonConverter(typeof(StringEnumConverter))]
+        public InterfaceSelector ActiveInterface {
+            get => _activeInterface;
+            set => _activeInterface = value;
         }
 
         [JsonProperty]
@@ -53,6 +72,11 @@ namespace Grumpy.ClickPLCHandler
             set => _network = value;
         }
 
+        [JsonProperty]
+        public SerialPortConfiguration? SerialPort {
+           get => _serialPort;
+           set => _serialPort = value;
+        }
 
         internal bool CopyFrom(IInterfaceConfiguration s) {
 
@@ -76,13 +100,11 @@ namespace Grumpy.ClickPLCHandler
             }
         }
 
-
         public  bool CopyFrom(object src) {
             var s = src as IInterfaceConfiguration;
 
             return (s is null) ? false : CopyFrom(s);
         }
-
 
         public void Reset() {
             Network = null;

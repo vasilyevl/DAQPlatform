@@ -42,14 +42,7 @@ namespace Grumpy.HWControl.Configuration
         NoError =  OK | Cancelled | Warning,
         Complete = OK | Error | Cancelled | Warning
     }
-    public enum PortState
-    {
-        Unknown,
-        Error,
-        Loaded,
-        Configured,
-        Connected,
-    }
+
 
     public class IoStatus : IEquatable<IoStatus>, IEquatable<IOStatus>
     {
@@ -215,38 +208,5 @@ namespace Grumpy.HWControl.Configuration
         }
 
     }
-    public interface ISerialInterfaceHandler
-    {
-        bool SetPortConfiguration(SerialPortConfiguration config);
-
-        IOStatus Open();
-
-        IOStatus Close();
-
-        bool IsConnected { get; }
-
-        bool Write(string message);
-
-        int Read(out string message, int maxLen, int minLen);
-
-        int Query(string message, out string response, int maxLen, int minLen);
-
-        // Serial Port Only 
-        bool FlushRxBuffer();
-
-        bool FlushTxBuffer();
-
-        bool FlushBuffers();
-
-        PortState Status { get; }
-
-        bool PortIsOpen { get; }
-
-        bool InErrorState { get; }
-
-        bool HasBytesToRead { get; }
-
-        int BytesToRead { get; }
-
-    }
+  
 }
