@@ -1,4 +1,5 @@
-﻿/* 
+﻿/*
+ 
 Copyright (c) 2024 vasilyevl (Grumpy). Permission is hereby granted, 
 free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"),to deal in the Software 
@@ -16,16 +17,22 @@ PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGH
 HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 */
 
+
 using Grumpy.Common.Utilities;
+
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+
+using System;
+
 
 namespace Grumpy.Common
 {
 
-    public interface IConfigurationBase : ICloneable
+    public interface IConfigurationBase: ICloneable
     {
         bool CopyFrom(object src);
         bool Init(string configuration);
@@ -36,12 +43,11 @@ namespace Grumpy.Common
     }
 
     [JsonObject(MemberSerialization = MemberSerialization.OptIn)]
-    public abstract class ConfigurationBase : ObservableObject, IConfigurationBase
+    public abstract class ConfigurationBase : ObservableObject,  IConfigurationBase
     {
         private string _fileName;
 
-        public ConfigurationBase() : base()
-        {
+        public ConfigurationBase( ) : base() {
             _fileName = null!;
             Reset();
         }
@@ -50,28 +56,25 @@ namespace Grumpy.Common
 
         public virtual object Clone()
         {
-            return MemberwiseClone();
+            return base.MemberwiseClone();
         }
 
         public bool SaveToFile(string? fileName = null)
         {
             if (fileName == null) {
-
                 fileName = FileName;
             }
             else {
-
                 FileName = fileName;
             }
 
             if (string.IsNullOrEmpty(fileName)) {
-
                 LastErrorComment = "Can't save into a file. " +
                     "Name not provided.";
                 return false;
             }
 
-            if (FileUtilities.FileExists(fileName)
+            if ( FileUtilities.FileExists(fileName) 
                 && !FileUtilities.DeleteFile(fileName)) {
 
                 LastErrorComment = $"Failed to delete file " +
@@ -79,8 +82,7 @@ namespace Grumpy.Common
                 return false;
             }
 
-            if (FileUtilities.SaveTextFile(ToString()!, null!, fileName)) {
-
+            if (FileUtilities.SaveTextFile(this.ToString()!, null!, fileName)) {
                 LastErrorComment = $"Failed to save to the " +
                     $"\"{fileName}\" file: {FileUtilities.LastError}";
             }
@@ -90,13 +92,11 @@ namespace Grumpy.Common
 
         public bool LoadFromFile(string filePathName)
         {
-            if (FileUtilities.ReadTextFile( null!, filePathName, 
-                                            out string text)) {
+            if (FileUtilities.ReadTextFile(null!, filePathName, out string text)) {
 
                 return Init(text);
             }
             else {
-
                 LastErrorComment = (string)FileUtilities.LastError.Clone();
                 return false;
             }
@@ -104,14 +104,12 @@ namespace Grumpy.Common
 
         public bool Init(string configuration)
         {
-            try
-            {
+            try {
                 var jt = JToken.Parse(configuration);
-                object src = jt.ToObject(GetType())!;
+                object src = jt.ToObject(this.GetType())!;
                 return CopyFrom(src);
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 LastErrorComment = ex.Message;
                 return false;
             }
@@ -121,50 +119,45 @@ namespace Grumpy.Common
         private object _lastErrorLock = new object();
 
         [JsonIgnore]
-        public string LastErrorComment
-        {
+        public string LastErrorComment {
             get {
                 lock (_lastErrorLock) {
-
-                    return (string)(_lastErrorComment?.Clone() ?? 
-                                    string.Empty);
+                    return (string)(_lastErrorComment?.Clone() ?? string.Empty);
                 }
             }
 
             protected set {
                 lock (_lastErrorLock) {
-
                     _lastErrorComment = value;
                 }
             }
         }
 
         [JsonIgnore]
-        public int LastErrorCode
-        {
+        public  int LastErrorCode {
             get; protected set;
         }
 
-        public string GetSummary()
-        {
-            if (string.IsNullOrEmpty(FileName)) {
-
-                return ToString()!;
+        public string GetSummary(){ 
+ 
+            if (string.IsNullOrEmpty(FileName)) {     
+                
+                return this.ToString()!;
             }
             else {
-
                 return "{\n\t\"FileName\": \"" + FileName + "\"\n}";
             }
         }
 
         [JsonProperty]
-        public string FileName
-        {
-            get => (string)_fileName.Clone();
-            set => _fileName = (string)(_fileName?.Clone() ?? null!);
-        }
-        public bool ShouldSerializeFileName() => false;
+        public string FileName { 
 
-        public abstract void Reset();
+            get => (string) _fileName.Clone(); 
+            set => _fileName = (string)(_fileName?.Clone() ?? null!); 
+        }
+        public bool ShouldSerializeFileName() =>  false;
+
+
+        public abstract void Reset();   
     }
 }

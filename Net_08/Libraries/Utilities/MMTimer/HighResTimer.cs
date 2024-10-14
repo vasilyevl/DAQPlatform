@@ -18,6 +18,10 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
+
 namespace Grumpy.Utilities.HighResTimer
 {
 
@@ -54,9 +58,10 @@ namespace Grumpy.Utilities.HighResTimer
         public ulong MissedClicks { get; private set; }
 
         /// <summary>
-        /// Gets the precise date and time when the event was triggered.
+        /// Gets the precise time when the venet was triggerd in MS 
+        /// from the moment when the stop watch was started.
         /// </summary>
-        public System.DateTime Time { get; private set; }
+        public double Time { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TimerEventArgs"/> class 
@@ -68,12 +73,12 @@ namespace Grumpy.Utilities.HighResTimer
         /// <param name="time">The precise date and time when the event 
         /// was triggered.</param>
         public TimerEventArgs(int timerID, ulong clicks, 
-            ulong missedClicks, System.DateTime time) {
+            ulong missedClicks, double time = double.NaN) {
 
-            TimerID = timerID;
+            TimerID =   timerID;
             ClickNumber = clicks;
             MissedClicks = missedClicks;
-            Time = time;
+            Time = double.IsNaN(time) ? HighResTimer.GetTimeInMs() : time;
         }
     }
 
@@ -84,10 +89,10 @@ namespace Grumpy.Utilities.HighResTimer
     /// triggered the event.</param>
     /// <param name="tickNumber">The total number of ticks that have 
     /// occurred since the timer started.</param>
-    /// <param name="time">The precise date and time when the event 
+    /// <param name="time">The precise time in ms when the event 
     /// was triggered.</param>
     /// 
-    public delegate void TimerProc( int timerID, ulong tickNumber, DateTime time);
+    public delegate void TimerProc( int timerID, ulong tickNumber, double timeMs);
 
     /// <summary>
     /// Represents a multimedia timer that can trigger 
@@ -109,12 +114,22 @@ namespace Grumpy.Utilities.HighResTimer
         private string _lastError;
         private object _lockCounterLock;
         private ManualResetEvent? _waitHandle;
-        static HighResTimer() {
+        static private Stopwatch _stopwatch;
+        static private double _stopWatchCliksInMs;
+        private double _startTime;
+        private double _endTime;
 
-            NativeMMTimerWrap.GetTimerCaps(out _systemsCaps);
+
+        static HighResTimer() {
+            _stopWatchCliksInMs = Stopwatch.Frequency/1000.0;
+            NativeTimingAPI.GetTimerCaps(out _systemsCaps);
+            _stopwatch = Stopwatch.StartNew();
         }
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]  
+        public static double GetTimeInMs() {
+            return _stopwatch.ElapsedTicks / _stopWatchCliksInMs;
+        } 
         public HighResTimer() {
 
             _timerId = 0;
@@ -127,6 +142,8 @@ namespace Grumpy.Utilities.HighResTimer
             _lastError = string.Empty;
             _lockCounterLock = new object();
             _waitHandle = null;
+            _startTime = double.NaN;
+            _endTime = double.NaN;
         }
 
 
@@ -195,6 +212,19 @@ namespace Grumpy.Utilities.HighResTimer
             }
         }
 
+
+
+        public double StartTimeMs =>
+            double.IsNaN(_startTime) ? double.NaN : _startTime;
+
+        public double EndTimeMs =>
+            double.IsNaN(_endTime) ? double.NaN : _endTime;
+
+        public double DurationMs =>
+            (double.IsNaN(StartTimeMs) || double.IsNaN(EndTimeMs)) ?
+            double.NaN :
+            EndTimeMs - StartTimeMs;
+
         /// <summary>
         /// Waits for the specified duration and returns a boolean indicating success.
         /// </summary>
@@ -211,14 +241,15 @@ namespace Grumpy.Utilities.HighResTimer
 
         public bool Wait( uint duration) {
 
-            _timerId = NativeMMTimerWrap.SetEvent(duration,
+            _timerId = NativeTimingAPI.SetEvent(duration,
                                _systemsCaps.PeriodMin,
                                WaitCallback,
                                0,
                                (uint)MMTimerMode.OneShot);
-
+            _startTime = GetTimeInMs();
             _waitHandle = new ManualResetEvent(false);
             Boolean r = _waitHandle.WaitOne((int)duration * 2);
+            _endTime = GetTimeInMs();
             _waitHandle.Close();
             _waitHandle = null;
 
@@ -235,13 +266,15 @@ namespace Grumpy.Utilities.HighResTimer
         public bool Start() {
             try {
 
-                _timerId = NativeMMTimerWrap.SetEvent(_periodMs,
+                _timerId = NativeTimingAPI.SetEvent(_periodMs,
                     _resolutionMs,
                     TimerCallback,
                     0,
                     _mode == TimerMode.OneShot ?
                        (uint)MMTimerMode.OneShot :
                        (uint)MMTimerMode.PeriodicCallbackFunctionKillSynchroneous);
+
+                _startTime = GetTimeInMs();
 
                 if (_timerId == 0) {
 
@@ -257,10 +290,6 @@ namespace Grumpy.Utilities.HighResTimer
             }
         }
 
-
-
-
-
         /// <summary>
         /// Stops the multimedia timer.
         /// </summary>
@@ -271,8 +300,8 @@ namespace Grumpy.Utilities.HighResTimer
             
             try { 
             
-                var r =  NativeMMTimerWrap.KillEvent(_timerId);
-                
+                var r =  NativeTimingAPI.KillEvent(_timerId);
+                _startTime = GetTimeInMs();
                 if (!(r == 0)) {
                 
                     LastError = $"Failed to stop MM timer event in " +
@@ -302,7 +331,7 @@ namespace Grumpy.Utilities.HighResTimer
         private void TimerCallback(int id, int msg, int user, 
             int dw1, int dw2) {
 
-            var time = System.DateTime.Now; 
+            var time = GetTimeInMs() - (!double.IsNaN(_startTime) ? _startTime : 0.0); 
             bool lockTaken = false;
 
             try {
@@ -348,7 +377,10 @@ namespace Grumpy.Utilities.HighResTimer
             }
         }
 
-
+        public double TimeFromStartInMs =>
+                !double.IsNaN(_startTime) ?
+                    GetTimeInMs() - _startTime :
+                    double.PositiveInfinity;
         private void WaitCallback(int id, int msg, int user, 
                        int dw1, int dw2) {
 

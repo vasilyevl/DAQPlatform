@@ -28,8 +28,11 @@ namespace Grumpy {
 
 	namespace DAQmxCLIWrap {
 
-		public delegate int32 DAQmxDoneCallbackDelegate(IntPtr taskHandle, int32 status, IntPtr% callbackData);
-		public delegate int32 DAQmxEveryNSamplesCallbackDelegate(IntPtr taskHandle, int32 eventType, UInt32 nSamples, IntPtr% callbackData);
+		public delegate int32 DAQmxDoneCallbackDelegate(IntPtr taskHandle, 
+			int32 status, IntPtr% callbackData);
+		public delegate int32 DAQmxEveryNSamplesCallbackDelegate(
+			IntPtr taskHandle, int32 eventType, UInt32 nSamples, 
+			IntPtr% callbackData);
 
 		public ref class CallbackHandle
 		{
@@ -66,7 +69,6 @@ namespace Grumpy {
 
 		private:
 			void _FreeResources();
-
 		};
 	}
 }

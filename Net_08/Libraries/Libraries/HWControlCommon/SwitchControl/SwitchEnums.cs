@@ -1,4 +1,5 @@
-﻿/* 
+﻿/*
+ 
 Copyright (c) 2024 vasilyevl (Grumpy). Permission is hereby granted, 
 free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"),to deal in the Software 
@@ -16,43 +17,26 @@ PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGH
 HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 */
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-using Newtonsoft.Json.Linq;
-
-namespace Grumpy.Common
+namespace Grumpy.HWControl.IO
 {
-    internal static class ConfigurationExt
+    public enum SwitchCtrl
     {
-        public static bool InitFromString( this IConfigurationBase o,  
-                                           string str, 
-                                           out string errorMessage )
-        {
-            if ( string.IsNullOrEmpty( str ) ) {
+        On = 1,
+        Off = 2,
+    }
 
-                errorMessage = "Can't deserialize empty or null string.";
-                return false;
-            }
-
-            try {
-
-                JToken jToken= JToken.Parse(str);
-                object res = jToken.ToObject(o.GetType())!;
-
-                if ( res == null ) {
-
-                    errorMessage = "Deserialization failed.";
-                    return false;
-                }
-
-                errorMessage = null!;
-                return  o.CopyFrom(res) ;
-            } 
-            catch (Exception ex ){ 
-
-                errorMessage = ex.Message;
-                return false;
-            }
-        }
+    public enum SwitchSt
+    {
+        Unknown = 0,
+        On = 1,
+        Off = 2
     }
 }

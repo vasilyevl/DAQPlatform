@@ -1,4 +1,5 @@
-﻿/* 
+﻿/*
+ 
 Copyright (c) 2024 vasilyevl (Grumpy). Permission is hereby granted, 
 free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"),to deal in the Software 
@@ -16,43 +17,21 @@ PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGH
 HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 */
 
-using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace Grumpy.Common
+namespace Grumpy.HWControl.Configuration
 {
-    internal static class ConfigurationExt
+    public enum InterfaceSelector
     {
-        public static bool InitFromString( this IConfigurationBase o,  
-                                           string str, 
-                                           out string errorMessage )
-        {
-            if ( string.IsNullOrEmpty( str ) ) {
-
-                errorMessage = "Can't deserialize empty or null string.";
-                return false;
-            }
-
-            try {
-
-                JToken jToken= JToken.Parse(str);
-                object res = jToken.ToObject(o.GetType())!;
-
-                if ( res == null ) {
-
-                    errorMessage = "Deserialization failed.";
-                    return false;
-                }
-
-                errorMessage = null!;
-                return  o.CopyFrom(res) ;
-            } 
-            catch (Exception ex ){ 
-
-                errorMessage = ex.Message;
-                return false;
-            }
-        }
+        Auto = 0,
+        Serial = 1,
+        Network = 2
     }
 }
