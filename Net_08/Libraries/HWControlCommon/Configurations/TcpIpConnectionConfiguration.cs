@@ -20,10 +20,10 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-using Grumpy.Common;
+using Grumpy.DaqFramework.Common;
 using Newtonsoft.Json;
 
-namespace Grumpy.HWControl.Configuration
+namespace Grumpy.DaqFramework.Configuration
 {
 
     [JsonObject(MemberSerialization = MemberSerialization.OptOut)]
@@ -91,7 +91,7 @@ namespace Grumpy.HWControl.Configuration
             DataPort = DefaultPort;
         }
 
-        public override bool CopyFrom(object src) {
+        public override bool CopyFrom(object? src) {
             var s = src as TcpIpConnectionConfiguration;
 
             if (s == null) { return false; }

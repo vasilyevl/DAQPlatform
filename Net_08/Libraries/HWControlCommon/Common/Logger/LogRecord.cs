@@ -22,7 +22,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 using System.Text;
 
-namespace Grumpy.Common
+namespace Grumpy.DaqFramework.Common
 {
     public enum LogLevel {
         Debug, 

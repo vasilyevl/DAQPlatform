@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 
-namespace Grumpy.Common
+namespace Grumpy.DaqFramework.Common
 {
     public class QueueBase<TItem>
     {
@@ -10,7 +10,7 @@ namespace Grumpy.Common
 
         public const int DefaultQueueDepth = 64;
 
-        protected ConcurrentQueue<TItem> _queue;
+        protected ConcurrentQueue<TItem>? _queue;
 
         protected object _queueLock;
         
@@ -47,9 +47,9 @@ namespace Grumpy.Common
             }
         }
 
-        public bool ItemPending => !_queue.IsEmpty;
+        public bool ItemPending => !(_queue?.IsEmpty ?? true);
 
-        public int Count => _queue.Count;
+        public int Count => _queue?.Count ?? 0;
                 
         public int RoomLeft {
             get {
@@ -64,12 +64,12 @@ namespace Grumpy.Common
         {
 
             return _maxDepth > 0 ?
-                Math.Max(0, _maxDepth - _queue.Count) :
+                Math.Max(0, _maxDepth - (_queue?.Count ?? 0)) :
                 int.MaxValue;
 
         }
 
-        public bool IsEmpty => _queue.IsEmpty;
+        public bool IsEmpty => (_queue?.IsEmpty ?? true);
 
         public bool AtCapacity => RoomLeft <= 0;
 
@@ -80,7 +80,7 @@ namespace Grumpy.Common
 
                 if (_errorHistory != null) {
 
-                    if (_errorHistory.Peek(out LogRecord r)) {
+                    if (_errorHistory.Peek(out LogRecord? r)) {
 
                         return r?.Details ?? string.Empty;
                     }
@@ -107,7 +107,7 @@ namespace Grumpy.Common
                 if (_errorHistory != null) {
 
                     return _errorHistory
-                         .PeekAllAsArray(lastFirst: false)
+                         .PeekAllAsArray(reverseOrder: false)
                          .Select((s) => s.Details).ToList();
                 }
 
@@ -117,10 +117,14 @@ namespace Grumpy.Common
 
         public bool TryPeek(out TItem? item)
         {
+            item = default(TItem);
+
             try {
-                return _queue.TryPeek(out item);
+
+                return _queue?.TryPeek(out item) ?? false;
             }
             catch (Exception ex) {
+
                 item = default;
                 LastError = ($"Failed to deque item from" +
                     $" fifo {Name}. Exception: {ex.Message}");
@@ -131,9 +135,12 @@ namespace Grumpy.Common
         public bool TryDequeue(out TItem? item)
         {
             try {
-                return _queue.TryDequeue(out item);
+
+                item = default(TItem);
+                return _queue?.TryDequeue(out item) ?? false;
             }
             catch (Exception ex) {
+
                 LastError = $"Failed to dequeue item from " +
                     $"queue {Name}. Exception: {ex.Message}";
                 item = default;
@@ -144,6 +151,7 @@ namespace Grumpy.Common
         public virtual bool TryEnqueue(TItem item)
         {
             lock (_queueLock) {
+
                 return _Enqueue(item);
             }
         }
@@ -151,21 +159,21 @@ namespace Grumpy.Common
         protected bool _Enqueue(TItem item)
         {
             
-            if ((_maxDepth < 0) || (_queue.Count < _maxDepth)) {
+            if ( (_queue != null) && ((_maxDepth < 0) || (_queue.Count < _maxDepth))) {
                 try {
                     _queue.Enqueue(item);
                     return true;
                 }
                 catch (Exception e) {
                     LastError = $"Exception while adding " +
-                        $"item {item.GetType().Name} to queue {_name}. " +
+                        $"item {item?.GetType().Name ?? "null"} to queue {_name}. " +
                         $"Exception: {e.Message}";
                     return false;
                 }
             }
             else {
                 LastError = $"Exception while adding " +
-                    $"item {item.GetType().Name} to queue {_name}. " +
+                    $"item {item?.GetType().Name ?? "null"} to queue {_name}. " +
                     $"Queue at capacity {_maxDepth}";
 
                 return false;
@@ -182,6 +190,12 @@ namespace Grumpy.Common
 
         private bool _InsertAt(TItem item, int index)
         {
+            if(_queue == null) {
+                LastError = $"Queue {Name} is null. " +
+                    $"Can't insert item at index {index}.";
+                return false;
+            }
+
 
             if (_queue.Count >= _maxDepth) {
 
@@ -233,6 +247,12 @@ namespace Grumpy.Common
 
         protected bool _InsertInfront(TItem[] items)
         {
+            if(_queue == null) {
+                LastError = $"Queue {Name} is null. " +
+                    $"Can't insert items infront.";
+                return false;
+            }
+
             if (items.Length > (_maxDepth - _queue.Count)) {
 
                 LastError = $"Failed to insert items infront " +
@@ -242,7 +262,7 @@ namespace Grumpy.Common
             }
 
             try {
-                Queue<TItem> tmp = null;
+                Queue<TItem>? tmp = null;
                 if (_queue.Count > 0) {
 
                     tmp = new Queue<TItem>();
@@ -285,6 +305,10 @@ namespace Grumpy.Common
         protected virtual bool _Purge()
         {
             try {
+                if (_queue == null) {
+                    return true;
+                }
+
                 while (_queue.Count > 0) {
 
                     _queue.TryDequeue(out var it);
@@ -310,8 +334,14 @@ namespace Grumpy.Common
         protected bool _MakeRoom(int roomRequested, out int itemsRemoved)
         { 
                 itemsRemoved = 0;
-   
-                if (_maxDepth - _queue.Count >= roomRequested) {
+
+            if (_queue == null) {
+                LastError = $"Queue {Name} is null. " +
+                    $"Can't free room for {roomRequested} items.";
+                return false;
+            }
+
+            if (_maxDepth - _queue.Count >= roomRequested) {
                     return true;
                 }
 
@@ -319,7 +349,7 @@ namespace Grumpy.Common
 
                     while( _queue.Count > 0 && _maxDepth - _queue.Count < roomRequested) { 
                     
-                        if(_queue.TryDequeue(out TItem item)) {
+                        if(_queue.TryDequeue(out TItem? item)) {
                             itemsRemoved++;
                         }
                     }
@@ -336,9 +366,15 @@ namespace Grumpy.Common
             }          
         }
 
-        public TItem[] PeekAllAsArray()
+        public TItem[]? PeekAllAsArray()
         {
-            lock (_queueLock) {          
+            lock (_queueLock) {
+
+                if (_queue == null) {
+                    LastError = $"Queue {Name} is null. " +
+                        $"Can't peek items as array.";
+                    return null;
+                }
 
                 if (_queue.Count > 0) {
                     try {
@@ -348,7 +384,7 @@ namespace Grumpy.Common
                             Array.Reverse(array);
                         }
 
-                        return array;
+                        return array!;
                     }
                     catch (Exception e) {
 
@@ -364,9 +400,9 @@ namespace Grumpy.Common
             }
         }
 
-        public List<TItem> PeekAllAsList()
+        public List<TItem>? PeekAllAsList()
         {
-            TItem[] array = PeekAllAsArray();
+            TItem[]? array = PeekAllAsArray();
 
             if ( array != null) {
                 return array.ToList();

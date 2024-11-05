@@ -21,7 +21,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace Grumpy.HWControl.Configuration
+namespace Grumpy.DaqFramework.Configuration
 {
 
     public interface IInterfaceConfiguration

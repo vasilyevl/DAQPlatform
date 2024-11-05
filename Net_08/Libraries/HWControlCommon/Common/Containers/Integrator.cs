@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Grumpy.Common
+namespace Grumpy.DaqFramework.Common
 {
     public interface IIntegrator<T>
     {

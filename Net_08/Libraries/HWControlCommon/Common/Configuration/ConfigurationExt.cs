@@ -20,7 +20,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 using Newtonsoft.Json.Linq;
 
-namespace Grumpy.Common
+namespace Grumpy.DaqFramework.Common
 {
     internal static class ConfigurationExt
     {

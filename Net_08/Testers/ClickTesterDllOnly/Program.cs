@@ -1,5 +1,5 @@
 ﻿
-using Grumpy.ClickPLCHandler;
+using Grumpy.ClickPLCDriver;
 
 using System;
 using System.Diagnostics;
@@ -16,7 +16,7 @@ namespace ClickTester
 
     internal class Program
     {
-        static ClickHandler _handler = null!;
+        static Grumpy.ClickPLCDriver _handler = null!;
         static string _io = "C1";
         static string _timer = "T1";
         static string _setPoint = "DS10";

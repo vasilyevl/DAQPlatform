@@ -1,11 +1,12 @@
-﻿using Serilog;
+﻿using DAQAndControlFramework.Utilities;
+using Serilog;
 using Serilog.Sinks.File;
 
 using System.Reflection;
 
 
 
-namespace Grumpy.Common.Utilities
+namespace Grumpy.DaqFramework.Utilities
 {
 
     public interface ILogger

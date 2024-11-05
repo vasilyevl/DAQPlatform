@@ -18,7 +18,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace Grumpy.Common
+namespace Grumpy.DaqFramework.Common
 { 
     public class BasicQueue<TObject> : QueueBase<TObject>, IDisposable
     {
@@ -113,6 +113,11 @@ namespace Grumpy.Common
         }
 
         protected bool _Push(TObject obj, bool force = false) {
+           
+            if (_queue == null) {
+                return false;
+            }
+
             if (force) {
                 if (_MakeRoom(1, out int itemsRemoved)) {
                     _queue.Enqueue(obj);
@@ -132,7 +137,7 @@ namespace Grumpy.Common
             }
         }
 
-        public virtual bool Pop(out TObject item) => base.TryDequeue(out item);
+        public virtual bool Pop(out TObject item) => base.TryDequeue(out item!);
 
         public override bool Purge() {
             if (base.Purge()) {

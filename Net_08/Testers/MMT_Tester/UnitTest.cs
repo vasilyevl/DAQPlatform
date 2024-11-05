@@ -20,7 +20,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace HighResTester
 {
-    using Grumpy.Utilities.HighResTimer;
+    using Grumpy.DaqFramework.Drivers.MMTimer;
     using System.Diagnostics;
     using System.Runtime.InteropServices;
     using Xunit.Abstractions;
@@ -52,13 +52,8 @@ namespace HighResTester
         [Fact]
         public void Test1_MMWrapPeriodic() {
 
-           // Process proc = Process.GetCurrentProcess();
-           // long affinityMask = 0x0002;
-            //proc.ProcessorAffinity = (IntPtr)affinityMask;
-
-
             _testOutputHelper.WriteLine("Test1 (\"Periodic\") started.");
-            Int32 r  = NativeTimingAPI.GetDevCaps(ref _caps,
+            Int32 r  = NativeMMTimerWrap.GetDevCaps(ref _caps,
                  Marshal.SizeOf<TimerCaps>(UnitTest._caps));
 
             Assert.True(r == 0, "Faile to get MMTimer caps.");
@@ -71,15 +66,15 @@ namespace HighResTester
             uint resolution = Math.Max(_resolution, _caps.PeriodMin);   
             double timerConfigStart = _stopWatch.ElapsedTicks / _stopWatchTicksPerMS;
 
-           // uint timerResolution =0;
-           //  var res = NativeTimingAPI.NtSetTimerResolution(10000, true, ref timerResolution);
+            // uint timerResolution =0;
+            //  var res = NativeTimingAPI.NtSetTimerResolution(10000, true, ref timerResolution);
 
-           // _testOutputHelper.WriteLine("System timer resolution set to " +
-           //    $"{ timerResolution/10000.0}ms.");
+            // _testOutputHelper.WriteLine("System timer resolution set to " +
+            //    $"{ timerResolution/10000.0}ms.");
 
-            NativeTimingAPI.BeginPeriod(resolution);
+            NativeMMTimerWrap.BeginPeriod(resolution);
 
-            Int32 id = NativeTimingAPI.SetEvent(_period, 
+            Int32 id = NativeMMTimerWrap.SetEvent(_period, 
                 resolution, TimerCallback, 
                 123, 
                 (uint)TimerMode.Periodic);
@@ -91,8 +86,8 @@ namespace HighResTester
 
             Thread.Sleep((int)_testDuration);
 
-            NativeTimingAPI.KillEvent(id);
-            NativeTimingAPI.EndPeriod(resolution);
+            NativeMMTimerWrap.KillEvent(id);
+            NativeMMTimerWrap.EndPeriod(resolution);
             ReportResults();
         }
 
@@ -102,7 +97,7 @@ namespace HighResTester
 
             _testOutputHelper.WriteLine("Test2 (\"Single Shot\") started.");
             
-            var r = NativeTimingAPI.GetDevCaps(ref _caps,
+            var r = NativeMMTimerWrap.GetDevCaps(ref _caps,
                  Marshal.SizeOf<TimerCaps>(UnitTest._caps));
 
             Assert.True(r == 0, "Failed to get MMTimer caps.");
@@ -115,9 +110,9 @@ namespace HighResTester
                 _times.Clear();
 
                 uint resolution = Math.Max(_resolution, _caps.PeriodMin);
-                NativeTimingAPI.BeginPeriod(resolution);
+                NativeMMTimerWrap.BeginPeriod(resolution);
 
-                Int32 id = NativeTimingAPI.SetEvent(_period,
+                Int32 id = NativeMMTimerWrap.SetEvent(_period,
                     resolution, TimerCallback,
                     123, (uint)TimerMode.OneShot);
 
@@ -126,8 +121,8 @@ namespace HighResTester
                 Assert.True(id != 0, "Failed to set MM timer event.");
                 Thread.Sleep(100);
 
-                NativeTimingAPI.KillEvent(id);
-                NativeTimingAPI.EndPeriod(resolution);
+                NativeMMTimerWrap.KillEvent(id);
+                NativeMMTimerWrap.EndPeriod(resolution);
 
                 ReportResults(i < 1);
             }
@@ -218,7 +213,7 @@ namespace HighResTester
             _durations.Clear();
             var accum = 0.0;
             var timer = new HighResTimer();
-
+            
             _testOutputHelper.WriteLine($"##\tWait ms\tError ms\tError %");
 
             for (int i = 0; i < 50; i++) {
@@ -263,9 +258,8 @@ namespace HighResTester
 
         [Fact]
         public void Test8_Periodic_SystemTimer() {
-             var r = NativeTimingAPI.NtSetTimerResolution(5000, true, ref _resolution);
-
-            NativeTimingAPI.BeginPeriod(1);
+             
+            NativeMMTimerWrap.BeginPeriod(1);
             _times.Clear();
             _start = _stopWatch.ElapsedTicks / _stopWatchTicksPerMS;
 
@@ -276,8 +270,6 @@ namespace HighResTester
 
             Thread.Sleep((int)_testDuration);
 
-      
-
             _testOutputHelper.WriteLine($"MM timer \"Test8\" complete.\n");
 
             ReportResults();
@@ -287,23 +279,19 @@ namespace HighResTester
             _times.Add(_stopWatch.ElapsedTicks / _stopWatchTicksPerMS);
         }
 
-
         private void TimerProc(int timerID, ulong clicks, double time) {
 
             _times.Add(time);
-
         }
 
         private void EventHandler(object sender, TimerEventArgs e) {
             _times.Add(e.Time);
         }
 
-
         private void SingleSHutEventHandler(object sender, TimerEventArgs e) {
            
             _durations.Add((_stopWatch.ElapsedTicks / _stopWatchTicksPerMS) - _start);
         }
-
 
         private void ReportResults( bool showHeader = true) {
 
@@ -328,7 +316,6 @@ namespace HighResTester
             }
         }
 
-
         private void ReportTimes() {
 
 
@@ -340,6 +327,7 @@ namespace HighResTester
                     $"\t{_times[i]}");
             }
         }
+
         private void ReportSingleShotResults() {
 
             _testOutputHelper.WriteLine($"Period: {_period}ms");
@@ -353,13 +341,11 @@ namespace HighResTester
             }
 
             _testOutputHelper.WriteLine($"Average duration: {(accum / _durations.Count).ToString("F2")}ms.");
-
         }
 
-        private void OnTimedEvent(Object source, ElapsedEventArgs e) {
+        private void OnTimedEvent(Object? source, ElapsedEventArgs e) {
 
             _times.Add(_stopWatch.ElapsedTicks / _stopWatchTicksPerMS);
-
         }
     }
 }

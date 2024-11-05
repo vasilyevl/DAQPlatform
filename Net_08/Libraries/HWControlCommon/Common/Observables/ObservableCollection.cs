@@ -6,7 +6,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 
 
-namespace Grumpy.Common
+namespace Grumpy.DaqFramework.Common
 {
     [Serializable]
     public class ObservableCollectionEx<T> : ObservableCollection<T>

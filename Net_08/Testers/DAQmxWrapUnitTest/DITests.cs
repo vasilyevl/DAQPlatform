@@ -1,7 +1,7 @@
-using Grumpy.DAQmxCLIWrap;
+using Grumpy.DAQmxNetApi;
 using Xunit.Abstractions;
 
-using DAQmx = Grumpy.DAQmxCLIWrap.DAQmxCLIWrapper;
+using DAQmx = Grumpy.DAQmxNetApi.DAQmxCLIWrapper;
 namespace Grumpy.DAQmxWrapUnitTest
 {
     public class QAQmxDITestClass

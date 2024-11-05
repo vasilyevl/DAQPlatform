@@ -25,7 +25,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
-namespace Grumpy.Common
+namespace Grumpy.DaqFramework.Common
 {
     public interface IStack<T>
     {
@@ -47,9 +47,9 @@ namespace Grumpy.Common
 
         bool Push(T value, bool force = true);
 
-        bool Pop(out T last);
+        bool Pop(out T? last);
 
-        bool Peek(out T last);
+        bool Peek(out T? last);
 
         bool Clean();
 
@@ -164,7 +164,7 @@ namespace Grumpy.Common
             }
         }
 
-        public bool Pop(out T last)
+        public bool Pop(out T? last)
         {
             lock (_stackLock) {
 
@@ -177,7 +177,7 @@ namespace Grumpy.Common
             }
         }
 
-        public bool Peek(out T last)
+        public bool Peek(out T? last)
         {
             lock (_stackLock) {
 
@@ -185,7 +185,7 @@ namespace Grumpy.Common
             }
         }
 
-        private bool _Peak(out T last)
+        private bool _Peak(out T? last)
         {
             if (_stack.Count > 0) {
                 LinkedListNode<T> node = _stack.Last!;
@@ -222,35 +222,30 @@ namespace Grumpy.Common
             }
         }
 
-        public T[] PeekAllAsArray(bool lastFirst = true)
-        {
+        public T[] PeekAllAsArray(bool reverseOrder = true) {
+            
             lock (_stackLock) {
 
-                if (_stack.Count > 0) {
-                    T[] array = _stack.ToArray();
-                    if (lastFirst) {
+                T[]? array = null;
+
+                if ((_stack?.Count ?? 0) > 0) {
+
+                    array = _stack?.ToArray();
+
+                    if ((array is not null) && reverseOrder) {
+
                         Array.Reverse(array);
                     }
-                    return array;
                 }
 
-                return null!;
+                return array!;
             }
         }
 
         public List<T> PeekAllAsList(bool recentFirst = true)
         {
-            if (_stack.Count > 0) {
-
-                T[] array = PeekAllAsArray( recentFirst );
-
-                List<T> list = new List<T>();
-
-                foreach (var item in array) {
-                    list.Add(item);
-                }
-
-                return list;
+            if ((_stack?.Count ?? 0) > 0) {
+                return new List<T>(PeekAllAsArray(recentFirst));
             }
 
             return null!;

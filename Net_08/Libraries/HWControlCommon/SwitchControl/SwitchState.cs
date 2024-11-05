@@ -23,7 +23,7 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json;
 
 
-namespace Grumpy.HWControl.IO
+namespace Grumpy.DaqFramework.IO
 {
 
     [JsonObject(MemberSerialization = MemberSerialization.OptIn)]

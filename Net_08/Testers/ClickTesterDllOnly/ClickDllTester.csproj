@@ -31,12 +31,6 @@
     <PackageReference Include="System.IO.Ports" Version="8.0.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="ClickPLC">
-      <HintPath>libs\ClickPLC.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <Exec Command="echo Configuration: $(Configuration)&#xD;&#xA;echo Ouput Diractory: $(OutDir)" />
   </Target>

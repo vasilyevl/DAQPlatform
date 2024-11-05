@@ -1,11 +1,11 @@
-﻿using Grumpy.Common;
+﻿using Grumpy.DaqFramework.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Grumpy.Common
+namespace Grumpy.DaqFramework.Common
 {
     public class ErrorHistory: StackBase<LogRecord> {
 

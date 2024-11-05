@@ -18,11 +18,11 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using Grumpy.Common.Utilities;
+using DAQAndControlFramework.Utilities;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Grumpy.Common
+namespace Grumpy.DaqFramework.Common
 {
 
     public interface IConfigurationBase : ICloneable
@@ -46,7 +46,7 @@ namespace Grumpy.Common
             Reset();
         }
 
-        public abstract bool CopyFrom(object src);
+        public abstract bool CopyFrom(object? src);
 
         public virtual object Clone()
         {

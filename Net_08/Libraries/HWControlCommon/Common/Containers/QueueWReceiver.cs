@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Grumpy.Common
+namespace Grumpy.DaqFramework.Common
 {
     public delegate void DataReceiver<TObject>(TObject obj);
 
@@ -92,7 +92,7 @@ namespace Grumpy.Common
             if (ReceiverThreadAlive) {
 
                 try {
-                    _receiverTaskCts.Cancel();
+                    _receiverTaskCts?.Cancel();
 
                     if (ReceiverIsPaused) {
                         ResumeReceiver();
@@ -134,6 +134,11 @@ namespace Grumpy.Common
         public bool PauseReceiver()
         {
             lock (_receiverTaskLock) {
+
+                if(_receiverTask == null) {
+
+                    return true;
+                }
 
                 if (ReceiverIsPaused) {
 
@@ -181,7 +186,7 @@ namespace Grumpy.Common
                           (_receiverTask.Status == TaskStatus.Created) ||
                           (_receiverTask.Status == TaskStatus.WaitingForActivation))) {
 
-                        _receiverTaskCts.Cancel();
+                        _receiverTaskCts?.Cancel();
                     }
                 }
             }
@@ -258,11 +263,17 @@ namespace Grumpy.Common
         {
             lock (_receiverTaskLock) {
 
+                if (_receiverTask == null) {
+
+                    return true;
+                }
+
                 if (ReceiverIsPaused) {
 
                     ReceiverIsInternallyPaused = true;
                     return true;
                 }
+
 
                 if (_receiverTask.Status == TaskStatus.Running) {
 
@@ -278,6 +289,11 @@ namespace Grumpy.Common
 
         private void _ReceiverWorker()
         {
+            if (_receiver == null) {
+
+                return;
+            }
+
             while (!_processorTaskCt.IsCancellationRequested) {
 
                 // Queue is empty. Let's pause the thread. 

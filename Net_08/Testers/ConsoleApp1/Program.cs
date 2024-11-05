@@ -150,7 +150,7 @@ namespace ConsoleApp1
         internal static double tm;
         internal static double tmMax = 0;
 
-        internal void TimerCallback (object callsr, EventArgs e) {
+        internal void TimerCallback (object? callsr, EventArgs? e) {
             s2.Restart();
             var el = s.ElapsedTicks / 10000.0;
             cntr++;
@@ -167,23 +167,16 @@ namespace ConsoleApp1
             return;
         }
 
-        public event EventHandler<EventArgs> Elapsed;
+        public event EventHandler<EventArgs>? Elapsed;
 
         public void Dispose() {
             Dispose(true);
         }
 
-        private void TimerCallbackMethod(uint id, uint msg, ref uint userCtx, uint rsv1, uint rsv2) {
-            EventHandler<EventArgs> handler = Elapsed;
+        private void TimerCallbackMethod(uint id, uint msg, ref uint userCtx, 
+            uint rsv1, uint rsv2) {
 
             TimerCallback(this, EventArgs.Empty);
-
-
-
-          //  if (handler != null) {
-
-                //handler.Invoke(this, EventArgs.Empty);
-            //}
         }
 
         private void CheckDisposed() {

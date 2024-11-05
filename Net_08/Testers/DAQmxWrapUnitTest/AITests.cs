@@ -1,5 +1,5 @@
-﻿using Grumpy.DAQmxCLIWrap;
-using DAQmx = Grumpy.DAQmxCLIWrap.DAQmxCLIWrapper;
+﻿using Grumpy.DAQmxNetApi;
+using DAQmx = Grumpy.DAQmxNetApi.DAQmxCLIWrapper;
 using Xunit.Abstractions;
 
 using System.Text;

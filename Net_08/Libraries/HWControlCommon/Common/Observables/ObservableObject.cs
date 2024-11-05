@@ -27,7 +27,7 @@ using System.Runtime.CompilerServices;
 using System.ComponentModel;
 using System.Windows.Input;
 
-namespace Grumpy.Common
+namespace Grumpy.DaqFramework.Common
 {
     public class ObservableObject : INotifyPropertyChanged
     {

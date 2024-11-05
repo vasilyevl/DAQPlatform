@@ -11,16 +11,19 @@ static int counter = 0;
 static int samples = 5000;
 static int* arr;
 
-void CALLBACK TimerProc(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2) {
+void CALLBACK TimerProc(UINT uTimerID, UINT uMsg, DWORD_PTR dwUser, 
+    DWORD_PTR dw1, DWORD_PTR dw2) {
+
     auto now = std::chrono::high_resolution_clock::now();
     auto since_epoch = now.time_since_epoch();
-    auto millis = std::chrono::duration_cast<std::chrono::microseconds>(since_epoch);
+    auto millis = std::chrono::
+        duration_cast<std::chrono::microseconds>(since_epoch);
+
     if (counter < (samples)) {
 
-		arr[counter] = millis.count() ;
+		arr[counter] = (int)millis.count() ;
 		counter++;
 	}
-
 }
 
 
@@ -33,7 +36,8 @@ int main()
     UINT resolution = 1; // 1ms resolution
 
     if (timeBeginPeriod(resolution) == TIMERR_NOERROR) {
-        timerId = timeSetEvent(1, resolution, TimerProc, 0, TIME_PERIODIC); // 1000ms interval
+        timerId = timeSetEvent(1, resolution, TimerProc, 
+            0, TIME_PERIODIC); // 1000ms interval
 
         if (timerId == 0) {
             std::cerr << "Failed to create timer." << std::endl;
@@ -59,14 +63,6 @@ int main()
 	}
 
     return 0;
-
-
-
-
-
-
-
-
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

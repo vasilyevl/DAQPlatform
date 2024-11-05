@@ -20,7 +20,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-using Grumpy.Common;
+using Grumpy.DaqFramework.Common;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -29,7 +29,7 @@ using System.IO.Ports;
 using System.Runtime.CompilerServices;
 
 
-namespace Grumpy.HWControl.Configuration
+namespace Grumpy.DaqFramework.Configuration
 {
     /*
         public enum Handshake
@@ -64,15 +64,16 @@ namespace Grumpy.HWControl.Configuration
     [JsonObject(MemberSerialization.OptIn)]
     public class SerialPortConfiguration: ConfigurationBase, IConfigurationBase
     {
-        protected const int DefaultBaudRate = 9600;
-        protected const int DefaultBits = 8;
-        protected const Parity DefaultParity = Parity.None;
-        protected const Handshake DefaultHandShake = Handshake.None;
-        protected const StopBits DefaultStopBits = StopBits.None;
-        protected const int DefaultReadWriteTimeoutMs = 100;
-        protected const string _DefaultPortName = "NotSet";
-        protected const int DefaultDelayBetweenTransactions = 100;
+        public const int DefaultBaudRate = 9600;
+        public const int DefaultBits = 8;
+        public const Parity DefaultParity = Parity.None;
+        public const Handshake DefaultHandShake = Handshake.None;
+        public const StopBits DefaultStopBits = StopBits.None;
+        public const int DefaultReadWriteTimeoutMs = 100;
+        public const string _DefaultPortName = "NotSet";
+        public const int DefaultDelayBetweenTransactions = 100;
         public const int DeafultConnectTimeoutMs = 1000;
+        public const string DefaultTerminator = "\n";
 
         private string? _portName;
         private int _baudRate;
@@ -108,7 +109,7 @@ namespace Grumpy.HWControl.Configuration
             }
         }
 
-        public override bool CopyFrom( object src )
+        public override bool CopyFrom( object? src )
         {
 
             var s = src as  SerialPortConfiguration;

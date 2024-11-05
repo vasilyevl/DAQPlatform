@@ -1,4 +1,4 @@
-﻿using Grumpy.ClickPLCHandler;
+﻿using Grumpy.ClickPLCDriver;
 
 using System.Text.RegularExpressions;
 
@@ -13,7 +13,7 @@ namespace ClickTester
 
     internal class Program
     {
-        static  ClickHandler _handler = null!;
+        static  ClickPlcDriver _handler = null!;
         static string _io = "C1";
         static string _timer = "T1";
         static string _setPoint = "DS10";
@@ -31,7 +31,7 @@ namespace ClickTester
                                                           "\"Port\":502," +
                                                           "\"Timeout\":15000}}}";
 
-            if (!ClickHandler.CreateHandler(config, out _handler!)) {
+            if (!ClickPlcDriver.CreateHandler(config, out _handler!)) {
                 Console.WriteLine("Failed to create handler.");
                 return -1;
             }

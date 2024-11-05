@@ -1,11 +1,12 @@
-﻿using Grumpy.Common;
-using Grumpy.HWControl.Configuration;
+﻿using DAQFramework.Common;
+using Grumpy.DaqFramework.Common;
+using Grumpy.DaqFramework.Configuration;
 
 using Serilog;
 
 using Prts = System.IO.Ports;
 
-namespace HWControlUtilities.Drivers.SerialInterface
+namespace Grumpy.DaqFramework.Drivers.SerialInterface
 {
     public class SeriaInterfaceDriver : ISerialInterface {
 
@@ -22,7 +23,7 @@ namespace HWControlUtilities.Drivers.SerialInterface
         protected const int TerminatorMissingError = -5;
         protected const int RxTxFlushError = -6;
         protected const int SendError = -7;
-
+        private IOResults _IOResult;
         private SerialPortConfiguration? _portConfig;
         private PortState _state;
         private Prts.SerialPort? _serialPort;
@@ -43,12 +44,25 @@ namespace HWControlUtilities.Drivers.SerialInterface
             _portConfig = null;
             State = PortState.Loaded;
             _errorStack = ErrorHistory.Create();
-
+            LastIOResult = IOResults.NA;
         }
 
+        object IOResultLock = new object();
+        public IOResults LastIOResult {
+            get {
+                lock (IOResultLock) {
+                    return _IOResult;
+                }
+            }
+            private set {
+                lock(IOResultLock) {
+                    _IOResult = value;
+                }
+            }
+        }
         public bool PortIsOpen => _serialPort?.IsOpen ?? false;
 
-        public bool IsConnected => State == PortState.Connected;
+        public bool IsOpen => State == PortState.Connected;
 
         public bool InErrorState => State == PortState.Error;
 
@@ -68,7 +82,8 @@ namespace HWControlUtilities.Drivers.SerialInterface
 
         public bool ConfigurationIsSet => _portConfig != null;
 
-        public int BytesToRead => PortIsOpen ? _serialPort?.BytesToRead ?? 0 : 0;
+        public int BytesToRead => PortIsOpen ? 
+                        _serialPort?.BytesToRead ?? 0 : 0;
 
         public bool HasBytesToRead => BytesToRead > 0;
 
@@ -113,45 +128,51 @@ namespace HWControlUtilities.Drivers.SerialInterface
             return result;
         }
 
-        public bool Open() {
+        public bool Open() 
+        {
             lock (_lock) {
 
-                bool result = false;
-
                 switch (State) {
+
                     case (PortState.Connected):
-                        _logger.Warning($"Serial Interface Driver Connect(): port is " +
-                            $"already connected. Request ignored.");
-                        result = true;
+                    
+                        _logger.Warning($"Serial Interface Driver Connect():" +
+                            $" port is already connected. Request ignored.");
+                        LastIOResult = IOResults.Ignored;
                         break;
 
                     case (PortState.Loaded):
                     case (PortState.Unknown):
-                        string err = $"Serial Interface Driver Connect(): port is not " +
-                            $"configured. Request ignored.";
+                        
+                        string err = $"Serial Interface Driver Connect():" +
+                            $" port is not configured. Request ignored.";
                         _logger.Error(err);
-                        _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(Open), err));   
+                        _errorStack?.Push(
+                            LogRecord.CreateErrorRecord(nameof(Open), err));
 
-                        result = true;
+                        LastIOResult = IOResults.NotReady;
                         break;
 
                     case (PortState.Configured):
-                        result = _OpenPort();
+
+                        LastIOResult = _OpenPort() ? IOResults.Success : IOResults.Error;
                         break;
 
                     case (PortState.Error):
+                        
                         _Disconnect();
                         State = PortState.Configured;
-                        result = _OpenPort();
+                        LastIOResult = _OpenPort() ? IOResults.Success : IOResults.Error;
                         break;
 
                     default:
-                        _logger.Warning($"Serial Interface Driver Connect(): Operation is " +
-                            $"not supported in this state: {State.ToString()}.");
-                        result = false;
+                        _logger.Warning($"Serial Interface Driver " +
+                            $"Connect(): Operation is not supported " +
+                            $"in this state: {State.ToString()}.");
+                        LastIOResult = IOResults.NotReady;
                         break;
                 }
-                return result;
+                return (LastIOResult & (IOResults.Success | IOResults.Ignored)) != 0;
             }
         }
 
@@ -167,7 +188,8 @@ namespace HWControlUtilities.Drivers.SerialInterface
                  err = $"Serial Interface Driver: Port not specified. " +
                     $"Check configuration file.";
                 _logger?.Error(err);
-                _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_OpenPort), err));
+                _errorStack?.Push(
+                    LogRecord.CreateErrorRecord(nameof(_OpenPort), err));
                 return false;
             }
              
@@ -198,7 +220,8 @@ namespace HWControlUtilities.Drivers.SerialInterface
                     $"port. Exception: {ex.Message}" +
                      $" Configuration cleared.";
                 _logger.Error(err);
-                _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_OpenPort), err));
+                _errorStack?.Push(
+                    LogRecord.CreateErrorRecord(nameof(_OpenPort), err));
                 _portConfig = null;
                 State = PortState.Loaded;
                 return false;
@@ -225,7 +248,8 @@ namespace HWControlUtilities.Drivers.SerialInterface
                     err = $"Serial Interface Driver. OpenPort(). " +
                         $"Invalid port parameter. Exception: {ex.Message}";
                     _logger.Error(err);
-                    _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_OpenPort), err));
+                    _errorStack?.Push(
+                        LogRecord.CreateErrorRecord(nameof(_OpenPort), err));
                     State = PortState.Error;
                     return false;
                 }
@@ -233,7 +257,8 @@ namespace HWControlUtilities.Drivers.SerialInterface
                     err = $"Serial Interface Driver. OpenPort(). " +
                         $"Port is not available. Exception: {ex.Message}";
                     _logger.Error(err);
-                    _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_OpenPort), err));
+                    _errorStack?.Push(
+                        LogRecord.CreateErrorRecord(nameof(_OpenPort), err));
                     State = PortState.Error;
                     return false;
                 }
@@ -242,48 +267,68 @@ namespace HWControlUtilities.Drivers.SerialInterface
                         $"Port is already open, probably by another process. " +
                         $"{ex.Message}. Trying again.";
                     _logger.Warning(err);
-                    _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_OpenPort), err));
+                    _errorStack?.Push(
+                        LogRecord.CreateErrorRecord(nameof(_OpenPort), err));
                 }
             }
             State = PortState.Error;
             err = $"Serial Interface Driver. Failed to open port within max " +
                 $"number of attmpts; {DefaultMaxRetriesToOpen};";
  
-            _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_OpenPort), err));
+            _errorStack?.Push(
+                LogRecord.CreateErrorRecord(nameof(_OpenPort), err));
             throw (new IOException(err));
         }
 
         //public virtual IOResult Close() => Disconnect() ? IOResult.Success : IOResult.Error;
 
         public bool Close() {
+
             lock (_lock) {
+
                 return _Disconnect();
+            }
+        }
+
+
+        public bool Reset() {
+
+            lock (_lock) {
+                
+                return (IsOpen && _Disconnect()) ? _OpenPort() : false;
             }
         }
 
         private bool _Disconnect() {
 
-            bool result = false;
+            if(_serialPort == null) {
+                LastIOResult = IOResults.Ignored;
+                return true;
+            }
 
             if (PortIsOpen) {
+
                 try {
+
                     _serialPort.Close();
-                    result = true;
-                    State = PortState.Configured;
                     _serialPort.Dispose();
+                    LastIOResult = IOResults.Success;
+                    State = PortState.Configured;
                     _serialPort = null;
+                    return true;
                 }
                 catch (IOException ex) {
 
                     var err = $"Serial Interface Driver. Disconnect: " +
                         $"Failed to close port. Exception: {ex.Message}";
                     _logger.Error(err);
-                    _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_Disconnect), err));
+                    _errorStack?.Push(
+                        LogRecord.CreateErrorRecord(
+                                            nameof(_Disconnect), err));
                     State = PortState.Error;
-                    result = false;
+                    LastIOResult = IOResults.Error;
+                    return false;
                 }
-
-                return result;
             }
             _logger.Warning($"Serial Interface Driver. Disconnect: " +
                 $"Port is not open, request ignored.");
@@ -291,76 +336,115 @@ namespace HWControlUtilities.Drivers.SerialInterface
             if (_portConfig == null) {
 
                 State = PortState.Loaded;
-                result = false;
+                LastIOResult = IOResults.NotReady;
+                return false;
             }
             else {
                 switch (State) {
+
                     case (PortState.Connected):
                     case (PortState.Error):
                     case (PortState.Configured):
                     case (PortState.Unknown):
-                        State = (_portConfig == null) ? PortState.Loaded : PortState.Configured;
-                        result = true;
-                        break;
+
+                        State = (_portConfig == null) ? 
+                                PortState.Loaded : PortState.Configured;
+                        LastIOResult = IOResults.NotReady;
+                        return true;
+
                     default:
+
                         var err = $"Serial Interface Driver Disconnect(): " +
                             $"Operation is not supported in " +
                             $"this state: {State.ToString()}.";
-                        _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_Disconnect), err));
+                        _errorStack?.Push(
+                            LogRecord.CreateErrorRecord(
+                                        nameof(_Disconnect), err));
                         _logger.Error(err);
-                        result = false;
-                        break;
+                        LastIOResult = IOResults.NotReady;
+                        return false;
+  
                 }
             }
-            return result;
         }
 
-        public bool Write(string message) {
+        public void ClearError() {
+
             lock (_lock) {
+
+                _errorStack?.Clean();
+            }
+        }
+            public bool Write(string message) {
+
+            lock (_lock) {
+
                 return _Write(message);
             }
         }
 
         public DateTime _LastTransactionTime { get; private set; }
         private bool _Write(string messageToSend) {
+
             _Wait();
             string errorMsg = string.Empty;
             bool result = false;
 
+            if(_serialPort == null) {
+
+                errorMsg = $"Serial Interface Driver. SendMessage: " +
+                    $"Port is not open. Request ignored. ";
+                _logger.Warning(errorMsg);
+                _errorStack?.Push(
+                    LogRecord.CreateErrorRecord(nameof(_Write), errorMsg));
+                return false;
+            }
+
             switch (State) {
                 case (PortState.Error): {
+
                         errorMsg = $"Serial Interface Driver. SendMessage: " +
                         $"Handler is in error state. Request ingoned. ";
                         _logger.Warning(errorMsg);
-                        _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_Write), errorMsg));
+                        _errorStack?.Push(
+                            LogRecord.CreateErrorRecord(
+                                                nameof(_Write), errorMsg));
                         result = false;
                     }
                     break;
 
                 case (PortState.Connected): {
                         if (messageToSend == null) {
-                            _logger.Warning($"Serial Interface Driver. SendMessage: " +
-                                $"Message is null, sending empty message.");
+                            _logger.Warning($"Serial Interface Driver. " +
+                                $"SendMessage: Message is null, " +
+                                $"sending empty message.");
                             messageToSend = String.Empty;
                         }
                         else {
                             try {
-                                _serialPort.Write(messageToSend + _portConfig.TxMessageTerminator);
+                                _serialPort.Write(messageToSend + 
+                                    _portConfig?.TxMessageTerminator ?? "");
                                 result = true;
                             }
                             catch (InvalidOperationException ex) {
-                                var err = $"Serial Interface Driver. SendMessage: " +
-                                    $"Failed. Exception {ex.Message}";
+                                var err = $"Serial Interface Driver. " +
+                                    $"SendMessage: Failed. " +
+                                    $"Exception {ex.Message}";
                                 _logger.Error(err);
-                                _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_Write), err));
+                                _errorStack?.Push(
+                                    LogRecord.CreateErrorRecord(
+                                                    nameof(_Write), err));
                                 State = PortState.Error;
                                 result = false;
                             }
                             catch (TimeoutException ex) {
-                                var err = $"Serial Interface Driver. SendMessage: " +
-                                    $"Failed. Timeout. Exception {ex.Message}";
+                                var err = $"Serial Interface Driver. " +
+                                    $"SendMessage: Failed. Timeout. " +
+                                    $"Exception {ex.Message}";
                                 _logger.Error(err);
-                                _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_Write), err));
+                                _errorStack?.Push(
+                                    LogRecord.CreateErrorRecord(
+                                                    nameof(_Write), err));
                                 result = false;
                             }
                         }
@@ -388,7 +472,7 @@ namespace HWControlUtilities.Drivers.SerialInterface
 
         private void _Wait() {
 
-            double timeToWait = _portConfig.MinTimeBetweenTransactionsMs -
+            double timeToWait = _portConfig!.MinTimeBetweenTransactionsMs -
                 (DateTime.Now - _LastTransactionTime).TotalMilliseconds;
 
             if (timeToWait > 0) {
@@ -417,13 +501,15 @@ namespace HWControlUtilities.Drivers.SerialInterface
             if (minLen < 0) { minLen = maxLen + 1; }
 
             reply = string.Empty;
-            string errorMsg = null;
+            string? errorMsg = null;
 
             if (State == PortState.Error) {
                 errorMsg = $"Serial port driver. Receive: Handler " +
                     $"is in error state. Request ignored. ";
                 _logger.Warning(errorMsg);
-                _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_Read), errorMsg));
+                _errorStack?.Push(
+                    LogRecord.CreateErrorRecord(
+                                    nameof(_Read), errorMsg));
                 reply = (string)errorMsg.Clone();
                 return PortInErrorState;
             }
@@ -433,32 +519,45 @@ namespace HWControlUtilities.Drivers.SerialInterface
 
             if (State == PortState.Connected) {
                 try {
+                    
+                    if (!string.IsNullOrEmpty(
+                                _portConfig?.RxMessageTerminator ?? 
+                                string.Empty)) {
 
-                    if (!string.IsNullOrEmpty(_portConfig.RxMessageTerminator)) {
+                        string msg = _serialPort?.ReadTo(
+                            _portConfig!.RxMessageTerminator) ??
+                                    string.Empty;
 
-                        string msg = _serialPort.ReadTo(_portConfig.RxMessageTerminator);
-
-                        reply = msg.Replace(_portConfig.TxMessageTerminator, "");
+                        reply = msg.Replace(
+                                    _portConfig!.TxMessageTerminator, "");
 
                         _LastTransactionTime = DateTime.Now;
                         return reply.Length;
 
                     }
                     else {
-                        DateTime timout = DateTime.Now + TimeSpan.FromMilliseconds(_portConfig.ReadTimeoutMs);
+                        DateTime timout = DateTime.Now + 
+                            TimeSpan.FromMilliseconds(
+                                            _portConfig!.ReadTimeoutMs);
 
-                        bytesReceived = _serialPort.Read(buffer, 0, maxLen);
+                        bytesReceived = _serialPort!.Read(buffer, 0, maxLen);
                         // If we made it here, then we got some bytes.
                         // Try to get some more within timeout... .
                         int cntr = 0;
                         reply = String.Empty;
 
-                        while ((DateTime.Now <= timout) && (bytesReceived < minLen)) {
+                        while ((DateTime.Now <= timout) && 
+                                            (bytesReceived < minLen)) {
 
                             if (_serialPort.BytesToRead > 0) {
-                                int bytesToRead = Math.Min(maxLen - bytesReceived, _serialPort.BytesToRead);
+                                int bytesToRead = 
+                                    Math.Min(maxLen - bytesReceived, 
+                                                        _serialPort.BytesToRead);
+
                                 if (bytesToRead > 0) {
-                                    bytesReceived += _serialPort.Read(buffer, bytesReceived, bytesToRead);
+                                    bytesReceived += 
+                                        _serialPort.Read(buffer, bytesReceived, 
+                                                                   bytesToRead);
                                 }
                             }
                             else {
@@ -466,7 +565,8 @@ namespace HWControlUtilities.Drivers.SerialInterface
                                 cntr++;
                             }
                         }
-                        reply = System.Text.Encoding.UTF8.GetString(buffer, 0, bytesReceived);
+                        reply = System.Text.Encoding.UTF8.GetString(
+                                                    buffer, 0, bytesReceived);
                         _LastTransactionTime = DateTime.Now;
                         return reply.Length;
                     }
@@ -475,7 +575,9 @@ namespace HWControlUtilities.Drivers.SerialInterface
                     errorMsg = $"Serial port driver. " +
                         $"Receive: Failed. Exception: ";
                     _logger.Error(errorMsg + ex.Message);
-                    _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_Read), errorMsg + ex.Message));
+                    _errorStack?.Push(
+                        LogRecord.CreateErrorRecord(
+                            nameof(_Read), errorMsg + ex.Message));
                     State = PortState.Error;
                     return InvalidOperationError;
                 }
@@ -491,7 +593,9 @@ namespace HWControlUtilities.Drivers.SerialInterface
                     if (!string.IsNullOrEmpty(_portConfig?.RxMessageTerminator)) {
                         errorMsg = $"Serial port driver. Receive: Timeout. ";
                         _logger.Warning(errorMsg + ex.Message);
-                        _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_Read), errorMsg + ex.Message));
+                        _errorStack?.Push(
+                            LogRecord.CreateErrorRecord(
+                                nameof(_Read), errorMsg + ex.Message));
                         State = PortState.Error;
                         return TimeoutError;
                     }
@@ -507,7 +611,9 @@ namespace HWControlUtilities.Drivers.SerialInterface
                         $"Receive: Terminator is " +
                         $"null or empty. Request ignored. ";
                     _logger.Error(errorMsg + ex.Message);
-                    _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_Read), errorMsg + ex.Message));
+                    _errorStack?.Push(
+                        LogRecord.CreateErrorRecord(
+                            nameof(_Read), errorMsg + ex.Message));
                     State = PortState.Error;
                     return TerminatorMissingError;
 
@@ -530,14 +636,28 @@ namespace HWControlUtilities.Drivers.SerialInterface
 
         private bool _FlushRxBuffer() {
             if (PortIsOpen) {
+
+                if(_serialPort == null) {
+
+                    string err = "Serial port driver. FlushRxBuffer: " +
+                        "Port is not open. Request ignored.";
+                    _errorStack?.Push(
+                        LogRecord.CreateErrorRecord(
+                            nameof(_FlushRxBuffer), err));
+                    _logger.Error(err);
+                    return false;
+                }
+
                 try {
-                    _serialPort.DiscardInBuffer();
+                    _serialPort?.DiscardInBuffer() ;
                     return true;
                 }
                 catch (InvalidOperationException e) {
                     var err = $"Serial port driver. FlushRxBuffer: " +
                         $"Invalid port setting(s). Exception {e.Message}";
-                    _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_FlushRxBuffer), err));
+                    _errorStack?.Push(
+                        LogRecord.CreateErrorRecord(
+                            nameof(_FlushRxBuffer), err));
                     _logger.Error(err);
                     State = PortState.Error;
                     return false;
@@ -554,36 +674,58 @@ namespace HWControlUtilities.Drivers.SerialInterface
 
         private bool _FlushTxBuffer() {
             if (PortIsOpen) {
+
+                if (_serialPort == null) {
+
+                    string err = "Serial port driver. FlushTxBuffer: " +
+                        "Port is not open. Request ignored.";
+                    _errorStack?.Push(
+                        LogRecord.CreateErrorRecord(
+                                    nameof(_FlushTxBuffer), err));
+                    _logger.Error(err);
+                    return false;
+                }
+
                 try {
+
                     _serialPort.DiscardOutBuffer();
                     return true;
                 }
                 catch (InvalidOperationException e) {
+
                     var err = $"Serial port driver. " +
                         $"FlushTxBuffer: Invalid port setting(s). " +
                         $"Exception {e.Message}";
-                    _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_FlushTxBuffer), err));
+                    _errorStack?.Push(
+                        LogRecord.CreateErrorRecord(nameof(_FlushTxBuffer), err));
                     _logger.Error(err);
                     State = PortState.Error;
                     return false;
                 }
             }
+
             return true;
         }
 
         public bool FlushBuffers() => (FlushRxBuffer()) && (FlushTxBuffer());
 
 
-        public int Query(string message, out string response, int maxLen = UseDefault, int minLen = UseDefault) {
+        public int Query(string message, out string response, 
+            int maxLen = UseDefault, int minLen = UseDefault) {
+            
             lock (_lock) {
+
                 return _Query(message, out response, maxLen, minLen);
             }
         }
 
 
-        private int _Query(string message, out string response, int maxLen = UseDefault, int minLen = UseDefault) {
+        private int _Query(string message, out string response, 
+            int maxLen = UseDefault, int minLen = UseDefault) {
             response = String.Empty;
+            
             if (!PortIsOpen) {
+
                 return PortIsNotOpen;
             }
 
@@ -602,19 +744,24 @@ namespace HWControlUtilities.Drivers.SerialInterface
         }
 
 
-        public virtual bool Command(string cmd, string conformation, int timeoutMs = 200) {
+        public virtual bool Command(string cmd, string conformation, 
+                                            int timeoutMs = 200) {
+
             lock (_lock) {
+
                 return _Command(cmd, conformation, timeoutMs);
             }
 
         }
 
 
-        private bool _Command(string cmd, string conformation, int timeoutMs = -1) {
+        private bool _Command(string cmd, string conformation, 
+                                            int timeoutMs = -1) {
 
             if (timeoutMs < 1) {
 
-                timeoutMs = _portConfig.WriteReadTimeout;
+                timeoutMs = _portConfig?.WriteReadTimeout ?? 
+                    SerialPortConfiguration.DefaultReadWriteTimeoutMs;
             }
 
             DateTime timeout =
@@ -625,27 +772,36 @@ namespace HWControlUtilities.Drivers.SerialInterface
 
                 int result = _Query(cmd, out string response);
                 if (result > 0) {
+
                     if (response.Contains(conformation)) {
+
                         return true;
                     }
                     else {
+
                         var err = $"Serial port driver. " +
                             $"Command {cmd} error. " +
                             $"Unexpected response {response}.";
                         _logger.Error(err);
-                        _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_Command), err));
+                        _errorStack?.Push(
+                            LogRecord.CreateErrorRecord(nameof(_Command), err));
                         return false;
                     }
                 }
                 else if (result == 0) {
+
                     if (String.IsNullOrEmpty(response)) {
+
                         return true;
                     }
                     else {
-                        var err = $"Serial port driver. " + $"Command {cmd} error. " + 
+
+                        var err = $"Serial port driver. " + 
+                            $"Command {cmd} error. " + 
                             $"Unexpected response {response}.";
                         _logger.Error(err);
-                        _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_Command), err));
+                        _errorStack?.Push(
+                            LogRecord.CreateErrorRecord(nameof(_Command), err));
                         return false;
                     }
                 }
@@ -655,11 +811,13 @@ namespace HWControlUtilities.Drivers.SerialInterface
                         $"Command {cmd} error. " +
                         $"{(String.IsNullOrEmpty(response) ? "" : response)}";
                     _logger.Error(err);
-                    _errorStack?.Push(LogRecord.CreateErrorRecord(nameof(_Command), err));
+                    _errorStack?.Push(
+                        LogRecord.CreateErrorRecord(nameof(_Command), err));
                     return false;
                 }
                 Thread.Sleep(30);
             }
+
             _logger.Error($"Serial port driver. " +
                 $"Command {cmd} timeout.");
             return false;
@@ -671,9 +829,9 @@ namespace HWControlUtilities.Drivers.SerialInterface
                 if( _errorStack == null || _errorStack.Count < 1) {
                     return string.Empty;
                 }
-                _errorStack.Peek( out LogRecord err);
+                _errorStack.Peek( out LogRecord? err);
 
-                return err.Details;
+                return err?.Details ?? string.Empty;
             }
 
         }

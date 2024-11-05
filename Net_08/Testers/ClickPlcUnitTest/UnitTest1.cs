@@ -1,4 +1,4 @@
-using Grumpy.ClickPLCHandler;
+using Grumpy.ClickPLCDriver;
 using Microsoft.VisualBasic.FileIO;
 using System.Diagnostics;
 using System.Reflection.Metadata;
@@ -27,7 +27,7 @@ namespace ClickPlcUnitTest
                                 "\"Port\": 502," +
                                 "\"Timeout\": 15000}}}";
 
-        private static ClickHandler _handler = null!;
+        private static ClickPlcDriver _handler = null!;
         private readonly ITestOutputHelper _testOutputHelper;
 
         public UnitTest1(ITestOutputHelper testOutputHelper) {
@@ -41,7 +41,7 @@ namespace ClickPlcUnitTest
 
             _testOutputHelper.WriteLine("Test1 started.");
 
-             bool r = ClickHandler.CreateHandler(config, out _handler!);
+             bool r = ClickPlcDriver.CreateHandler(config, out _handler!);
 
             Assert.True(r, "Failed to create Click PLC handler.");
 
@@ -73,7 +73,7 @@ namespace ClickPlcUnitTest
 
             _testOutputHelper.WriteLine("Test2 started.");
 
-            bool r = ClickHandler.CreateHandler(config, out _handler!);
+            bool r = ClickPlcDriver.CreateHandler(config, out _handler!);
 
             Assert.True(r, "Failed to create Click PLC handler.");
 
@@ -145,7 +145,7 @@ namespace ClickPlcUnitTest
 
             _testOutputHelper.WriteLine("Test3 (AIO) started.");
 
-            bool r = ClickHandler.CreateHandler(config, out _handler!);
+            bool r = ClickPlcDriver.CreateHandler(config, out _handler!);
 
             Assert.True(r, "Failed to create Click PLC handler.");
 
