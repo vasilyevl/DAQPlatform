@@ -18,7 +18,7 @@
     <RootNamespace>Grumpy.DAQmxNetApi</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <TargetFramework>net8.0</TargetFramework>
-    <ProjectName>DAQmxNETDriver12</ProjectName>
+    <ProjectName>DAQmxNETDriver</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
