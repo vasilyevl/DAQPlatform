@@ -1,6 +1,5 @@
 ﻿/*
- 
-Copyright (c) 2024 vasilyevl (Grumpy). Permission is hereby granted, 
+ * Copyright (c) 2024 vasilyevl (Grumpy). Permission is hereby granted, 
 free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"),to deal in the Software 
 without restriction, including without limitation the rights to use, copy, 
@@ -17,21 +16,23 @@ PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGH
 HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 */
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace Grumpy.DaqFramework.Configuration
 {
-    public enum InterfaceSelector
+    public interface ITcpIpConnectionConfiguration
     {
-        Auto = 0,
-        Serial = 1,
-        Network = 2
+        public Int32 DataPort { get; set; }
+        public String IpAddress { get; set; }
+        public Int32 MessagePort { get; set; }
+        public String Name { get; set; }
+        public Int32 Port { get; set; }
+        public Int32 Timeout { get; set; }
+
+        public Boolean CopyFrom(Object src);
+        public void Reset();
     }
+
 }

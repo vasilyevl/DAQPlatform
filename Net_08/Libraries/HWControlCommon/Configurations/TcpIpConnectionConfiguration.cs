@@ -20,24 +20,11 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-using Grumpy.Common;
-
+using Grumpy.DaqFramework.Common;
 using Newtonsoft.Json;
 
-namespace Grumpy.HWControl.Configuration
+namespace Grumpy.DaqFramework.Configuration
 {
-    public interface ITcpIpConnectionConfiguration
-    {
-        public Int32 DataPort { get; set; }
-        public String IpAddress { get; set; }
-        public Int32 MessagePort { get; set; }
-        public String Name { get; set; }
-        public Int32 Port { get; set; }
-        public Int32 Timeout { get; set; }
-
-        public Boolean CopyFrom(Object src);
-        public void Reset();
-    }
 
     [JsonObject(MemberSerialization = MemberSerialization.OptOut)]
     public class TcpIpConnectionConfiguration : ConfigurationBase, ITcpIpConnectionConfiguration
@@ -104,7 +91,7 @@ namespace Grumpy.HWControl.Configuration
             DataPort = DefaultPort;
         }
 
-        public override bool CopyFrom(object src) {
+        public override bool CopyFrom(object? src) {
             var s = src as TcpIpConnectionConfiguration;
 
             if (s == null) { return false; }

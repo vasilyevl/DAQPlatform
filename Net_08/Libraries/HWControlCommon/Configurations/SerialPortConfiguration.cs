@@ -20,30 +20,60 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-using Grumpy.Common;
+using Grumpy.DaqFramework.Common;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
 using System.IO.Ports;
+using System.Runtime.CompilerServices;
 
 
-namespace Grumpy.HWControl.Configuration
+namespace Grumpy.DaqFramework.Configuration
 {
+    /*
+        public enum Handshake
+        {
+            None = 0,
+            XOnXOff = 1,
+            RequestToSend = 2,
+            RequestToSendXOnXOff = 3,
+            AsIs = 1024
+        }
+        public enum Parity
+        {
+            None = 0,
+            Odd = 1,
+            Even = 2,
+            Mark = 3,
+            Space = 4,
+            AsIs = 1024
+        }
+
+        public enum StopBits
+        {
+            None = 0,
+            One = 1,
+            Two = 2,
+            OnePointFive = 3,
+            AsIs = 1024
+        }
+    */
 
 
     [JsonObject(MemberSerialization.OptIn)]
     public class SerialPortConfiguration: ConfigurationBase, IConfigurationBase
     {
-        protected const int DefaultBaudRate = 9600;
-        protected const int DefaultBits = 8;
-        protected const Parity DefaultParity = Parity.None;
-        protected const Handshake DefaultHandShake = Handshake.None;
-        protected const StopBits DefaultStopBits = StopBits.One;
-        protected const int DefaultReadWriteTimeoutMs = 200;
-        protected const string _DefaultPortName = "NotSet";
-        protected const int DefaultDelayBetweenTransactions = 100;
-
+        public const int DefaultBaudRate = 9600;
+        public const int DefaultBits = 8;
+        public const Parity DefaultParity = Parity.None;
+        public const Handshake DefaultHandShake = Handshake.None;
+        public const StopBits DefaultStopBits = StopBits.None;
+        public const int DefaultReadWriteTimeoutMs = 100;
+        public const string _DefaultPortName = "NotSet";
+        public const int DefaultDelayBetweenTransactions = 100;
+        public const int DeafultConnectTimeoutMs = 1000;
+        public const string DefaultTerminator = "\n";
 
         private string? _portName;
         private int _baudRate;
@@ -56,7 +86,7 @@ namespace Grumpy.HWControl.Configuration
         private int _writeTimeoutMs;
         private int _readTimeoutMs;
         private int _minTimeBetweenTransactionsMs;
-
+        private int _connectTimeoutMs;
         private string? _txTerminator;
         private string? _rxTerminator;
 
@@ -79,7 +109,7 @@ namespace Grumpy.HWControl.Configuration
             }
         }
 
-        public override bool CopyFrom( object src )
+        public override bool CopyFrom( object? src )
         {
 
             var s = src as  SerialPortConfiguration;
@@ -124,6 +154,7 @@ namespace Grumpy.HWControl.Configuration
             _txTerminator = null;
             _rxTerminator = null;
             _minTimeBetweenTransactionsMs = DefaultDelayBetweenTransactions;
+            _connectTimeoutMs = DeafultConnectTimeoutMs;
         }
 
         [JsonProperty]
@@ -145,6 +176,13 @@ namespace Grumpy.HWControl.Configuration
         public int WriteTimeoutMs {
             get { return _writeTimeoutMs; }
             set { _writeTimeoutMs = value; }
+        }
+
+
+        [JsonProperty]
+        public int ConnectTimeoutMs {
+            get { return _connectTimeoutMs; }
+            set { _connectTimeoutMs = value; }
         }
 
 

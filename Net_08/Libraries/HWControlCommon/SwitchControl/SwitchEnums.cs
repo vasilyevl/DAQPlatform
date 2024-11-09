@@ -25,7 +25,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Grumpy.HWControl.IO
+namespace Grumpy.DaqFramework.IO
 {
     public enum SwitchCtrl
     {

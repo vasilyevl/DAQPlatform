@@ -1,2 +1,0 @@
-# MyPlatform
-My projects

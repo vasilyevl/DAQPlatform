@@ -1,4 +1,5 @@
-﻿/*
+﻿using System;
+/*
  
 Copyright (c) 2024 vasilyevl (Grumpy). Permission is hereby granted, 
 free of charge, to any person obtaining a copy of this software
@@ -20,18 +21,30 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Grumpy.DaqFramework.Configuration
+namespace Grumpy.ClickPLCDriver
 {
-    public enum InterfaceSelector
+    public enum ClickErrorCode
     {
-        Auto = 0,
-        Serial = 1,
-        Network = 2
+        NoError = 0,
+        GenericError = -1,
+        ConfigurationNotSet = -2,
+        InvalidControlName = -3,
+        InvalidControlNamePrefix = -4,
+        InvalidControlAddress = -5,
+        OpenFailed = -6,
+        CloseFailed = -7,
+        ProhibitedWhenControllerIsConnected = -8,
+        ProhibitedWhenControllerIsNotConnected = -9,
+        ConfigDeserializationError = -10,
+        IoNotSupported = -11,
+        InvalidSwitchState = -12,
+        NotConnected = -13,
+        SingleIoWriteFailed = -14,
+        NoDataProvided = -15,
+        GroupIoWriteFailed = -16,
+        ConfigurationIsNotProvided = -17,
+        NotWritableControl = -18,
+        FailedTConvertRegistersToFloat = -19,
     }
 }

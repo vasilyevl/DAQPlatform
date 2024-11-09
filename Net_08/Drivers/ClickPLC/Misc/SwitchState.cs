@@ -19,45 +19,64 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
-
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Grumpy.DaqFramework.IO
+
+namespace Grumpy.ClickPLCDriver
 {
-    [JsonObject(MemberSerialization = MemberSerialization.OptIn)]
-    public class SwitchControl : IEquatable<object>, IEquatable<SwitchCtrl>,
-        IEquatable<SwitchSt>
+    public enum SwitchCtrl
     {
-        public SwitchControl() {
-            Value = SwitchCtrl.Off;
+        On = 1,
+        Off = 2,
+    }
+
+    public enum SwitchSt
+    {
+        Unknown = 0,
+        On = 1,
+        Off = 2
+    }
+
+
+    [JsonObject(MemberSerialization = MemberSerialization.OptIn)]
+    public class SwitchState
+    {
+        public SwitchState() {
+
+            State = SwitchSt.Unknown;
         }
 
-        public SwitchControl(SwitchCtrl ctrl) {
-            Value = ctrl;
+        public SwitchState(SwitchSt state) : this() {
+
+            State = state;
         }
 
         [JsonProperty("state")]
         [JsonConverter(typeof(StringEnumConverter))]
-        public SwitchCtrl Value { get; set; }
+        public SwitchSt State { get; set; }
 
-        public override bool Equals(object? other) {
-            var o = other as SwitchControl;
-            return (((object?)o) != null) ? Value == o.Value : false;
-        }
+        public override bool Equals(object? other) =>
+            ((other as SwitchState) is not null)
+            && Equals(((SwitchState)other).State);
 
-        public bool Equals(SwitchCtrl other) => Value == other;
-
-        public bool Equals(SwitchSt st) =>
-            (Value == SwitchCtrl.On && st == SwitchSt.On)
-            || (Value == SwitchCtrl.Off && st == SwitchSt.Off);
+        public bool Equals(SwitchSt other) => State == other;
 
         public override int GetHashCode() =>
-            base.GetHashCode() + 2 * Value.GetHashCode();
+            base.GetHashCode() + 2 * State.GetHashCode();
+
+        public override String ToString() {
+
+            switch (State) {
+
+                case (SwitchSt.On):
+                    return nameof(SwitchSt.On);
+
+                case (SwitchSt.Off):
+                    return nameof(SwitchSt.Off);
+            }
+
+            return nameof(SwitchSt.Unknown);
+        }
     }
 }
