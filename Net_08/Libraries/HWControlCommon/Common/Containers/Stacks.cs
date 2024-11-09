@@ -25,7 +25,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
-namespace Grumpy.DaqFramework.Common
+namespace Grumpy.DAQFramework.Common
 {
     public interface IStack<T>
     {

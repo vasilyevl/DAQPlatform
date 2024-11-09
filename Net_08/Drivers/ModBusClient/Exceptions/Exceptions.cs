@@ -1,4 +1,5 @@
 ﻿/*
+ 
 This code is based on  2018-2020 Rossmann-Engineering EasyModbus project. 
 The original code is available at:
 https://github.com/rossmann-engineering/EasyModbusTCP.NET

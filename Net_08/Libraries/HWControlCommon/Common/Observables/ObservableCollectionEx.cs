@@ -22,7 +22,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 using System.Collections.ObjectModel;
 
-namespace Grumpy.DaqFramework.Common
+namespace Grumpy.DAQFramework.Common
 {
     [Serializable]
     public class ObservableCollectionEx<T> : ObservableCollection<T>

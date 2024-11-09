@@ -18,7 +18,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
-namespace Grumpy.DaqFramework.Drivers.SerialInterface
+namespace Grumpy.DAQFramework.Drivers.SerialInterface
 {
     public enum PortState
     {

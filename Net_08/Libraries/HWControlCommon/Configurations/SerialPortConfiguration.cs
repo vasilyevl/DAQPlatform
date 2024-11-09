@@ -20,7 +20,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-using Grumpy.DaqFramework.Common;
+using Grumpy.DAQFramework.Common;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -29,7 +29,7 @@ using System.IO.Ports;
 using System.Runtime.CompilerServices;
 
 
-namespace Grumpy.DaqFramework.Configuration
+namespace Grumpy.DAQFramework.Configuration
 {
     /*
         public enum Handshake

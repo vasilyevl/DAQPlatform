@@ -1,5 +1,4 @@
-﻿using System;
-/*
+﻿/*
  
 Copyright (c) 2024 vasilyevl (Grumpy). Permission is hereby granted, 
 free of charge, to any person obtaining a copy of this software

@@ -20,7 +20,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 using System.Runtime.InteropServices;
 
-namespace Grumpy.DaqFramework.Drivers.MMTimer
+namespace Grumpy.DAQFramework.Drivers.MMTimer
 {
     [Flags]
     internal enum MMTimerMode : uint

@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics;
-using Grumpy.DaqFramework.Drivers.MMTimer;
+using Grumpy.DAQFramework.Drivers.MMTimer;
 using System.Runtime.InteropServices;
 using System.Timers;
 
@@ -7,7 +7,8 @@ namespace TimerTest
 {
     internal class Program
     {
-        static TimerCaps _caps = new TimerCaps();
+        //static TimerCaps _caps = new TimerCaps();
+
         static uint _period = 1;
         static uint _resolution = 1;
 

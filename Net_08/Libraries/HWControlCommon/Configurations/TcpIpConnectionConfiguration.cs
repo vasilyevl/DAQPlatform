@@ -20,10 +20,10 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-using Grumpy.DaqFramework.Common;
+using Grumpy.DAQFramework.Common;
 using Newtonsoft.Json;
 
-namespace Grumpy.DaqFramework.Configuration
+namespace Grumpy.DAQFramework.Configuration
 {
 
     [JsonObject(MemberSerialization = MemberSerialization.OptOut)]

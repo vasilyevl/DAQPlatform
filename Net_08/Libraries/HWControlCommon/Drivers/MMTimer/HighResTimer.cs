@@ -22,7 +22,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 
-namespace Grumpy.DaqFramework.Drivers.MMTimer
+namespace Grumpy.DAQFramework.Drivers.MMTimer
 {
     public class HighResTimerException : System.Exception {
 

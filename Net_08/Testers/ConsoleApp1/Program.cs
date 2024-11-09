@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -11,7 +11,7 @@ namespace ConsoleApp1
         static void Main(string[] args) {
             Console.WriteLine("Hello, World!");
           
-               // TestThreadingTimer();
+                TestThreadingTimer();
                 TestMultimediaTimer();
             return;
         }
@@ -80,12 +80,11 @@ namespace ConsoleApp1
             set {
                 CheckDisposed();
 
-                if (value < 0)
-                    throw new ArgumentOutOfRangeException("value");
+                ArgumentOutOfRangeException.
+                    ThrowIfNegative(value, paramName: "Interval value");
 
                 interval = value;
-                if (Resolution > Interval)
-                    Resolution = value;
+                Resolution = Math.Min(Resolution, Interval);
             }
         }
 

@@ -22,12 +22,6 @@ See the original code and licence here:
     https://gist.github.com/NikolayIT/d86118a3a0cb3f5ed63d674a350d75f2
 */
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Utilities.Math
 {

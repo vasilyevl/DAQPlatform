@@ -20,7 +20,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace HighResTester
 {
-    using Grumpy.DaqFramework.Drivers.MMTimer;
+    using Grumpy.DAQFramework.Drivers.MMTimer;
     using System.Diagnostics;
     using System.Runtime.InteropServices;
     using Xunit.Abstractions;

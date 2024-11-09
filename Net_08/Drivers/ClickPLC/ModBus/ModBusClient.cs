@@ -26,7 +26,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 using System.Net.Sockets;
 using System.Net;
 using System.IO.Ports;
-using Grumpy.DaqFramework.Configuration;
+using Grumpy.DAQFramework.Configuration;
 
 namespace Grumpy.ClickPLCDriver.ModBus
 {

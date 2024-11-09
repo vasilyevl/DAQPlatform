@@ -20,14 +20,13 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-using System;
 using System.ComponentModel;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
-namespace Grumpy.DaqFramework.Common
+namespace Grumpy.DAQFramework.Common
 
 {    /// <summary>
      /// Represents an observable object that provides notifications when properties change.

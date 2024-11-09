@@ -22,7 +22,7 @@ using DAQAndControlFramework.Utilities;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Grumpy.DaqFramework.Common
+namespace Grumpy.DAQFramework.Common
 {
 
     public interface IConfigurationBase : ICloneable
