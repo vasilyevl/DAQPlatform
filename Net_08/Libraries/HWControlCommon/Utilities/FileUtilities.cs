@@ -20,7 +20,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-namespace DAQAndControlFramework.Utilities
+namespace DAQFramework.Utilities
 {
     public delegate void ErrorEvent(string source, ErrorEventArgs args);
 
@@ -62,23 +62,34 @@ namespace DAQAndControlFramework.Utilities
             }
         }
 
-        public static bool FileExists(string name, List<string> paths = null!)
+        public static bool FileExists(string name, 
+            out string fileName, out string directory, 
+            List<string>? paths = null)
         {
+            directory = string.Empty;
+            fileName = string.Empty;
+
             if (paths == null)
             {
+                if(File.Exists(name.Replace(@"\\", @"\"))){
 
-                var r = File.Exists(name.Replace(@"\\", @"\"));
+                    fileName = Path.GetFileName(name);
+                    directory = Path.GetDirectoryName(name)!;
 
-                return r;
+                    return true;
+                }
+
+                return false;
             }
 
-            foreach (string path in paths)
+            foreach (string p in paths)
             {
 
-                string p = Path.Combine(path, Path.GetFileName(name));
+                string fp = Path.Combine(p, Path.GetFileName(name));
 
-                if (File.Exists(p))
+                if (File.Exists(fp))
                 {
+                    directory = p;
                     return true;
                 }
             }
@@ -233,7 +244,7 @@ namespace DAQAndControlFramework.Utilities
         }
 
 
-        public static bool ReadTextFile(string directory, string fileName, out string text, string filter = null!)
+        public static bool ReadTextFile(string directory, string fileName, out string? text, string? filter = null)
         {
             string filePathName = Path.Combine(directory, fileName);
             text = null!;

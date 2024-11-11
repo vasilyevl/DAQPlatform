@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Grumpy.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <BaseOutputPath>..\..\bin\</BaseOutputPath>
+    <Platforms>AnyCPU;x64</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Libraries\HWControlCommon\DAQFramework.csproj" />
+    <ProjectReference Include="..\DAQmxCLI\DAQmxNETDriver.vcxproj" />
+  </ItemGroup>
+
+</Project>

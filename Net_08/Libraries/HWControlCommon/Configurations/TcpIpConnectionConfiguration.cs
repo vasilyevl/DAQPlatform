@@ -27,7 +27,7 @@ namespace Grumpy.DAQFramework.Configuration
 {
 
     [JsonObject(MemberSerialization = MemberSerialization.OptOut)]
-    public class TcpIpConnectionConfiguration : ConfigurationBase, ITcpIpConnectionConfiguration
+    public class TcpIpConnectionConfiguration : Common.ConfigurationBase, ITcpIpConnectionConfiguration
     {
         public const int DefaultTimeoutMs = 5000;
         public const string DefaultIP = "0:0:0:0";

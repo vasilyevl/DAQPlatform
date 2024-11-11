@@ -62,7 +62,7 @@ namespace Grumpy.DAQFramework.Configuration
 
 
     [JsonObject(MemberSerialization.OptIn)]
-    public class SerialPortConfiguration: ConfigurationBase, IConfigurationBase
+    public class SerialPortConfiguration: Common.ConfigurationBase, IConfigurationBase
     {
         public const int DefaultBaudRate = 9600;
         public const int DefaultBits = 8;

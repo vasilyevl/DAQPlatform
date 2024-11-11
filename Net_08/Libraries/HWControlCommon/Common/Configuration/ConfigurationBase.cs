@@ -18,7 +18,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using DAQAndControlFramework.Utilities;
+using DAQFramework.Utilities;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -71,7 +71,7 @@ namespace Grumpy.DAQFramework.Common
                 return false;
             }
 
-            if (FileUtilities.FileExists(fileName)
+            if (FileUtilities.FileExists(fileName, out string file, out string dir)
                 && !FileUtilities.DeleteFile(fileName)) {
 
                 LastErrorComment = $"Failed to delete file " +

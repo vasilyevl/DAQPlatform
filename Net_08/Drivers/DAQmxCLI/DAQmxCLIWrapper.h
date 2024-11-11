@@ -48,6 +48,13 @@ namespace Grumpy{
 			PseudoDifferential = DAQmx_Val_PseudoDiff	//  12529 Pseudo-Differential
 		};
 
+		public enum class DODrive
+		{
+			Any = 0,
+			Active = DAQmx_Val_ActiveDrive,             // 12573 Active Drive
+			OpenCollector = DAQmx_Val_OpenCollector     // 12574 Open Collector
+		};
+
 		public enum class VoltageUnits
 		{
 			Volts = DAQmx_Val_Volts,						// 10348  Volts	
