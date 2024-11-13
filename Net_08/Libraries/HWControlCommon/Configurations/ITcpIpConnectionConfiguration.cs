@@ -31,8 +31,7 @@ namespace Grumpy.DAQFramework.Configuration
         public Int32 Port { get; set; }
         public Int32 Timeout { get; set; }
 
-        public Boolean CopyFrom(Object src);
-        public void Reset();
+    
     }
 
 }

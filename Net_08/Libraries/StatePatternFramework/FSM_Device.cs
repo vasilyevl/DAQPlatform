@@ -19,6 +19,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+using DAQFramework.Common.Configuration;
 using Grumpy.DAQFramework.Common;
 using Grumpy.DAQFramework.Drivers;
 
@@ -36,7 +37,8 @@ namespace Grumpy.StatePatternFramework
 
     public class ConfigurationUpdateException : Exception
     {
-        public ConfigurationUpdateException(Exception? e = null) : base("Configuration update attempt failed.", e) {
+        public ConfigurationUpdateException(Exception? e = null) : 
+            base("Configuration update attempt failed.", e) {
         }
     }
 
@@ -87,7 +89,7 @@ namespace Grumpy.StatePatternFramework
                         if (_configuration != null) {
 
                             TConfiguration c =  new TConfiguration();
-                            c.CopyFrom(this._configuration);
+                            c.CopyFrom(this._configuration, out string? error);
                             return c;
                         }
                         else {
@@ -107,8 +109,13 @@ namespace Grumpy.StatePatternFramework
             private set {
                 bool lockAcuared = false;
                 try {
+
                     TConfiguration cnfg = new TConfiguration();
-                    cnfg.CopyFrom(value!);
+                    
+                    if(!cnfg.CopyFrom(value!, out string? error)) {
+
+                        throw new Exception(error);
+                    }
 
                     Monitor.TryEnter(_configurationLock, 
                         ConfigurationLockTimeoutMs, ref lockAcuared);

@@ -20,7 +20,6 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 using System.Reflection;
 
-
 namespace Grumpy.DAQFramework.Common
 {
     /// <summary>

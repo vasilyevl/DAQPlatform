@@ -20,6 +20,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
+using DAQFramework.Common.Configuration;
 using Grumpy.DAQFramework.Common;
 
 using Newtonsoft.Json;
@@ -62,7 +63,7 @@ namespace Grumpy.DAQFramework.Configuration
 
 
     [JsonObject(MemberSerialization.OptIn)]
-    public class SerialPortConfiguration: Common.ConfigurationBase, IConfigurationBase
+    public class SerialPortConfiguration: ConfigurationBase, IConfigurationBase
     {
         public const int DefaultBaudRate = 9600;
         public const int DefaultBits = 8;
@@ -109,12 +110,12 @@ namespace Grumpy.DAQFramework.Configuration
             }
         }
 
-        public override bool CopyFrom( object? src )
+        public bool CopyFrom( object? src )
         {
 
             var s = src as  SerialPortConfiguration;
             if (s == null) {
-                LastErrorComment = "Source type is not compatible with SerialPortConfiguration type";
+                LastError = "Source type is not compatible with SerialPortConfiguration type";
                 return false;   
             }
 
@@ -132,16 +133,16 @@ namespace Grumpy.DAQFramework.Configuration
                 _rxTerminator = s.RxMessageTerminator;
                 _minTimeBetweenTransactionsMs = s.MinTimeBetweenTransactionsMs;
 
-                LastErrorComment = string.Empty;
+                LastError = string.Empty;
                 return true;
             }
             catch (Exception ex) {
-                LastErrorComment = ex.Message;
+                LastError = ex.Message;
                 return false;
             }
         }
 
-        public override void Reset()
+        public void Reset()
         {
             _portName = _DefaultPortName;
             _baudRate = DefaultBaudRate;
@@ -249,7 +250,7 @@ namespace Grumpy.DAQFramework.Configuration
             }
             catch (Exception e) {
 
-                LastErrorComment = $"Failed to serialize object {this.GetType().Name}. " +
+                LastError = $"Failed to serialize object {this.GetType().Name}. " +
                     $"Exception {e.Message}";
                 return string.Empty;
             }

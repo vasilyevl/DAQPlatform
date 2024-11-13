@@ -1,4 +1,4 @@
-﻿/* 
+﻿/*
 Copyright (c) 2024 vasilyevl (Grumpy). Permission is hereby granted, 
 free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"),to deal in the Software 
@@ -18,153 +18,104 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using DAQFramework.Utilities;
+using Grumpy.DAQFramework.Common;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
-namespace Grumpy.DAQFramework.Common
+namespace DAQFramework.Common.Configuration
 {
 
-    public interface IConfigurationBase : ICloneable
+    [JsonObject(MemberSerialization.OptIn)]
+    public class ConfigurationBase : ObservableObject, IConfigurationBase
     {
-        bool CopyFrom(object src);
-        bool Init(string configuration);
-        bool LoadFromFile(string configuration);
-        string? ToString();
-        bool SaveToFile(string filePath);
-        string LastErrorComment { get; }
-    }
+        protected const double Epsilon = 1.0e-6;
 
-    [JsonObject(MemberSerialization = MemberSerialization.OptIn)]
-    public abstract class ConfigurationBase : ObservableObject, IConfigurationBase
-    {
-        private string _fileName;
-
-        public ConfigurationBase() : base()
+        private string? _fileName;
+        public ConfigurationBase()
         {
-            _fileName = null!;
-            Reset();
-        }
 
-        public abstract bool CopyFrom(object? src);
-
-        public virtual object Clone()
-        {
-            return MemberwiseClone();
-        }
-
-        public bool SaveToFile(string? fileName = null)
-        {
-            if (fileName == null) {
-
-                fileName = FileName;
-            }
-            else {
-
-                FileName = fileName;
-            }
-
-            if (string.IsNullOrEmpty(fileName)) {
-
-                LastErrorComment = "Can't save into a file. " +
-                    "Name not provided.";
-                return false;
-            }
-
-            if (FileUtilities.FileExists(fileName, out string file, out string dir)
-                && !FileUtilities.DeleteFile(fileName)) {
-
-                LastErrorComment = $"Failed to delete file " +
-                    $"\"{fileName}\". {FileUtilities.LastError}";
-                return false;
-            }
-
-            if (FileUtilities.SaveTextFile(ToString()!, null!, fileName)) {
-
-                LastErrorComment = $"Failed to save to the " +
-                    $"\"{fileName}\" file: {FileUtilities.LastError}";
-            }
-
-            return true;
-        }
-
-        public bool LoadFromFile(string filePathName)
-        {
-            if (FileUtilities.ReadTextFile( null!, filePathName, 
-                                            out string text)) {
-
-                return Init(text);
-            }
-            else {
-
-                LastErrorComment = (string)FileUtilities.LastError.Clone();
-                return false;
-            }
-        }
-
-        public bool Init(string configuration)
-        {
-            try
-            {
-                var jt = JToken.Parse(configuration);
-                object src = jt.ToObject(GetType())!;
-                return CopyFrom(src);
-            }
-            catch (Exception ex)
-            {
-                LastErrorComment = ex.Message;
-                return false;
-            }
-        }
-
-        private string? _lastErrorComment = null;
-        private object _lastErrorLock = new object();
-
-        [JsonIgnore]
-        public string LastErrorComment
-        {
-            get {
-                lock (_lastErrorLock) {
-
-                    return (string)(_lastErrorComment?.Clone() ?? 
-                                    string.Empty);
-                }
-            }
-
-            protected set {
-                lock (_lastErrorLock) {
-
-                    _lastErrorComment = value;
-                }
-            }
-        }
-
-        [JsonIgnore]
-        public int LastErrorCode
-        {
-            get; protected set;
-        }
-
-        public string GetSummary()
-        {
-            if (string.IsNullOrEmpty(FileName)) {
-
-                return ToString()!;
-            }
-            else {
-
-                return "{\n\t\"FileName\": \"" + FileName + "\"\n}";
-            }
+            _fileName = null;
         }
 
         [JsonProperty]
         public string FileName
         {
-            get => (string)_fileName.Clone();
+            get => (string)(_fileName?.Clone() ?? string.Empty);
             set => _fileName = (string)(_fileName?.Clone() ?? null!);
         }
-        public bool ShouldSerializeFileName() => false;
 
-        public abstract void Reset();
+        public bool PopulateFromString(string jsonString,
+                                       out string? error)
+        {
+
+            return ConfigurationExtensions.PopulateFromString(this,
+                                            jsonString, out error);
+        }
+
+        public bool PopulateFromFile(string filePath,
+                                     out string? error)
+        {
+
+            return ConfigurationExtensions.PopulateFromFile(
+                this, filePath, out error);
+        }
+
+
+        public bool SerializeToString(out string? serialized,
+                                      out string? error)
+        {
+
+            serialized =
+                ConfigurationExtensions.SerializeToString(this,
+                                                           out error);
+
+            return !string.IsNullOrEmpty(serialized);
+        }
+
+        public bool SerializeToFile(string filePath,
+                                    out string? error)
+        {
+
+            return ConfigurationExtensions.SerializeToFile(this,
+                                                filePath, out error);
+        }
+
+        public bool PopulateFromString<T>(string jsonString,
+            out string? error) where T : ConfigurationBase
+        {
+
+            return PopulateFromString(jsonString, out error);
+        }
+
+        public bool PopulateFromFile<T>(string filePath,
+            out string? error) where T : ConfigurationBase
+        {
+
+            return PopulateFromFile(filePath, out error);
+        }
+
+        public static bool DeserializeFromString<T>(string source,
+            out T? o, out string error) where T : ConfigurationBase
+        {
+
+            return ConfigurationExtensions.DeserializeFromString(
+                source, out o, out error);
+        }
+
+        public static bool DeserializeFromFile<T>(string source,
+            out T? o, out string error) where T : ConfigurationBase
+        {
+
+            return ConfigurationExtensions.DeserializeFromFile(
+                source, out o, out error);
+        }
+
+  
+
+        public string LastError
+        {
+            get;
+            protected set;
+        } = string.Empty;
+
     }
 }

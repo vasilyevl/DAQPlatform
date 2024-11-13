@@ -18,24 +18,22 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+using DAQFramework.Common.Configuration;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
 namespace Grumpy.DAQFramework.Configuration
 {
-
     public interface IInterfaceConfiguration
     {
         InterfaceSelector ActiveInterface { get; set; }
         TcpIpConnectionConfiguration? Network { get; set; }
         SerialPortConfiguration? SerialPort { get; set; }
-
     }
 
     [JsonObject(MemberSerialization = MemberSerialization.OptIn)]
     public class InterfaceConfiguration :  IInterfaceConfiguration
     {
-
         private const InterfaceSelector _DefaultInterface = 
                                         InterfaceSelector.Auto;
 
@@ -43,7 +41,6 @@ namespace Grumpy.DAQFramework.Configuration
         private TcpIpConnectionConfiguration? _network;
         private SerialPortConfiguration? _serialPort;
         private InterfaceSelector _activeInterface;
-
 
         public InterfaceConfiguration() : base() { 
 
@@ -55,7 +52,7 @@ namespace Grumpy.DAQFramework.Configuration
         public InterfaceConfiguration(IInterfaceConfiguration src) : this() {
 
             Network = (src?.Network is not null) ? 
-                (src.Network.Clone() as TcpIpConnectionConfiguration) : 
+                (src.Network.Clone( out string? error) as TcpIpConnectionConfiguration) : 
                 null;
         }
 
@@ -89,7 +86,7 @@ namespace Grumpy.DAQFramework.Configuration
                 if (s.Network != null) {
 
                     var net = new TcpIpConnectionConfiguration();
-                    b2 = net.CopyFrom(s.Network);
+                    b2 = net.CopyFrom(s.Network, out string? error);
                     if (b2) { Network = net; }
                 }
                 return b1 && b2;

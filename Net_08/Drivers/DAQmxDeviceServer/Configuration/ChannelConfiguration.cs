@@ -1,5 +1,4 @@
 ﻿/*
-
 Copyright (c) 2024 vasilyevl (Grumpy). Permission is hereby granted,
 free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"),to deal in the Software
@@ -17,10 +16,9 @@ PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGH
 HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 */
 
-using Grumpy.DAQFramework.Configuration;
+using DAQFramework.Common.Configuration;
 using Grumpy.DAQmxNetApi;
 
 using Newtonsoft.Json;
@@ -46,12 +44,12 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
         PulseCounter = Pulse | Counter
     }
 
-    public class ChannelConfigurationBase : ConfigurationBase,
-                IEquatable<ChannelConfigurationBase>
+    public class ChannelConfiguration : ConfigurationBase,
+                IEquatable<ChannelConfiguration>
     {
         public const char ChannelNamePartsSeparator = '/';
 
-        private string _alias;
+        private string? _alias;
         private string _physicalChannel;
         private string _pulseCounter;
 
@@ -62,7 +60,7 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
 
         private AIORange? _range;
 
-        public ChannelConfigurationBase() {
+        public ChannelConfiguration():base() {
 
             _type = IOTypes.NA;
             _aiTermination = AiTermination.Default;
@@ -76,10 +74,73 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
             _range = null;        
         }
 
-        public ChannelConfigurationBase(IOTypes type = IOTypes.NA):this() {
-            
-            Type = type;
+        public ChannelConfiguration(string physicalChannel,
+                                    string? alias,
+                                    IOTypes ioType, 
+                                    IOModes[] operationModes, 
+                                    AIORange? range = null, 
+                                    AiTermination aiTermination = AiTermination.Default,
+                                    DODrive doDrive = DODrive.Any, 
+                                    string? pulseCounter = null): this() {
+
+            _type=ioType;
+            _alias=alias;
+            _physicalChannel= physicalChannel ?? string.Empty;
+            _pulseCounter=pulseCounter ?? string.Empty;
+            _operationModes = operationModes ?? [];
+            _range = range ?? new AIORange(-10, 10); 
+            _aiTermination = aiTermination;
+            _doDrive= doDrive;
         }
+        
+
+        public static ChannelConfiguration CreateAiChannelConfiguration(
+            string physicalChannel, IOModes[] modes, 
+            string? alias, AIORange range, 
+            AiTermination termination) {
+           
+            return new ChannelConfiguration( physicalChannel, alias,
+                IOTypes.AnalogInput,modes, range, termination);
+        }
+
+
+        public static ChannelConfiguration CreateAoChannelConfiguration(
+            string physicalChannel, IOModes[] modes,
+            string? alias, AIORange range) {
+
+            return new ChannelConfiguration(physicalChannel, alias,
+                IOTypes.AnalogOutput, modes, range);
+        }
+
+
+        public static ChannelConfiguration CreateDoChannelConfiguration(
+            string physicalChannel, IOModes[] modes,
+            string? alias, DODrive drive =  DODrive.Any) {
+
+            return new ChannelConfiguration(physicalChannel: physicalChannel, 
+                alias : alias,
+                ioType: IOTypes.DigitalOutput,
+                operationModes: modes,
+                range: null,
+                aiTermination: AiTermination.Default,
+                doDrive: drive,
+                pulseCounter: null);
+        }
+
+        public static ChannelConfiguration CreateDiChannelConfiguration(
+            string physicalChannel, IOModes[] modes,
+            string? alias) {
+
+            return new ChannelConfiguration(physicalChannel: physicalChannel,
+                alias: alias,
+                ioType: IOTypes.DigitalInput,
+                operationModes: modes,
+                range: null,
+                aiTermination: AiTermination.Default,
+                doDrive: DODrive.Any,
+                pulseCounter: null);
+        }
+
 
         [JsonProperty]
         [JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
@@ -144,15 +205,15 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
 
 
         [JsonProperty]
-        public string PulseCounter {
+        public string LinkedIO {
 
-            get => ShouldSerializePulseCounter() ? 
+            get => ShouldSerializeLinkedIO() ? 
                         string.Empty : _pulseCounter;
             set => _pulseCounter = 
                         string.IsNullOrEmpty(value) ? string.Empty :value;
         }
 
-        public bool ShouldSerializePulseCounter() =>
+        public bool ShouldSerializeLinkedIO() =>
             (Type & IOTypes.PulseCounter) != 0;
 
         [JsonIgnore]
@@ -204,23 +265,12 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
             }
         }
 
-        // Implicit conversion from DAQmxTaskMode to IOMode
-        public static implicit operator 
-            ChannelConfigurationBase(IOTypes type) =>
-                new ChannelConfigurationBase(type);
-
-        // Implicit conversion from DAQmxTaskModeWrapper to
-        // DAQmxTaskMode
-        public static implicit operator 
-            IOTypes(ChannelConfigurationBase wrapper) =>
-                wrapper.Type;
-
         // Method to assign an enum value to an instance of
         // DAQmxTaskModeWrapper
         public void SetType(IOTypes type) => Type = type;
 
         // Equals method for IEquatable<DAQmxTaskModeWrapper>
-        public bool Equals(ChannelConfigurationBase? other) =>
+        public bool Equals(ChannelConfiguration? other) =>
             other != null 
                 && Type == other.Type
                 && (string.Compare(
@@ -229,13 +279,13 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
                     ignoreCase:true) == 0)
                 && (string.Compare(Alias, other.Alias) == 0)
                 && RequestedModesOfOperation == other.RequestedModesOfOperation
-                && (string.Compare(PulseCounter, other.PulseCounter) == 0)
+                && (string.Compare(LinkedIO, other.LinkedIO) == 0)
                 && (Range?.Equals(other.Range) ?? true)
                 && AITermination == other.AITermination
                 && Drive == other.Drive;
 
         public override bool Equals(object? obj) =>
-            obj is ChannelConfigurationBase other && Equals(other);
+            obj is ChannelConfiguration other && Equals(other);
 
         public override int GetHashCode() => Type.GetHashCode();
 

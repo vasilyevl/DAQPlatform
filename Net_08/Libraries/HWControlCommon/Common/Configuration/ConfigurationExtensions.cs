@@ -1,5 +1,4 @@
 ﻿/*
- 
 Copyright (c) 2024 vasilyevl (Grumpy). Permission is hereby granted, 
 free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"),to deal in the Software 
@@ -17,11 +16,9 @@ PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGH
 HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 */
 
 using DAQFramework.Utilities;
-
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -31,120 +28,138 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Grumpy.DAQFramework.Configuration
+namespace DAQFramework.Common.Configuration
 {
     public static class ConfigurationExtensions
     {
-     
-        public static bool DeserializeFromString<T>(string source, out T? o, 
-            out string error)
-            where T : ConfigurationBase {
 
-            error = String.Empty;
+        public static bool DeserializeFromString<T>(string source, out T? o,
+            out string error)
+            where T : ConfigurationBase
+        {
+
+            error = string.Empty;
             o = null;
 
-            if (!IsJsonObjectType(typeof(T))) {
+            if (!IsJsonObjectType(typeof(T)))
+            {
 
                 error = $"DeserialiseFromString. Target object must have \"JsonObject\" attribute.";
                 return false;
             }
 
 
-            try {
+            try
+            {
 
                 JToken deserialized = JToken.Parse(source);
-                if (deserialized is not null) {
+                if (deserialized is not null)
+                {
 
                     o = deserialized.ToObject<T>();
 
-                    error = (o != null) ? String.Empty :
+                    error = o != null ? string.Empty :
                         $"Failed to deserialize object of type {typeof(T).FullName} from string.";
                 }
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
 
                 error = ex.Message;
             }
 
 
-            return String.IsNullOrEmpty(error);
-        } 
+            return string.IsNullOrEmpty(error);
+        }
 
         public static bool DeserializeFromFile<T>(string source, out T? o,
-                out string error, List<string> paths = null!) where T : ConfigurationBase {
+                out string error, List<string> paths = null!) where T : ConfigurationBase
+        {
 
             o = null;
 
-            if (!IsJsonObjectType(typeof(T))) {
+            if (!IsJsonObjectType(typeof(T)))
+            {
 
                 error = $"DeserialiseFromFile. Target object must have \"JsonObject\" attribute.";
                 return false;
             }
-           
+
 
             return LoadJsonFile(name: source, out string? text, out error) ?
                 DeserializeFromString(text!, out o, out error) : false;
 
         }
 
-        public static bool LoadJsonFile(string name, out string? jsonText, 
+        public static bool LoadJsonFile(string name, out string? jsonText,
             out string error)
         {
 
-            error = String.Empty;
+            error = string.Empty;
             jsonText = null;
 
             if (FileUtilities.FileExists(name: name,
                 out string fileName, out string directory,
-                paths: null!)) {
+                paths: null!))
+            {
 
-                if (!FileUtilities.ReadTextFile(directory: directory, 
+                if (!FileUtilities.ReadTextFile(directory: directory,
                     fileName: fileName,
-                    out jsonText, filter: null)) {
+                    out jsonText, filter: null))
+                {
                     error = FileUtilities.LastError;
                 }
             }
-            else {
+            else
+            {
 
                 error = $"File {name} does not exist.";
             }
-            return string.IsNullOrEmpty(error) ;
+            return string.IsNullOrEmpty(error);
         }
 
-        public static bool PopulateFromString<T>( this T obj, string text,
+        public static bool PopulateFromString<T>(this T obj, string text,
             out string error)
-            where T : ConfigurationBase {
+            where T : ConfigurationBase
+        {
 
-            if (!IsJsonObjectType(typeof(T))) {
+            if (!IsJsonObjectType(typeof(T)))
+            {
 
                 error = $"PopulateFromString. Target object must have \"JsonObject\" attribute.";
                 return false;
             }
 
-            error = String.Empty;   
+            error = string.Empty;
 
-            if (!string.IsNullOrEmpty(text)) {
-                try {
+            if (!string.IsNullOrEmpty(text))
+            {
+                try
+                {
                     JsonConvert.PopulateObject(text, obj);
 
                     return true;
                 }
-                catch (Exception ex) {
+                catch (Exception ex)
+                {
 
                     error = $" Object update from string faled. Exception {ex.Message}";
                     return false;
                 }
             }
-            else {
+            else
+            {
                 error = $"No or empty JSON string provided.";
                 return false;
             }
         }
 
-        public static bool PopulateFromFile<T>(this T obj, string source, 
-            out string error) where T : ConfigurationBase {
+        public static bool PopulateFromFile<T>(this T obj, string source,
+            out string error) where T : ConfigurationBase
+        {
 
-            if (!IsJsonObjectType(typeof(T))) {
+            if (!IsJsonObjectType(typeof(T)))
+            {
 
                 error = $"PopulateFromFile. Target object must have \"JsonObject\" attribute.";
                 return false;
@@ -154,49 +169,58 @@ namespace Grumpy.DAQFramework.Configuration
                 PopulateFromString(obj, text!, out error) : false;
         }
 
-        public static string SerializeToString<T>(this T obj, out string error, 
+        public static string SerializeToString<T>(this T obj, out string error,
             bool indented = true)
-            where T : ConfigurationBase {
+            where T : ConfigurationBase
+        {
 
-            error = String.Empty;
+            error = string.Empty;
 
-            if (!IsJsonObjectType(typeof(T))) {
+            if (!IsJsonObjectType(typeof(T)))
+            {
 
                 error = $"SerializeToString. Target object must have \"JsonObject\" attribute.";
-                return string.Empty ;
+                return string.Empty;
             }
-            
-            try {
-                return JsonConvert.SerializeObject(obj, indented? Formatting.Indented : Formatting.None);
+
+            try
+            {
+                return JsonConvert.SerializeObject(obj, indented ? Formatting.Indented : Formatting.None);
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
 
                 error = $"Object serializationFailed. Exception: {ex.Message}";
-                return String.Empty;
+                return string.Empty;
             }
         }
 
-        public static bool SerializeToFile<T>(this T obj, string filePathName, 
+        public static bool SerializeToFile<T>(this T obj, string filePathName,
             out string error, bool indented = true)
-            where T : ConfigurationBase {
+            where T : ConfigurationBase
+        {
 
-            if (!IsJsonObjectType(typeof(T))) {
+            if (!IsJsonObjectType(typeof(T)))
+            {
 
                 error = $"SerializeToFile. Target object must have \"JsonObject\" attribute.";
                 return false;
             }
 
-            string text = SerializeToString(obj, out error, indented);
+            string text = obj.SerializeToString(out error, indented);
 
-            if (!string.IsNullOrEmpty(text)) {
+            if (!string.IsNullOrEmpty(text))
+            {
 
                 if (FileUtilities.SaveTextFile(text: text,
                     directory: Path.GetFullPath(filePathName),
-                    fileName: Path.GetFileName(filePathName))) {
+                    fileName: Path.GetFileName(filePathName)))
+                {
 
                     return true;
                 }
-                else {
+                else
+                {
 
                     error = FileUtilities.LastError;
                 }
@@ -204,31 +228,37 @@ namespace Grumpy.DAQFramework.Configuration
             return false;
         }
 
-        public static bool CopyFrom<T>(this T target, T source, 
-            out string error) where T: ConfigurationBase {
+        public static bool CopyFrom<T>(this T target, T source,
+            out string? error) where T : ConfigurationBase
+        {
 
-            if (!IsJsonObjectType(typeof(T))) {
+            if (!IsJsonObjectType(typeof(T)))
+            {
 
                 error = $"CopyFrom. Target and source objects must have \"JsonObject\" attribute.";
                 return false;
             }
 
 
-            if (source is null) {
+            if (source is null)
+            {
 
                 error = "Source object is null.";
                 return false;
             }
 
-            try {
+            try
+            {
 
                 string serialized = source.SerializeToString(out error);
-                if(!string.IsNullOrEmpty(serialized)) {
+                if (!string.IsNullOrEmpty(serialized))
+                {
 
                     return target.PopulateFromString(serialized, out error);
                 }
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
 
                 error = $"CopyFrom. Attempt to copy JSON properties failed. " +
                     $"Exception: {ex.Message}";
@@ -238,28 +268,34 @@ namespace Grumpy.DAQFramework.Configuration
         }
 
         public static T? Clone<T>(this T source, out string error)
-            where T : ConfigurationBase {
+            where T : ConfigurationBase
+        {
 
-            if (!IsJsonObjectType(typeof(T))) {
+            if (!IsJsonObjectType(typeof(T)))
+            {
 
                 error = $"Clone. Target must have \"JsonObject\" attribute.";
                 return null;
             }
 
-            error = String.Empty;
+            error = string.Empty;
 
-            try {
+            try
+            {
 
                 JToken token = JToken.FromObject(source);
-                if (token is not null) {
+                if (token is not null)
+                {
 
                     return token?.ToObject<T>() ?? null;
                 }
-                else {
+                else
+                {
                     error = "Clone. Failed to convert source object to JToken. ";
                 }
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
 
                 error = $"Clone. Attempt to clone object failed. " +
                     $"Exception: {ex.Message}";
@@ -270,17 +306,19 @@ namespace Grumpy.DAQFramework.Configuration
 
 
 
-        public static bool IsJsonObjectType( Type T) {
+        public static bool IsJsonObjectType(Type T)
+        {
 
             var attributes = T.GetCustomAttributes(typeof(JsonObjectAttribute), true);
 
             return attributes.Length > 0;
         }
 
-        public static bool IsJsonObject(object obj) {
+        public static bool IsJsonObject(object obj)
+        {
 
             return IsJsonObjectType(obj.GetType());
-        }     
+        }
 
     }
 

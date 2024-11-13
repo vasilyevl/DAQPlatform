@@ -1,4 +1,4 @@
-﻿/* 
+﻿/*
 Copyright (c) 2024 vasilyevl (Grumpy). Permission is hereby granted, 
 free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"),to deal in the Software 
@@ -18,41 +18,17 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using Newtonsoft.Json.Linq;
-
-namespace Grumpy.DAQFramework.Common
+namespace DAQFramework.Common.Configuration
 {
-    internal static class ConfigurationExt
+    public interface IConfigurationBase
     {
-        public static bool InitFromString( this IConfigurationBase o,  
-                                           string str, 
-                                           out string errorMessage )
-        {
-            if ( string.IsNullOrEmpty( str ) ) {
+        string FileName { get; set; }
 
-                errorMessage = "Can't deserialize empty or null string.";
-                return false;
-            }
-
-            try {
-
-                JToken jToken= JToken.Parse(str);
-                object res = jToken.ToObject(o.GetType())!;
-
-                if ( res == null ) {
-
-                    errorMessage = "Deserialization failed.";
-                    return false;
-                }
-
-                errorMessage = null!;
-                return  o.CopyFrom(res) ;
-            } 
-            catch (Exception ex ){ 
-
-                errorMessage = ex.Message;
-                return false;
-            }
-        }
+        bool PopulateFromFile(string filePath, out string? error);
+        bool PopulateFromFile<T>(string filePath, out string? error) where T : ConfigurationBase;
+        bool PopulateFromString(string jsonString, out string? error);
+        bool PopulateFromString<T>(string jsonString, out string? error) where T : ConfigurationBase;
+        bool SerializeToFile(string filePath, out string? error);
+        bool SerializeToString(out string? serialized, out string? error);
     }
 }
