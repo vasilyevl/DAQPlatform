@@ -37,12 +37,9 @@ namespace Grumpy.StatePatternFramework
         Rejected = 256,
 
         Active = Pending | Processing,
-
         ProcessingComplete = Success | Failed | Timeout | 
                              Ignored | Wrong | Rejected,
-
         Error = Failed | Timeout | Wrong,
-
         Processed = Success | Failed | Ignored | Rejected
     }
 
@@ -50,80 +47,87 @@ namespace Grumpy.StatePatternFramework
     {
         public event EventHandler? StateChanged;
 
-        protected const int _NoTimeoutMs = -1;
-        protected const int _MinTimeoutMs = 25;
+        protected const int NoTimeoutMs = -1;
+        protected const int MinTimeoutMs = 25;
 
 
-        protected CommandState _currentState;
-        protected DateTime _timeout;
-        protected int _timeoutMs;
-        protected int _processingTimeoutMs; 
-        private static long _commandID = 0;
+        protected CommandState currentState;
+        protected DateTime timeout;
+        protected int timeoutMs;
+        protected int processingTimeoutMs; 
+        private static long id = 0;
 
-        protected object _stateLock;
+        protected object stateLock;
 
-        System.Timers.Timer? _timer;
+        System.Timers.Timer? timer;
+
+        public CommandBase() {
+
+            stateLock = new object();
+            ID = ++id;
+            Type = CommandTypeBase.Generic;
+            currentState = CommandState.Created;
+            timeoutMs = NoTimeoutMs;
+            processingTimeoutMs = NoTimeoutMs;
+            timeout = DateTime.MaxValue;
+            Arguments = null;
+            timer = null;
+        }
+
 
         public CommandBase( CommandTypeBase commandType,
                 object? arguments,
                 EventHandler? callback,
-                int timeoutMs = _NoTimeoutMs,
-                int processingTimeoutMs = _NoTimeoutMs) {
+                int timeoutMs = NoTimeoutMs,
+                int processingTimeoutMs = NoTimeoutMs): this() {
 
-            CommandID = ++_commandID;
-
-            _stateLock = new object();
-
-            CommandType = commandType is null ? 
-                CommandTypeBase.Generic : commandType;
+            Type = commandType;
 
             if (callback != null) {
 
                 StateChanged += callback;
             }
 
-            _currentState = CommandState.Created;
-
             Arguments = arguments;
 
-            _timeoutMs = timeoutMs > 0 ? 
-                    Math.Max(_MinTimeoutMs, timeoutMs) : 
-                    _NoTimeoutMs;
+            this.timeoutMs = timeoutMs > 0 ?
+                    Math.Max(MinTimeoutMs, timeoutMs) :
+                    NoTimeoutMs;
             
-            _processingTimeoutMs = processingTimeoutMs > 0 ? 
-                    Math.Max(_MinTimeoutMs, processingTimeoutMs) : 
-                    _NoTimeoutMs;
+            this.processingTimeoutMs = processingTimeoutMs > 0 ?
+                    Math.Max(MinTimeoutMs, processingTimeoutMs) :
+                    NoTimeoutMs;
 
-            _timeout = _timeoutMs > 0 ? 
-                DateTime.Now + TimeSpan.FromMilliseconds(_timeoutMs) :
+            timeout = this.timeoutMs > 0 ?
+                DateTime.Now + TimeSpan.FromMilliseconds(this.timeoutMs) :
                 DateTime.MaxValue;
 
-            if (_timeoutMs > 0) {
-                _timer = new System.Timers.Timer(_timeoutMs);
-                _timer.Elapsed += _OnTimedEvent!;
-                _timer.AutoReset = false;
-                _timer.Enabled = true;
+            if (this.timeoutMs > 0) {
+                timer = new System.Timers.Timer(this.timeoutMs);
+                timer.Elapsed += _OnTimedEvent!;
+                timer.AutoReset = false;
+                timer.Enabled = true;
             }
             else {
-               
-                _timer = null;
+
+                timer = null;
             }
         }
 
         public void Dispose() {
 
             try {
-                _timer?.Stop();
-                _timer?.Dispose();
+                timer?.Stop();
+                timer?.Dispose();
             }
             catch (Exception) {
                 // Ignore
             }
         }
 
-        public long CommandID { get; private set; }
+        public long ID { get; private set; }
 
-        public CommandTypeBase CommandType { get; private set; }
+        public CommandTypeBase Type { get; private set; }
 
         public object? Arguments { get; private set; }
 
@@ -146,35 +150,38 @@ namespace Grumpy.StatePatternFramework
 
         public virtual CommandState State {
             get {
-                lock (_stateLock) {
+                lock (stateLock) {
 
-                    return _currentState;
+                    return currentState;
                 }
             }
             set {
 
-                lock (_stateLock) {
+                lock (stateLock) {
 
-                    if (value != _currentState 
-                        && _currentState != CommandState.Timeout) {
+                    if (value != currentState 
+                        && currentState != CommandState.Timeout) {
 
-                        _currentState = value;
+                        currentState = value;
 
-                        if ((value & (CommandState.Rejected |
-                            CommandState.Success | CommandState.Error |
-                            CommandState.Processed | CommandState.Processing)) != 0) {
+                        if ((value & (CommandState.Rejected 
+                            | CommandState.Success 
+                            | CommandState.Error 
+                            | CommandState.Processed 
+                            | CommandState.Processing)) != 0) {
 
-                            _timer?.Stop();
-                            _timer?.Dispose();
+                            timer?.Stop();
+                            timer?.Dispose();
                         }
 
-                        if (value == CommandState.Processing && _processingTimeoutMs > 0) {
+                        if ( value == CommandState.Processing 
+                            && processingTimeoutMs > 0 ) {
 
-                            _timer = new System.Timers.Timer(_processingTimeoutMs);
-                            _timer.Elapsed += _OnTimedEvent!;
-                            _timer.AutoReset = false;
-                            _timer.Enabled = true;
-                            _timer.Start();
+                            timer = new System.Timers.Timer(processingTimeoutMs);
+                            timer.Elapsed += _OnTimedEvent!;
+                            timer.AutoReset = false;
+                            timer.Enabled = true;
+                            timer.Start();
                         }
 
                         _OnStatusChanged();
@@ -185,17 +192,17 @@ namespace Grumpy.StatePatternFramework
 
         protected void _OnTimedEvent(Object source, ElapsedEventArgs e) {
             
-            lock (_stateLock) {         
+            lock (stateLock) {         
 
-                if ((_currentState & CommandState.Processed) != 0) {
+                if ((currentState & CommandState.Processed) != 0) {
 
-                    _currentState = CommandState.Timeout;
+                    currentState = CommandState.Timeout;
                 }
             }
 
-            _timer?.Stop();
-            _timer?.Dispose();
-            _timer = null;
+            timer?.Stop();
+            timer?.Dispose();
+            timer = null;
         }
 
         protected virtual void _OnStatusChanged(object? arguments = null) {
@@ -204,7 +211,7 @@ namespace Grumpy.StatePatternFramework
             if ((handler != null) && (State != CommandState.Created)) {
 
                 var args = new CommandStateChangedEventArgs(status: State, 
-                    commandType: CommandType,
+                    commandType: Type,
                     arguments: arguments);
 
                 handler.Invoke(this, args);
@@ -212,7 +219,5 @@ namespace Grumpy.StatePatternFramework
         }
 
         ~CommandBase() => Dispose();
-
-
     }
 }

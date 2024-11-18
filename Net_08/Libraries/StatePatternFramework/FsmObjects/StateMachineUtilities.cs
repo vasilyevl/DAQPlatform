@@ -4,43 +4,43 @@ namespace Grumpy.StatePatternFramework.FsmObjects
 {
     public static class StateMachineUtilities
     {
-        static readonly Dictionary<IOResults, StateExecutionResult>
+        static readonly Dictionary<Results, StateResult>
             _ioResultToStateStatus =
-                new Dictionary<IOResults, StateExecutionResult>()
+                new Dictionary<Results, StateResult>()
         {
-            { IOResults.Success, StateExecutionResult.Completed },
-            { IOResults.Error, StateExecutionResult.Error },
-            { IOResults.Cancelled, StateExecutionResult.Completed },
-            { IOResults.Warning, StateExecutionResult.Completed }
+            { Results.Success, StateResult.Completed },
+            { Results.Error, StateResult.Error },
+            { Results.Cancelled, StateResult.Completed },
+            { Results.Warning, StateResult.Completed }
         };
 
-        public static StateExecutionResult FromIOResult(IOResults result) {
+        public static StateResult FromIOResult(Results result) {
 
             if (_ioResultToStateStatus.ContainsKey(result)) {
                 return _ioResultToStateStatus[result];
             }
             else {
-                return StateExecutionResult.NotAvailable;
+                return StateResult.NotAvailable;
             }
         }
 
-        private static readonly Dictionary<CommandState, StateExecutionResult>
+        private static readonly Dictionary<CommandState, StateResult>
         _commandStatusToStateStatus =
-            new Dictionary<CommandState, StateExecutionResult>()
+            new Dictionary<CommandState, StateResult>()
 {
-                {CommandState.Success, StateExecutionResult.Completed},
-                {CommandState.Ignored, StateExecutionResult.Completed},
-                {CommandState.Rejected, StateExecutionResult.Completed},
-                {CommandState.Failed, StateExecutionResult.Error},
-                {CommandState.Timeout, StateExecutionResult.Error},
+                {CommandState.Success, StateResult.Completed},
+                {CommandState.Ignored, StateResult.Completed},
+                {CommandState.Rejected, StateResult.Completed},
+                {CommandState.Failed, StateResult.Error},
+                {CommandState.Timeout, StateResult.Error},
             };
 
-        public static StateExecutionResult FromCommandStatus(CommandState status) {
+        public static StateResult FromCommandStatus(CommandState status) {
             if (_commandStatusToStateStatus.ContainsKey(status)) {
                 return _commandStatusToStateStatus[status];
             }
             else {
-                return StateExecutionResult.NotAvailable;
+                return StateResult.NotAvailable;
             }
         }
     }

@@ -30,13 +30,13 @@ namespace Grumpy.StatePatternFramework
                 base(message, innerException) { }
     }
 
-    public class CommandQueue:BasicQueue<CommandBase>
+    public class CommandQueue: BasicQueue<CommandBase>
     {
-        public const int MaxQueueLength = 127;
+        private const int DeafaultQueueLength = 127;
 
-        public CommandQueue(int capacity = MaxQueueLength): base(capacity) {
+        public CommandQueue(int capacity = DeafaultQueueLength): base(capacity) {
 
-            MaxDepth = capacity;
+            Depth = capacity;
         }
 
         public event EventHandler? CommandAdded;
@@ -45,7 +45,7 @@ namespace Grumpy.StatePatternFramework
 
         public override bool Push(CommandBase cmd, bool force = false) {
      
-            if ((MaxDepth < 0) || (Count < MaxDepth)) {
+            if ((Depth < 0) || (Count < Depth)) {
 
                 try {
 
@@ -83,7 +83,7 @@ namespace Grumpy.StatePatternFramework
                     CommandQueueEnueueException ex =
                         new CommandQueueEnueueException(
                             $"Exception while adding command " +
-                            $"{cmd.CommandType}", e);
+                            $"{cmd.Type}", e);
 
                     OnCommandAdded(cmd, cmd.State, ex);
                     
@@ -97,8 +97,8 @@ namespace Grumpy.StatePatternFramework
                 CommandQueueEnueueException ex =
                     new CommandQueueEnueueException(
                         $"Exception while adding command " +
-                        $"{cmd.CommandType}. " +
-                        $"Queue at capacity {MaxDepth}");
+                        $"{cmd.Type}. " +
+                        $"Queue at capacity {Depth}");
 
                 OnCommandAdded(cmd, cmd.State, ex);
 
@@ -115,7 +115,7 @@ namespace Grumpy.StatePatternFramework
                 var eventListeners = CommandAdded.GetInvocationList();
 
                 var args = 
-                    new CommandAddedEventArgs(cmd.CommandType, state, e);
+                    new CommandAddedEventArgs(cmd.Type, state, e);
 
                 foreach (var listener in eventListeners) {
 

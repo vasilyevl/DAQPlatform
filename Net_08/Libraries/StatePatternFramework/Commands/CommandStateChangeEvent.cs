@@ -42,7 +42,7 @@ namespace Grumpy.StatePatternFramework
         public CommandStateChangedEventArgs(ICommandState cmd) : base() {
 
             NewState = cmd.State;
-            CommandType = cmd.CommandType;
+            CommandType = cmd.Type;
         }
 
         public CommandState NewState { get; private set; }

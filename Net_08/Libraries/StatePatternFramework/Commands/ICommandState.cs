@@ -22,8 +22,8 @@ namespace Grumpy.StatePatternFramework
 {
     public interface ICommandState
     {
-        long CommandID { get; }
-        CommandTypeBase CommandType { get; }
+        long ID { get; }
+        CommandTypeBase Type { get; }
         CommandState State { get; }
         bool HasArguments { get; }
         bool ProcessingComplete { get; }

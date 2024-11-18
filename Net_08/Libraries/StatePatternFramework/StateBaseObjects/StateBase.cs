@@ -26,13 +26,13 @@ namespace Grumpy.StatePatternFramework
 {
     public class IOResultToFsmStatusException: ArgumentException
     {
-        public IOResultToFsmStatusException( string description, IOResults r) :
-                        base(description)
+        public IOResultToFsmStatusException( 
+            string description, Results r) : base(description)
         {
             IoResult = r;
         }
 
-        public IOResults IoResult {
+        public Results IoResult {
             get;
             private set;
         }
@@ -50,7 +50,7 @@ namespace Grumpy.StatePatternFramework
 
         protected object _contextLock;
 
-        private volatile StateExecutionResult _exequtionResult;
+        private volatile StateResult _exequtionResult;
 
         private int _periodMs;
         private int _minPeriodMs;
@@ -63,7 +63,7 @@ namespace Grumpy.StatePatternFramework
             PeriodMS = (period < InfiniteTimeout) ? InfiniteTimeout :
                 (period < MinTimeoutLimitMs) ? MinTimeoutLimitMs : period;
 
-            Result = StateExecutionResult.Working;
+            Result = StateResult.Working;
             _contextLock = new object();
             _id = en;
 
@@ -115,7 +115,7 @@ namespace Grumpy.StatePatternFramework
                                     Math.Max(value, MinTimeoutLimitMs);
         }
 
-        public bool IsActive => Result == StateExecutionResult.Working;
+        public bool IsActive => Result == StateResult.Working;
 
         public bool Equals(StateBase? other) {
             if (other is null)
@@ -162,7 +162,7 @@ namespace Grumpy.StatePatternFramework
         }
 
         private object _stateResultLock = new object();
-        public StateExecutionResult Result {
+        public StateResult Result {
             get {
                 lock (_stateResultLock) {
                     return _exequtionResult;
@@ -176,7 +176,7 @@ namespace Grumpy.StatePatternFramework
             }
         }
 
-        internal void ActivateState() => Result = StateExecutionResult.Working;
+        internal void ActivateState() => Result = StateResult.Working;
 
         public virtual void Enter() { }
 

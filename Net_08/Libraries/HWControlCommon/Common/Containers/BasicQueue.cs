@@ -106,7 +106,7 @@ namespace Grumpy.DAQFramework.Common
         }
 
         public virtual bool Push(TObject obj, bool force = false) {
-            lock (_queueLock) {
+            lock (queueLock) {
 
                 return _Push(obj, force);
             }
@@ -114,13 +114,13 @@ namespace Grumpy.DAQFramework.Common
 
         protected bool _Push(TObject obj, bool force = false) {
            
-            if (_queue == null) {
+            if (queue == null) {
                 return false;
             }
 
             if (force) {
                 if (_MakeRoom(1, out int itemsRemoved)) {
-                    _queue.Enqueue(obj);
+                    queue.Enqueue(obj);
                     _lostItemsCount += itemsRemoved;
                     return true;
                 }

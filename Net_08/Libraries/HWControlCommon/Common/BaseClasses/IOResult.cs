@@ -21,7 +21,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace Grumpy.DAQFramework.Common
 {
     [Flags]
-    public enum IOResults
+    public enum Results
     {
         NA = 0,
         Success = 1,

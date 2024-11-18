@@ -42,7 +42,7 @@ namespace Grumpy.DAQFramework.Drivers.SerialInterface
         protected const int TerminatorMissingError = -5;
         protected const int RxTxFlushError = -6;
         protected const int SendError = -7;
-        private IOResults _IOResult;
+        private Results _IOResult;
         private SerialPortConfiguration? _portConfig;
         private PortState _state;
         private Prts.SerialPort? _serialPort;
@@ -63,11 +63,11 @@ namespace Grumpy.DAQFramework.Drivers.SerialInterface
             _portConfig = null;
             State = PortState.Loaded;
             _errorStack = ErrorHistory.Create();
-            LastIOResult = IOResults.NA;
+            LastIOResult = Results.NA;
         }
 
         object IOResultLock = new object();
-        public IOResults LastIOResult {
+        public Results LastIOResult {
             get {
                 lock (IOResultLock) {
                     return _IOResult;
@@ -157,7 +157,7 @@ namespace Grumpy.DAQFramework.Drivers.SerialInterface
                     
                         _logger.Warning($"Serial Interface Driver Connect():" +
                             $" port is already connected. Request ignored.");
-                        LastIOResult = IOResults.Ignored;
+                        LastIOResult = Results.Ignored;
                         break;
 
                     case (PortState.Loaded):
@@ -169,29 +169,29 @@ namespace Grumpy.DAQFramework.Drivers.SerialInterface
                         _errorStack?.Push(
                             LogRecord.CreateErrorRecord(nameof(Open), err));
 
-                        LastIOResult = IOResults.NotReady;
+                        LastIOResult = Results.NotReady;
                         break;
 
                     case (PortState.Configured):
 
-                        LastIOResult = _OpenPort() ? IOResults.Success : IOResults.Error;
+                        LastIOResult = _OpenPort() ? Results.Success : Results.Error;
                         break;
 
                     case (PortState.Error):
                         
                         _Disconnect();
                         State = PortState.Configured;
-                        LastIOResult = _OpenPort() ? IOResults.Success : IOResults.Error;
+                        LastIOResult = _OpenPort() ? Results.Success : Results.Error;
                         break;
 
                     default:
                         _logger.Warning($"Serial Interface Driver " +
                             $"Connect(): Operation is not supported " +
                             $"in this state: {State.ToString()}.");
-                        LastIOResult = IOResults.NotReady;
+                        LastIOResult = Results.NotReady;
                         break;
                 }
-                return (LastIOResult & (IOResults.Success | IOResults.Ignored)) != 0;
+                return (LastIOResult & (Results.Success | Results.Ignored)) != 0;
             }
         }
 
@@ -321,7 +321,7 @@ namespace Grumpy.DAQFramework.Drivers.SerialInterface
         private bool _Disconnect() {
 
             if(_serialPort == null) {
-                LastIOResult = IOResults.Ignored;
+                LastIOResult = Results.Ignored;
                 return true;
             }
 
@@ -331,7 +331,7 @@ namespace Grumpy.DAQFramework.Drivers.SerialInterface
 
                     _serialPort.Close();
                     _serialPort.Dispose();
-                    LastIOResult = IOResults.Success;
+                    LastIOResult = Results.Success;
                     State = PortState.Configured;
                     _serialPort = null;
                     return true;
@@ -345,7 +345,7 @@ namespace Grumpy.DAQFramework.Drivers.SerialInterface
                         LogRecord.CreateErrorRecord(
                                             nameof(_Disconnect), err));
                     State = PortState.Error;
-                    LastIOResult = IOResults.Error;
+                    LastIOResult = Results.Error;
                     return false;
                 }
             }
@@ -355,7 +355,7 @@ namespace Grumpy.DAQFramework.Drivers.SerialInterface
             if (_portConfig == null) {
 
                 State = PortState.Loaded;
-                LastIOResult = IOResults.NotReady;
+                LastIOResult = Results.NotReady;
                 return false;
             }
             else {
@@ -368,7 +368,7 @@ namespace Grumpy.DAQFramework.Drivers.SerialInterface
 
                         State = (_portConfig == null) ? 
                                 PortState.Loaded : PortState.Configured;
-                        LastIOResult = IOResults.NotReady;
+                        LastIOResult = Results.NotReady;
                         return true;
 
                     default:
@@ -380,7 +380,7 @@ namespace Grumpy.DAQFramework.Drivers.SerialInterface
                             LogRecord.CreateErrorRecord(
                                         nameof(_Disconnect), err));
                         _logger.Error(err);
-                        LastIOResult = IOResults.NotReady;
+                        LastIOResult = Results.NotReady;
                         return false;
   
                 }

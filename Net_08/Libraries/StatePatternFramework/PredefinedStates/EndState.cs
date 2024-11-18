@@ -29,7 +29,7 @@ namespace Grumpy.StatePatternFramework
 
         public override void StateProc(StateProcArgs args)
         {
-            Result = StateExecutionResult.Completed;
+            Result = StateResult.Completed;
         }
     }
 }

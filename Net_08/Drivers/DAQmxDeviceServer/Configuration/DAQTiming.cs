@@ -27,6 +27,83 @@ using Newtonsoft.Json.Converters;
 
 namespace Grumpy.DAQmxDeviceServer.Configuration
 {
+    [Flags]
+    public enum TriggerTypes
+    {
+        None,
+        Software = 1 << 0,
+        DigitalEdge = 1 << 1,
+        DigitalPattern = 1 << 2,
+        AnalogEdge  = 1 << 3,       
+        AnalogWindowEnter = 1 << 4,
+        AnalogWindowExit = 1 << 5,
+        Handshake = 1 << 6,
+
+        StatrtTrigger = 1 << 16,
+        ArmStartTrigger = 1 << 17,
+        ReferenceTrigger = 1 << 18,
+        AdvanceTrigger = 1 << 19,
+        PauseTrigger = 1 << 20,
+        ExparationTrigger = 1 << 21,
+        Retriggerable = 1 << 22,
+    }
+
+    public class DAQTrigger : ConfigurationBase/*, IEquatable<DAQTrigger>*/ {
+        private string? _source;
+        private TriggerTypes _triggerType;
+        private ActiveEdge _edge;
+        private double _analogTriggerLevel;
+        private double _hysteresis;
+        private double _delay;
+        private double _minimumPulseWidth;
+        private double _retriggerDelay;
+        private int _retriggerCount;
+        private int _retriggerTimeout;
+        private int _retriggerFilterEnable;
+
+
+
+
+
+        public DAQTrigger() : base() {
+            _source = string.Empty;
+            _triggerType = TriggerTypes.None;
+            _edge = ActiveEdge.Rising;
+            _analogTriggerLevel = 0.0;
+            _hysteresis = 0.0;
+            _delay = 0.0;
+            _minimumPulseWidth = 0.0;
+            _retriggerDelay = 0.0;
+            _retriggerCount = 0;
+            _retriggerTimeout = 0;
+            _retriggerFilterEnable = 0;
+        }
+
+        public TriggerTypes TriggerType {
+            get => _triggerType;
+            set => _triggerType = value;
+        }
+
+        public string? Source {
+            get => _source;
+            set => _source = value;
+        }
+
+        public ActiveEdge Edge {
+            get => _edge;
+            set => _edge = value;
+        }
+
+        public double AnalogTriggerLevel {
+            get =>  (TriggerType & TriggerTypes.AnalogEdge) == 0 ? double.NaN  :_analogTriggerLevel;
+            set => _analogTriggerLevel = value;
+        }
+
+        public double Hysteresis {
+            get => _hysteresis;
+            set => _hysteresis = value;
+        }
+    }
     public class DAQTiming: ConfigurationBase, IEquatable<DAQTiming>
     {
         private string? _clockSource;

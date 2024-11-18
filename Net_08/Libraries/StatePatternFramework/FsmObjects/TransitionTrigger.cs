@@ -18,65 +18,59 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+using System.Net.Http.Headers;
+
 namespace Grumpy.StatePatternFramework
 {
     #region Types:
 
+    public delegate bool CustomTransitionCondition();
+
     public class TransitionTrigger : IEquatable<TransitionTrigger>
     {
         protected StateBase _currentState;
-        protected StateExecutionResult _exitStatus;
-
-        public TransitionTrigger(StateBase currentState, StateExecutionResult exitStatus)
+        protected StateResult _exitResult;
+        protected CustomTransitionCondition? _customCondition;
+        public TransitionTrigger(StateBase currentState, 
+            StateResult result,
+            CustomTransitionCondition? customCondition = null)
         {
             _currentState = currentState;
-            _exitStatus = exitStatus;
+            _exitResult = result;
+            _customCondition = customCondition;
         }
 
-        public bool Equals(TransitionTrigger? other)
-        {
-            if (other is null)
-                return false;
-            return (_currentState == other._currentState) && (_exitStatus == other._exitStatus);
-        }
+        public bool Equals(TransitionTrigger? other)=>  
+                (other is not null)
+                && (_currentState == other._currentState)
+                && (_exitResult == other._exitResult)
+                && (ReferenceEquals(_customCondition, other._customCondition));
 
-        public override bool Equals(object? obj)
-        {
-            if (obj is null)
-                return false;
-
-            TransitionTrigger? tr = obj as TransitionTrigger;
-
-            if (tr is null)
-                return false;
-
-            return ((this._currentState == tr._currentState) && (this._exitStatus == tr._exitStatus));
-        }
+        public override bool Equals(object? obj) => 
+            (obj is not null) && Equals(obj as TransitionTrigger);
 
         public static bool operator == ( TransitionTrigger a, TransitionTrigger b)
         {
-            if (a is null)
-                return false;
-
-            return a.Equals(b);
+            return ((a is null) && (b is null)) ||
+                ((a is not null) && a.Equals(b));
         }
 
         public static bool operator != ( TransitionTrigger a, TransitionTrigger b)
         {
-            if (a is null)
-                return true;
-
-            return (!a.Equals(b));
+            return !((a is null) && (b is null)) ||
+                   ((a is not null) && (b is null)) ||
+                   ((a is null) && (b is not null)) ||
+                   !a.Equals(b);
         }
 
         public override int GetHashCode()
         {
-            int hashcode = _currentState.Name.GetHashCode() + _exitStatus.GetHashCode();
+            int hashcode = _currentState.Name.GetHashCode() + _exitResult.GetHashCode();
             return hashcode;
         }
 
         public StateBase CurrentState { get { return _currentState; } }
-        public StateExecutionResult Status { get { return _exitStatus; } }
+        public StateResult Status { get { return _exitResult; } }
 
         public override string ToString()
         {

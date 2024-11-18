@@ -21,8 +21,8 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 using Grumpy.DAQFramework.Common;
 
 using Microsoft.Extensions.Logging;
-
 using System.Runtime.CompilerServices;
+using System.Xml.Linq;
 
 namespace Grumpy.StatePatternFramework
 {
@@ -30,11 +30,13 @@ namespace Grumpy.StatePatternFramework
     public enum IdlingResult
     {
         NA = 0,
-        IdlingInterrupted = 1,
-        CommandPending = 2,
-        Tick = 4,
-        Timeout = 8,
-        ContineousRun = 16
+        IdlingInterrupted = 1 << 0,
+        CommandPending = 1 << 1,
+        Tick = 1 << 2,
+        Timeout = 1 << 3,
+        ContineousRun = 1 << 4,
+        Any = IdlingInterrupted | CommandPending 
+            | Tick | Timeout | ContineousRun
     }
 
     public class StateChangeEventArgs : EventArgs {
@@ -72,23 +74,22 @@ namespace Grumpy.StatePatternFramework
                                                  StateChangeEventArgs e);
     public class StateMachineBase
     {
-        protected ILogger? _logger = null;
-
-        protected const int EngineStartTimeout = 50;
-        protected const int EngineStartPeriodMs = 1;
-        protected const int DefaultWorkerTerminationTimeoutMs = 5000;
-        protected const int _StateHistoryDepth = 32;
+        protected const int EngineStartTimeout = 100;
+        protected const int EngineStartCheckPeriodMs = 15;
+        protected const int DefaultWorkerTerminationTimeoutMs = 10000;
+        protected const int HistoryDepth = 128;
+        protected const int DefaultCommandQueueCapacity = 256;
 
         #region Members
-
-        protected StackBase<StateBase>? _statesHistory;
+        protected ILogger? _logger = null;
+        protected StackBase<StateBase>? _history;
         protected StateTransitionManager _transitionManager;
-        // FSM thread.
+        
         protected Thread? _workerThread;                 
-        AutoResetEvent? _fsmWorkerResetEvent;
+        AutoResetEvent? _workerResetEvent;
         protected object _workerLock;
 
-        private CancellationTokenSource? _threadCts;
+        private CancellationTokenSource? _cts;
 
         private Timer? _idlingTimer;
         // Maximum time it took to Execute any of the states in FSMPrdMs. 
@@ -108,7 +109,9 @@ namespace Grumpy.StatePatternFramework
 
         private object _carrentStateLock;
         private StateBase? _currentState;
-        public StateQueue StateQueue { get; protected set; }
+
+        private CommandQueue _pendingCommands;
+
         #endregion Members
 
         public event StateChangeEventHandler? StateChangeEvent;
@@ -116,11 +119,13 @@ namespace Grumpy.StatePatternFramework
         #region Constructors:
         /// <summary> Constructor with Name only  as a parameter. 
         ///  </summary>Such device will be considered independent or master.
-        public StateMachineBase(string name, bool logTransitions = false, 
-                       ILogger? logger = null)
-        {
-            Name = name;        
-            _logger = logger;
+        public StateMachineBase(string? name,
+            bool logTransitions = false, 
+            ILogger? logger = null) {
+
+            Name = name ?? string.Empty;
+            this._logger = logger;
+
             _carrentStateLock = new object();
             _idlingCallBackLock = new object();
             _workerLock = new object();
@@ -133,96 +138,114 @@ namespace Grumpy.StatePatternFramework
             _lastIdlingResult = IdlingResult.NA;
             _timerFired = false;
 
-            _threadCts = new CancellationTokenSource();           
-            _transitionManager = new StateTransitionManager();
+            _cts = new CancellationTokenSource();
+
+            _transitionManager =
+                new StateTransitionManager();
 
             LogTransitions = logTransitions;
             StateQueue = new StateQueue();
 
-            _fsmWorkerResetEvent = null;
+            _workerResetEvent = null;
+            _pendingCommands =
+                new CommandQueue(DefaultCommandQueueCapacity);
 
-            _InitFSM();
+            _stateLock = new object();
+            _carrentStateLock = new object();
+            _transitionManager = new StateTransitionManager();
 
-            // This virtual method adds custom states to the dictionary
-            // and defines transitions.
+            States = [];
+
+            AddState(new StartState(this));
+            // These dummy states used for state machine stopping.
+            AddState(new EndState(this));
+            AddState(new StopState(this));
+            CurrentState = States[StateIDBase.Start];
+            _history = new StackBase<StateBase>(HistoryDepth);
+
             try {
-
-                InitFSM();
+                // Add user states and transitions.
+                InitStateMachine();
             }
             catch (Exception ex) {
 
-                string msg = $"FSM \"{Name}\". InitFSM() call failed. " +
-                    $"Check Transition table. Exception: {ex.Message}";
-                _logger?.LogError(msg);
+                string msg = $"State machine \"{Name}\". " +
+                    $"Failed to add user defined states and transitions. " +
+                    $"Exception: {ex.Message}";
+
+                logger?.LogError(msg);
+
                 throw new Exception(msg);
             }
         }
 
-        public string Name { get; set; }
+        public StateQueue StateQueue { 
+            get; 
+            protected set; 
+        }
+
+        public string Name { 
+            get; 
+            private set; 
+        }
+
         public bool InStateSequence => StateQueue.Count > 0;
+
 
         public StateBase? CurrentState {
             get {
                 lock (_carrentStateLock) {
-
                     return _currentState;
                 }
             }
             protected set {
                 lock (_carrentStateLock) {
-
                     _currentState = value;
                 }
             }
         }
         #endregion //Constructors:
 
-        private void _InitFSM() { 
-                        
-            _stateLock = new object ();
-            _carrentStateLock = new object ();
-            _transitionManager = new StateTransitionManager();
+        virtual public void InitStateMachine() { }
 
-            States = [];
-            // The first state always:
-            AddState(new StartState(this));
-            // These dummy states used FSM stopping.
-            AddState(new EndState(this));
-            AddState(new StopState(this));
-            CurrentState = States[StateIDBase.Start];
-            _statesHistory = new StackBase<StateBase>(_StateHistoryDepth);
-        }
+        public bool CommandPending => 
+                (_pendingCommands?.Count ?? 0) > 0;
 
-        virtual public void InitFSM() { }
 
-        virtual public bool CommandPending => false;
+
+        public bool PurgeCommands() => _pendingCommands?.Purge() ?? true;
+
 
         #region Public Properties:
+
+        public bool CanAddCommand =>
+            (_pendingCommands?.Count ?? 0) < 
+                    (_pendingCommands?.Depth ?? -1);
+
         public StateLibrary? States {
-            get; private set;
+            get; 
+            private set;
         }
 
-        public bool LogTransitions { get; set;  }
+        public bool LogTransitions { 
+            get; 
+            set;  
+        }
 
-        /// <summary> True if FSM worker thread is alive 
-        /// (not terminated or aborted).
-        /// </summary>
-        public bool FsmIsRunning => 
+        public bool IsRunning => 
             _workerThread?.IsAlive ?? false;  
 
-        public bool WorkerIsPaused => 
-            (_workerThread != null) ? 
-                _workerThread.ThreadState == ThreadState.WaitSleepJoin :
-                false;
+        public bool IsPaused =>
+            (_workerThread != null) 
+            && _workerThread.ThreadState == ThreadState.WaitSleepJoin;
 
-        public bool FsmIsSuspended => 
-            (_workerThread != null) ? 
-                _workerThread.ThreadState == ThreadState.Suspended :
-                false;
+        public bool IsSuspended =>
+            (_workerThread != null) 
+            && _workerThread.ThreadState == ThreadState.Suspended;
 
-        public void ResetMaxTimeRecord() => _maxStateExecutionTime = 0;
+        
 
-        public long MaxExecTime {
+        public long MaxSTateExecutionTime {
 
             get => _maxStateExecutionTime;
             protected set => _maxStateExecutionTime = 0;   
@@ -230,31 +253,39 @@ namespace Grumpy.StatePatternFramework
 
         public long NumberOfMissedTicks {
 
-            get =>(_missedTriggerCounter); 
+            get => _missedTriggerCounter; 
             protected set => _missedTriggerCounter = value;
         }
 
+        public bool MissedTicks => _missedTriggerCounter > 0;
+
         public StateTransitionManager? TransitionManager => 
                                             _transitionManager;
-        
-        public bool MissedTicks => _missedTriggerCounter > 0; 
+
+
         #endregion // Public Properties:
 
-        #region Protected Methods       
+        #region Protected Methods   
+
+        protected CommandBase? PopCommand() =>
+            (_pendingCommands?.TryDequeue(out CommandBase? cmd) ?? false)
+            ? cmd
+            : null;
+
+        protected bool EnqueueCommand(CommandBase cmd) =>
+            (_pendingCommands?.TryEnqueue(cmd) ?? false);
+
+
         protected int AddState(StateBase state)
         {
-            if( States == null) {
-
-                States = new StateLibrary();
-            }
+            if( States == null) { States = [];}
 
             if (States.ContainsKey(state.ID)) {
 
-                string err = $"FSM \"{Name}\". Failed to add state " +
-                    $"{state.Name} to the list";
+                string err = $"State Machine \"{Name}\". Failed to " +
+                    $"add state {state.Name} to the list";
 
-                _logger?.LogError(err);
-                
+                _logger?.LogError(err);               
                 throw new Exception(err);
             }
 
@@ -269,16 +300,16 @@ namespace Grumpy.StatePatternFramework
             
             foreach (StateBase st in states) {
             
-                try {
-                
+                try {               
                     statesAdded = AddState(st);
                 }
                 catch (Exception fsmEx) {
 
                     errCntr++;
 
-                    var msg = $"FSM \"{Name}\". Failed to add state " +
-                    $"{st.Name} to the list. Exception: {fsmEx.Message}";
+                    string msg = $"State machine \"{Name}\". " +
+                        $"Failed to add state {st.Name} to the list. " +
+                        $"Exception: {fsmEx.Message}";
 
                     _logger?.LogError(msg);
 
@@ -313,12 +344,12 @@ namespace Grumpy.StatePatternFramework
                     }
                 }
                 else {
-                    // "Stop" is a special state, which FSM machine might not need to switch to.
-                    // It can simply stop FSM engine when switch to "Stop" requested.
+                    // "Stop" is a special dummy state which indicates to the
+                    // state machine that "Stop" requested.
                     if (!newState.Name.Equals("Stop", 
                                     StringComparison.OrdinalIgnoreCase)) {
 
-                        throw new Exception($"FSM \"{Name}\". " +
+                        throw new Exception($"State machine \"{Name}\". " +
                             $"RaiseStateChangeEvent(). State {newState} " +
                             $"not registered.");
                     }
@@ -326,6 +357,7 @@ namespace Grumpy.StatePatternFramework
             }
         }
         #endregion Protected Methods
+
 
         #region Public Methods:
         public bool GetState(string name, ref StateBase? st)
@@ -340,28 +372,27 @@ namespace Grumpy.StatePatternFramework
             return st is not null;
         }
 
-        public StackBase<StateBase>? HistoryStack => _statesHistory;
-
         public List<StateBase> StateHistory => 
-            _statesHistory?.PeekAllAsList() ?? new List<StateBase>();
+            _history?.PeekAllAsList() ?? new List<StateBase>();
 
         public StateBase? PreviousState => 
-            _statesHistory?.Peek(out StateBase? last) ?? false? last : null;
+            _history?.Peek(out StateBase? last) ?? false? last : null;
 
-        private void _IntitNewState(StateBase nextState)
+        private void IntitNextState(StateBase nextState)
         {
             if (nextState is null) {
 
-                throw new NullReferenceException($"New state is not " +
-                    $"selectcted. FSM \"{Name}\", Current " +
-                    $"state {CurrentState?.Name}");
+                throw new NullReferenceException(
+                    $"State machine \"{Name}\". " +
+                    $"New state is not selectcted. " +
+                    $"Current state {CurrentState?.Name}");
             }
             
             _idlingTimer?.Dispose();
             
             if (CurrentState is not null) {
 
-                HistoryStack?.Push(CurrentState, force: true);
+                _history?.Push(CurrentState, force: true);
             }
             
             CurrentState = nextState;
@@ -373,24 +404,23 @@ namespace Grumpy.StatePatternFramework
                 if (CurrentState.TimeoutIsInfinite || 
                     CurrentState.UsesWatchDog) {
 
-                    _fsmWorkerResetEvent = 
+                    _workerResetEvent = 
                         new AutoResetEvent(initialState: false);
                 }
                 else {
-                    _fsmWorkerResetEvent?.Close();
-                    _fsmWorkerResetEvent = null;
+                    _workerResetEvent?.Close();
+                    _workerResetEvent = null;
                 }
             }
 
             if (CurrentState.UsesWatchDog) {
                 _idlingTimer = 
-                    new Timer(_IdlingWakeUpCallBack!, null, 
+                    new Timer(IdlingWakeUpCallBack!, null, 
                               CurrentState.PeriodMS, CurrentState.PeriodMS);
             }
         }
 
-
-        public void _IdlingWakeUpCallBack(object info)
+        public void IdlingWakeUpCallBack(object info)
         {
             bool lockTaken = false;
 
@@ -402,22 +432,23 @@ namespace Grumpy.StatePatternFramework
 
                     lock (_workerLock) {
                         // Resume thread if paused.
-                        if (FsmIsRunning && WorkerIsPaused) {
+                        if (IsRunning && IsPaused) {
                             _timerFired = true;
-                            _fsmWorkerResetEvent?.Set();
+                            _workerResetEvent?.Set();
                         }
                     }
                 }
                 else {
                     _missedTriggerCounter++;
-                    _logger?.LogDebug($" FSM \"{Name}\": Watchdog timer " +
-                        $"failed to enter callback.");
+                    _logger?.LogDebug($"State machine \"{Name}\": " +
+                        $"Watchdog timer failed to enter callback.");
                 }
             }
             catch(Exception e) {
                 
                 _missedTriggerCounter++;
-                _logger?.LogWarning($"FSM \"{Name}\". _IdlingWakeUp() exception: {e.Message}");
+                _logger?.LogWarning($"FSM \"{Name}\". IdlingWakeUp() " +
+                    $"exception: {e.Message}");
             }
             finally {
                 
@@ -428,24 +459,26 @@ namespace Grumpy.StatePatternFramework
             }
         }
 
-        private bool _KeepGoing() => !(_threadCts?.Token.IsCancellationRequested ?? false) &&
-                                     CurrentState is not null &&
-                                     CurrentState.Name != "Stop" &&
-                                     CurrentState.Name != "End";
+        private bool CouldContinue() => 
+            !(_cts?.Token.IsCancellationRequested ?? false) 
+            && CurrentState is not null 
+            && CurrentState.ID != StateIDBase.Stop 
+            && CurrentState.ID != StateIDBase.End;
 
-        protected virtual void _FSMEngine()
+        protected virtual void Engine()
         {
             // Reset timeout marker.
             _engineTimeOutClock = DateTime.Now.Ticks;
 
             if (CurrentState is null) {
 
-                string msg = $"FSM \"{Name}\" failed to start. " +
+                string msg = $"State machine \"{Name}\" " +
+                    $"failed to start. " +
                     $"Intial state is not set.";
+
                 _logger?.LogError(msg);
 
                 if (_logger is null) {
-
                     throw new Exception(msg);
                 }
 
@@ -455,44 +488,43 @@ namespace Grumpy.StatePatternFramework
             //Enter Imnitial state...  
             CurrentState.Enter();
 
-            _logger?.LogInformation($"FSM \"{Name}\" engine started. " +
-                $"{CurrentState.Name} initial state entered.");
+            _logger?.LogInformation($"State machine " +
+                $"\"{Name}\" engine started. ");
 
             _lastIdlingResult = IdlingResult.NA;
 
-            while (_KeepGoing()) { 
+            while (CouldContinue()) { 
 
                 while (CurrentState.IsActive) {
 
                     CurrentState.StateProc(
-                                new StateProcArgs(_lastIdlingResult) );
+                        new StateProcArgs(_lastIdlingResult) );
                    
                     if (CurrentState.IsActive) {
 
                         _lastIdlingResult = 
                             CurrentState.UsesIdling ? 
-                                _Idling() : 
+                                Idling() : 
                                 IdlingResult.ContineousRun;
                     }
 
-                    if (_threadCts?.Token.IsCancellationRequested ?? false) {
+                    if (_cts?.Token.IsCancellationRequested ?? false) {
 
-                        _logger?.LogWarning($"FSM \"{Name}\" " +
-                            $"cancellation requested. " +
-                            $"Exitting FSM thread worker.");
+                        _logger?.LogWarning($"State machine \"{Name}\" " +
+                            $"cancellation requested.");
                         return;
                     }
                 }
 
-                _DisarmIdlingTimer();
+                DisarmIdlingTimer();
 
                 CurrentState.Exit();
                 
-                if (_SelectNextState(out StateBase? nextState) 
+                if (SelectNextState(out StateBase? nextState) 
                     && nextState is not null) {
 
                     EnumBase previousStateID = CurrentState.ID;
-                    _IntitNewState(nextState);
+                    IntitNextState(nextState);
                     RaiseStateChangeEvent(CurrentState.ID, previousStateID);
                 }
                 else {
@@ -500,11 +532,11 @@ namespace Grumpy.StatePatternFramework
                     break;
                 }
             }          
-            _logger?.LogInformation($"Stopping {Name}  FSM Engine.");
+            _logger?.LogInformation($"State machine \"{Name}\" stopping engine.");
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void _DisarmIdlingTimer()
+        private void DisarmIdlingTimer()
         {
             try {
 
@@ -525,9 +557,9 @@ namespace Grumpy.StatePatternFramework
             }
         }
 
-        private bool _SelectNextState(out StateBase? nextState)
+        private bool SelectNextState(out StateBase? nextState)
         {
-            if (StateQueue is not null && StateQueue.Count > 0) {
+            if ((StateQueue?.Count ?? 0) > 0) {
 
                 StateQueue.TryDequeue(out nextState);
 
@@ -603,22 +635,16 @@ namespace Grumpy.StatePatternFramework
 
             return nextState is not null;
         }
-    
+
         virtual protected bool CustomTransitionHandler(
                                     out StateBase? nextState)
         {
             nextState = null;
-            
-            if (StateQueue.Count > 0) {
-
-                StateQueue.TryDequeue(out nextState);
-            }
-            
             return (nextState is not null);
         }
 
         public int AddTransitions( List<Tuple<StateBase, 
-                                   StateExecutionResult, 
+                                   StateResult, 
                                    StateBase>> transitions)
         {
             foreach (var item in transitions) {
@@ -630,7 +656,7 @@ namespace Grumpy.StatePatternFramework
         }
 
         public bool AddTransition ( string currentState, 
-                                    StateExecutionResult status, 
+                                    StateResult status, 
                                     string nextState)
         {
             string error = String.Empty;
@@ -724,7 +750,7 @@ namespace Grumpy.StatePatternFramework
         }
 
         public bool AddTransition(StateIDBase currentState,
-                                  StateExecutionResult status, 
+                                  StateResult status, 
                                   StateIDBase nextState)
         {
             if (_transitionManager is null) {
@@ -823,7 +849,7 @@ namespace Grumpy.StatePatternFramework
         }
 
         public int AddTransition( StateBase currentState, 
-                                  StateExecutionResult status, 
+                                  StateResult status, 
                                   StateBase nextState)
         {
             if( _transitionManager is null) {
@@ -879,34 +905,31 @@ namespace Grumpy.StatePatternFramework
             return _transitionManager?.Count ?? 0;
         }
 
-        ///<summary> This function starts FSM. Is executed in the 
-        ///same thread where TauDevice object created. 
-        /// 
-        ///</summary>
-        public bool StartFSMEngine()
+
+        public bool StartEngine()
         {
             // If there is no thread or it is not alive.
-            _logger?.LogDebug($"FSM \"{Name}\" engine: starting.");
+            _logger?.LogDebug($"State machine \"{Name}\" engine: starting.");
 
             if ((_workerThread != null) && (_workerThread.IsAlive)) {
 
-                _logger?.LogDebug($"FSM \"{Name}\". " +
+                _logger?.LogDebug($"State machine \"{Name}\". " +
                     $"Request to start ignored. " +
                     $"Worker thread is already running.");
 
                 return true;  // already running.
             }
 
-            _logger?.LogDebug($"FSM \"{Name}\" Engine: " +
+            _logger?.LogDebug($"State machine \"{Name}\" Engine: " +
                                 $"starting new worker thread.");
 
             try {
 
-                _threadCts = new CancellationTokenSource();
-                _workerThread = new Thread(_FSMEngine);  
+                _cts = new CancellationTokenSource();
+                _workerThread = new Thread(Engine);  
                 _workerThread.Start(); 
 
-                if (_VerifyThreadRuns()) {
+                if (EngineThreadIsRunning()) {
 
                     _logger?.LogInformation($"FSM \"{Name}\" " +
                         $"Engine: worker thread has started.");
@@ -946,44 +969,34 @@ namespace Grumpy.StatePatternFramework
             }
         }
 
-        private bool _VerifyThreadRuns()
+        private bool EngineThreadIsRunning()
         {
-            int counter = 0;
-            
-            for (int i = EngineStartTimeout; i > 0; i -= EngineStartPeriodMs) {
+            for (int i = EngineStartTimeout/EngineStartCheckPeriodMs; i >= 0; i--) {
 
-                counter = i;
-
-                if (FsmIsRunning) {
-                
-                    break;
-                }
-
-                Thread.Sleep(EngineStartPeriodMs);
+                if (IsRunning) { return true; }
+                Thread.Sleep(EngineStartCheckPeriodMs);
             }
 
-            return (counter >= 0);
+            return false;
         }
 
-        private IdlingResult _Idling()
+        private IdlingResult Idling()
         {
-            if (CommandPending) {
-
-                return IdlingResult.CommandPending;
+            if (CommandPending) { 
+                return IdlingResult.CommandPending; 
             }
 
-            if (_fsmWorkerResetEvent == null) {
-
+            if (_workerResetEvent == null) { 
                 return IdlingResult.ContineousRun;
             }
 
-            if( _threadCts != null 
-                && _threadCts.Token.IsCancellationRequested) {
+            if( _cts != null 
+                && _cts.Token.IsCancellationRequested) {
 
                 return IdlingResult.IdlingInterrupted;
             }
 
-            _fsmWorkerResetEvent.WaitOne();
+            _workerResetEvent.WaitOne();
 
             lock (_workerLock) {
 
@@ -994,7 +1007,6 @@ namespace Grumpy.StatePatternFramework
                             IdlingResult.IdlingInterrupted;
 
                 _timerFired = false;
-
                 return r;
             }
         }
@@ -1022,15 +1034,16 @@ namespace Grumpy.StatePatternFramework
                 if ((_workerThread == null) ||
                      (_workerThread.ThreadState == ThreadState.Unstarted)) {
                     
-                    _logger?.LogWarning($"FSM \"{Name}\": an attempt " +
-                        $"to resume nonexisting or unstarted worker thread.");
+                    _logger?.LogWarning($"State machine \"{Name}\": " +
+                        $"an attempt to resume nonexisting or " +
+                        $"unstarted worker thread.");
 
                     return false;
                 }
 
                 if (_workerThread.ThreadState == ThreadState.WaitSleepJoin) {
 
-                    _fsmWorkerResetEvent?.Set();
+                    _workerResetEvent?.Set();
                 }
 
                 return true;
@@ -1041,42 +1054,38 @@ namespace Grumpy.StatePatternFramework
         {
             try {
 
-                if(_threadCts is null) {
-
-                    _threadCts = new CancellationTokenSource();
-                }
-
-                _threadCts?.Cancel();
+                _cts ??= new CancellationTokenSource();
+                _cts.Cancel();
                 _workerThread?.Join();
-
                 return true;
             } 
             catch (ThreadAbortException e) {
 
-                _logger?.LogInformation($"FSM \"{Name}\" worker thread " +
+                _logger?.LogInformation($"State machine \"{Name}\" " +
+                    $"worker thread " +
                     $"aborted. {e.Message}");
 
                 return true;
             }
             catch (Exception e) {
 
-                String error = $"FSM \"{Name}\" worker thread abort " +
+                String error = $"State machine \"{Name}\" " +
+                    $"worker thread abort " +
                     $"error. {e.Message}";
 
                 if(_logger is null) {
-
                     throw new Exception(error);
                 }
                 else {
-
                     _logger.LogError(error);
                     return false;
                 }               
             }
         }
 
-        public bool JoinWorkerThread(
-                    int timeoutMs = DefaultWorkerTerminationTimeoutMs,
+        public bool JoinWorker(
+                    int timeoutMs = 
+                        DefaultWorkerTerminationTimeoutMs,
                     bool abortIfTimeout = true)
         {
             try {
@@ -1130,4 +1139,98 @@ namespace Grumpy.StatePatternFramework
         }
         #endregion Public Methods
     }
+
+    public class StateMachine<TCommand>: 
+        StateMachineBase where TCommand: CommandBase
+    {
+        public StateMachine(string? name,
+                            bool logTransitions = false,
+                            ILogger? logger = null) :
+            base(name, logTransitions, logger) { }
+
+        public override void InitStateMachine() =>
+            base.InitStateMachine();
+      
+        public bool EnqueueCommand(TCommand cmd) =>
+            base.EnqueueCommand(cmd);
+
+        public new TCommand? PopCommand() =>
+            base.PopCommand() as TCommand;
+    }
+
+    public class StateWorker
+    {
+        protected ILogger? _logger = null;
+
+        private Thread? thread;
+        private AutoResetEvent? resetEvent;
+        private CancellationTokenSource cts;
+
+        private readonly object workerLock = new();
+
+        public StateWorker(ILogger? logger = null) {
+            _logger = logger;
+            cts = new CancellationTokenSource();
+            resetEvent = new AutoResetEvent(false);
+
+        }
+
+
+        public void Start(Action<CancellationToken> workerLogic) {
+            lock (workerLock) {
+                if (thread != null) return;
+                thread = new Thread(() => workerLogic(cts.Token));
+                thread.Start();
+            }
+        }
+
+        public void StopWorkerThread() {
+            lock (workerLock) {
+                cts?.Cancel();
+                thread?.Join();
+                thread = null;
+            }
+        }
+
+        public bool PauseWorker() {
+            lock (workerLock) {
+         
+                if (thread == null) return false;
+
+                resetEvent?.Reset();
+                return true;
+            }
+        }
+
+        public bool ResumeWorker() {
+            lock (workerLock) {
+
+                if ( (thread == null) 
+                    || (thread.ThreadState == ThreadState.Unstarted)) {
+
+                    _logger?.LogWarning($"State Machine worker: " +
+                        $"an attempt to resume nonexisting or " +
+                        $"unstarted worker thread.");
+
+                    return false;
+                }
+
+                if (thread.ThreadState == ThreadState.WaitSleepJoin) {
+
+                    resetEvent?.Set();
+                }
+
+                return true;
+            }
+        }
+
+        public bool IsRunning => thread?.IsAlive ?? false;
+
+        public bool IsPaused =>
+            (thread != null) && thread.ThreadState == ThreadState.WaitSleepJoin;
+
+        public bool IsSuspended =>
+            (thread != null) && thread.ThreadState == ThreadState.Suspended;
+    }
+
 }

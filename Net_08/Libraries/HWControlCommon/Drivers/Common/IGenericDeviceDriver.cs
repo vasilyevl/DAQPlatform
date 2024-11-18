@@ -30,6 +30,6 @@ namespace Grumpy.DAQFramework.Drivers
         public void ClearError();
         public bool IsOpen { get; }
         string LastError { get; }
-        IOResults LastIOResult { get; }
+        Results LastIOResult { get; }
     }
 }

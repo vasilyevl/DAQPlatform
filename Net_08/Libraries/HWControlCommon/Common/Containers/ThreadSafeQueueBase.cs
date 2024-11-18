@@ -30,77 +30,71 @@ namespace Grumpy.DAQFramework.Common
 
         public const int DefaultQueueDepth = 64;
 
-        protected ConcurrentQueue<TItem>? _queue;
+        protected ConcurrentQueue<TItem>? queue;
 
-        protected object _queueLock;
+        protected object queueLock;
         
-        private ErrorHistory _errorHistory;
-        private int _maxDepth;
-        private readonly string? _name;
+        private ErrorHistory errorHistory;
+        private int depth;
+        private readonly string? name;
  
 
         public QueueBase(int maxDepth = DefaultQueueDepth, string? name = null) 
         {           
             QueueCounter++;
 
-            _maxDepth = maxDepth;
-            _queueLock = new object();
+            depth = maxDepth;
+            queueLock = new object();
 
-            _queue = new ConcurrentQueue<TItem>();
-            _errorHistory = Common.ErrorHistory.Create(maxCapacity: DefaultErrorHistoryDepth);
-            _name = name != null ? name : $"Queue_{QueueCounter}";
+            queue = new ConcurrentQueue<TItem>();
+            errorHistory = Common.ErrorHistory.Create(maxCapacity: DefaultErrorHistoryDepth);
+            this.name = name != null ? name : $"Queue_{QueueCounter}";
         }
 
-        public string Name => (string)(_name?.Clone() ?? string.Empty);
+        public string Name => (string)(name?.Clone() ?? string.Empty);
 
-        public int MaxDepth {
+        public int Depth {
             get {
-                lock (_queueLock) {
-                    return _maxDepth;
+                lock (queueLock) {
+                    return depth;
                 }
             }
 
             set {
-                lock (_queueLock) {
-                    _maxDepth = value;
+                lock (queueLock) {
+                    depth = value;
                 }
             }
         }
 
-        public bool ItemPending => !(_queue?.IsEmpty ?? true);
+        public bool ItemPending => !(queue?.IsEmpty ?? true);
 
-        public int Count => _queue?.Count ?? 0;
+        public int Count => queue?.Count ?? 0;
                 
         public int RoomLeft {
             get {
-                lock (_queueLock) {
+                lock (queueLock) {
 
-                    return _RoomLeft();
+                    return AvailableDepth();
                 }
             }
         }
 
-        private int _RoomLeft()
-        {
-
-            return _maxDepth > 0 ?
-                Math.Max(0, _maxDepth - (_queue?.Count ?? 0)) :
+        private int AvailableDepth() => depth > 0 ?
+                Math.Max(0, depth - (queue?.Count ?? 0)) :
                 int.MaxValue;
 
-        }
-
-        public bool IsEmpty => (_queue?.IsEmpty ?? true);
+        public bool Empty => (queue?.IsEmpty ?? true);
 
         public bool AtCapacity => RoomLeft <= 0;
-
 
         public string LastError {
 
             get {
 
-                if (_errorHistory != null) {
+                if (errorHistory != null) {
 
-                    if (_errorHistory.Peek(out LogRecord? r)) {
+                    if (errorHistory.Peek(out LogRecord? r)) {
 
                         return r?.Details ?? string.Empty;
                     }
@@ -113,7 +107,7 @@ namespace Grumpy.DAQFramework.Common
 
                 if (!string.IsNullOrEmpty(value)) {
                 
-                    _errorHistory.Push(
+                    errorHistory.Push(
                         new LogRecord(LogLevel.Error, "", value, -1),
                         force: true);
                 }
@@ -124,9 +118,9 @@ namespace Grumpy.DAQFramework.Common
 
             get {
 
-                if (_errorHistory != null) {
+                if (errorHistory != null) {
 
-                    return _errorHistory
+                    return errorHistory
                          .PeekAllAsArray(reverseOrder: false)
                          .Select((s) => s.Details).ToList();
                 }
@@ -141,7 +135,7 @@ namespace Grumpy.DAQFramework.Common
 
             try {
 
-                return _queue?.TryPeek(out item) ?? false;
+                return queue?.TryPeek(out item) ?? false;
             }
             catch (Exception ex) {
 
@@ -157,7 +151,7 @@ namespace Grumpy.DAQFramework.Common
             try {
 
                 item = default(TItem);
-                return _queue?.TryDequeue(out item) ?? false;
+                return queue?.TryDequeue(out item) ?? false;
             }
             catch (Exception ex) {
 
@@ -170,7 +164,7 @@ namespace Grumpy.DAQFramework.Common
 
         public virtual bool TryEnqueue(TItem item)
         {
-            lock (_queueLock) {
+            lock (queueLock) {
 
                 return _Enqueue(item);
             }
@@ -179,22 +173,22 @@ namespace Grumpy.DAQFramework.Common
         protected bool _Enqueue(TItem item)
         {
             
-            if ( (_queue != null) && ((_maxDepth < 0) || (_queue.Count < _maxDepth))) {
+            if ( (queue != null) && ((depth < 0) || (queue.Count < depth))) {
                 try {
-                    _queue.Enqueue(item);
+                    queue.Enqueue(item);
                     return true;
                 }
                 catch (Exception e) {
                     LastError = $"Exception while adding " +
-                        $"item {item?.GetType().Name ?? "null"} to queue {_name}. " +
+                        $"item {item?.GetType().Name ?? "null"} to queue {name}. " +
                         $"Exception: {e.Message}";
                     return false;
                 }
             }
             else {
                 LastError = $"Exception while adding " +
-                    $"item {item?.GetType().Name ?? "null"} to queue {_name}. " +
-                    $"Queue at capacity {_maxDepth}";
+                    $"item {item?.GetType().Name ?? "null"} to queue {name}. " +
+                    $"Queue at capacity {depth}";
 
                 return false;
             }
@@ -202,7 +196,7 @@ namespace Grumpy.DAQFramework.Common
 
         public virtual bool InsertAt(TItem item, int index)
         {
-            lock (_queueLock) {
+            lock (queueLock) {
 
                 return _InsertAt(item, index);
             }
@@ -210,14 +204,14 @@ namespace Grumpy.DAQFramework.Common
 
         private bool _InsertAt(TItem item, int index)
         {
-            if(_queue == null) {
+            if(queue == null) {
                 LastError = $"Queue {Name} is null. " +
                     $"Can't insert item at index {index}.";
                 return false;
             }
 
 
-            if (_queue.Count >= _maxDepth) {
+            if (queue.Count >= depth) {
 
                 LastError = $"Can't insert. No room left. ";
                 return false;
@@ -227,18 +221,18 @@ namespace Grumpy.DAQFramework.Common
 
             try {
 
-                if (index >= _queue.Count) {
-                    index = _queue.Count;
+                if (index >= queue.Count) {
+                    index = queue.Count;
                     
-                    _queue.Enqueue(item);
+                    queue.Enqueue(item);
                     return true;
                 }
                 else {
-                    TItem[] arr = _queue.ToArray();
+                    TItem[] arr = queue.ToArray();
                     Array.Resize(ref arr, arr.Length + 1);
                     Array.Copy(arr, index, arr, index + 1, arr.Length - index - 1);
                     arr[index] = item;
-                    _queue = new ConcurrentQueue<TItem>(arr);
+                    queue = new ConcurrentQueue<TItem>(arr);
                     return true;
                 }
             }
@@ -251,7 +245,7 @@ namespace Grumpy.DAQFramework.Common
 
         public virtual bool InsertFirst(TItem item)
         {
-            lock (_queueLock) {
+            lock (queueLock) {
 
                 return _InsertAt(item, 0);
             }
@@ -260,20 +254,20 @@ namespace Grumpy.DAQFramework.Common
 
         public virtual bool InsertInfront(TItem[] items)
         {
-            lock (_queueLock) {
+            lock (queueLock) {
                 return _InsertInfront(items);
             }
         }
 
         protected bool _InsertInfront(TItem[] items)
         {
-            if(_queue == null) {
+            if(queue == null) {
                 LastError = $"Queue {Name} is null. " +
                     $"Can't insert items infront.";
                 return false;
             }
 
-            if (items.Length > (_maxDepth - _queue.Count)) {
+            if (items.Length > (depth - queue.Count)) {
 
                 LastError = $"Failed to insert items infront " +
                     $"in queue {Name}. Number of items exceeds " +
@@ -283,26 +277,26 @@ namespace Grumpy.DAQFramework.Common
 
             try {
                 Queue<TItem>? tmp = null;
-                if (_queue.Count > 0) {
+                if (queue.Count > 0) {
 
                     tmp = new Queue<TItem>();
 
-                    while (_queue.Count > 0) {
+                    while (queue.Count > 0) {
 
-                        if (_queue.TryDequeue(out var st)) {
+                        if (queue.TryDequeue(out var st)) {
                             tmp.Enqueue(st);
                         }
                     }
                 }
 
                 foreach (var item in items) {
-                    _queue.Enqueue(item);
+                    queue.Enqueue(item);
                 }
 
                 if (tmp != null) {
 
                     while (tmp.Count > 0) {
-                        _queue.Enqueue(tmp.Dequeue());
+                        queue.Enqueue(tmp.Dequeue());
                     }
                 }
                 return true;
@@ -317,7 +311,7 @@ namespace Grumpy.DAQFramework.Common
         
         public virtual bool Purge()
         {
-            lock (_queueLock) {
+            lock (queueLock) {
                 return _Purge();
             }
         }
@@ -325,16 +319,16 @@ namespace Grumpy.DAQFramework.Common
         protected virtual bool _Purge()
         {
             try {
-                if (_queue == null) {
+                if (queue == null) {
                     return true;
                 }
 
-                while (_queue.Count > 0) {
+                while (queue.Count > 0) {
 
-                    _queue.TryDequeue(out var it);
+                    queue.TryDequeue(out var it);
                 }
 
-                return _queue.IsEmpty;
+                return queue.IsEmpty;
             }
             catch (Exception ex) {
                 LastError = $"Failed to purge queue {Name}. " +
@@ -345,7 +339,7 @@ namespace Grumpy.DAQFramework.Common
 
         public bool MakeRoom(int roomRequested, out int itemsRemoved)
         {
-            lock (_queueLock) {
+            lock (queueLock) {
 
                 return _MakeRoom(roomRequested, out itemsRemoved);
             }
@@ -355,50 +349,50 @@ namespace Grumpy.DAQFramework.Common
         { 
                 itemsRemoved = 0;
 
-            if (_queue == null) {
+            if (queue == null) {
                 LastError = $"Queue {Name} is null. " +
                     $"Can't free room for {roomRequested} items.";
                 return false;
             }
 
-            if (_maxDepth - _queue.Count >= roomRequested) {
+            if (depth - queue.Count >= roomRequested) {
                     return true;
                 }
 
-                if (_queue.Count > 0) {
+                if (queue.Count > 0) {
 
-                    while( _queue.Count > 0 && _maxDepth - _queue.Count < roomRequested) { 
+                    while( queue.Count > 0 && depth - queue.Count < roomRequested) { 
                     
-                        if(_queue.TryDequeue(out TItem? item)) {
+                        if(queue.TryDequeue(out TItem? item)) {
                             itemsRemoved++;
                         }
                     }
                 }
 
-            if (roomRequested <= (_maxDepth - _queue.Count)) { 
+            if (roomRequested <= (depth - queue.Count)) { 
                 return true;
             } 
             else {
                 LastError = $"Queue {Name}. Failed to free enough room to " +
                         $"accomodate {roomRequested} items." +
-                        $" {((roomRequested > _maxDepth) ? $"Requested count exceeds max depth {_maxDepth}." : "")}";
+                        $" {((roomRequested > depth) ? $"Requested count exceeds max depth {depth}." : "")}";
                 return false;
             }          
         }
 
         public TItem[]? PeekAllAsArray()
         {
-            lock (_queueLock) {
+            lock (queueLock) {
 
-                if (_queue == null) {
+                if (queue == null) {
                     LastError = $"Queue {Name} is null. " +
                         $"Can't peek items as array.";
                     return null;
                 }
 
-                if (_queue.Count > 0) {
+                if (queue.Count > 0) {
                     try {
-                        TItem[] array = _queue.ToArray();
+                        TItem[] array = queue.ToArray();
 
                         if (array != null) {
                             Array.Reverse(array);
@@ -433,7 +427,7 @@ namespace Grumpy.DAQFramework.Common
         public virtual void Dispose()
         {
             _Purge();
-            _queue = null;
+            queue = null;
         }
     }
 

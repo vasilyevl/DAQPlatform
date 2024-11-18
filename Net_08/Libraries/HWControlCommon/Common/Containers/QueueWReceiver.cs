@@ -212,7 +212,7 @@ namespace Grumpy.DAQFramework.Common
 
         public override bool Push(TObject obj, bool force = false)
         {
-            lock(_queueLock) {
+            lock(queueLock) {
 
                  if(base._Push(obj, force)) {
 

@@ -24,19 +24,19 @@ namespace Grumpy.StatePatternFramework
 {
     public class StateTransitionManager 
     {
-        protected ILogger? _logger = null;
+        protected ILogger? logger = null;
 
-        private Dictionary<TransitionTrigger, StateBase> _transitions;
+        private Dictionary<TransitionTrigger, StateBase> transitions;
 
         public StateTransitionManager(ILogger logger = null!) {
-            _logger = logger;
-            _transitions = [];
+            this.logger = logger;
+            transitions = [];
         }
 
-        public bool LoggerIsSet => _logger != null; 
+        public bool LoggerIsSet => logger != null; 
 
         public bool AddTransition(StateBase initialState, 
-                                  StateExecutionResult stateExitStatus, 
+                                  StateResult stateExitStatus, 
                                   StateBase nextState)
         {
             var transitionTrigger = 
@@ -49,46 +49,49 @@ namespace Grumpy.StatePatternFramework
                                   StateBase nextState)
         {
 
-            if (!_transitions.ContainsKey(transitionTrigger)) {
+            if (!transitions.ContainsKey(transitionTrigger)) {
 
-                _transitions.Add(transitionTrigger, nextState);
+                transitions.Add(transitionTrigger, nextState);
                 return true;
-            }
-
-           _logger?.LogWarning($"State Transition Manager. " +
-                $"Attempt to add redundant transition to the state " +
-                $"{nextState.Name}:\nexecution result " +
-                $"{transitionTrigger.Status} to state " +
-                $"{_transitions[transitionTrigger].Name}. " +
-                $"Request ignored.");
-
-            return false;
-        }
-
-        public bool ContainsTrigger(TransitionTrigger transitionTrigger)
-        {
-            return _transitions.ContainsKey(transitionTrigger);
-        }
-
-        public bool PeekNextState(TransitionTrigger trigger, out StateBase? nextState)
-        {       
-            if (_transitions.ContainsKey(trigger)) {
-
-                nextState = _transitions[trigger];
             }
             else {
 
-                nextState = null;
-            }
+                string msg = $"State Machine Transition Manager. " +
+                    $"Attempt to add redundant transition to the state " +
+                    $"{nextState.Name}:\nexecution result " +
+                    $"{transitionTrigger.Status} to state " +
+                    $"{transitions[transitionTrigger].Name}. " +
+                    $"Request ignored.";
 
+                logger?.LogWarning(msg);
+
+                if (logger is null) {
+                    throw new ExceptionTransitionNotDefined(msg);
+                }
+
+                return false;
+            }
+        }
+
+        public bool ContainsTrigger(TransitionTrigger transitionTrigger) =>
+            transitions.ContainsKey(transitionTrigger);
+        
+
+        public bool PeekNextState(TransitionTrigger trigger, 
+            out StateBase? nextState)
+        {
+            nextState = (transitions?.ContainsKey(trigger) ?? false) ?
+                transitions[trigger]:
+                null;
+  
             return nextState is not null;
         }
 
         public bool PeekNextStateName(TransitionTrigger trigger, 
                                       out string nextStateName)
         {            
-                nextStateName = 
-                    PeekNextState(trigger, out StateBase? nextState) ?
+            nextStateName = 
+                PeekNextState(trigger, out StateBase? nextState) ?
                         nextState?.Name ?? string.Empty : 
                         string.Empty;
    
@@ -97,43 +100,47 @@ namespace Grumpy.StatePatternFramework
 
         public StateBase? NextState(StateBase st)
         {
-            TransitionTrigger trigger = new TransitionTrigger(st, st.Result);
+            TransitionTrigger trigger = 
+                new TransitionTrigger(st, st.Result);
 
-            if (_transitions.ContainsKey(trigger))
-            {
-                StateBase next = _transitions[trigger];
-
-                return next;
+            if (transitions.ContainsKey(trigger)) {
+                return transitions[trigger];
             }
 
             switch (st.Result)
             {
-                case StateExecutionResult.Working:
-                    return st;
-
-                case StateExecutionResult.Timeout:
+                case StateResult.Working:
+                case StateResult.Timeout:
                     return st;
 
                 default:
-                    _logger?.LogError($"Transition from state {st.Name} " +
-                        $"on trigger {st.Result.ToString()} is not defined.");
+                    string msg = $"State Machine Transition Manager. " +
+                        $"No transition from state {st.Name} " +
+                        $"on trigger {st.Result.ToString()} defined.";
+                   
+                    if(logger is null) {
+                        throw new ExceptionTransitionNotDefined(msg);
+                    }
+                    else {
+                        logger.LogWarning(msg);
+                    }
                     return null;
             }
         }
 
-        public int Count => _transitions.Count(); 
+        public int Count => transitions.Count(); 
     }
 
-    public class FSMExceptionTransitionNotDefined : Exception
+    public class ExceptionTransitionNotDefined : Exception
     {
-        public FSMExceptionTransitionNotDefined() : 
+        public ExceptionTransitionNotDefined() : 
             base("State Transition is not defined") 
         { }
         
-        public FSMExceptionTransitionNotDefined(string msg) : 
+        public ExceptionTransitionNotDefined(string msg) : 
             base(msg) 
         { }
-        public FSMExceptionTransitionNotDefined(StateBase st) : 
+        public ExceptionTransitionNotDefined(StateBase st) : 
             base($"No transition from state {st.Name} " +
                 $"on trigger {st.Result.ToString()} defined.") 
         { }
