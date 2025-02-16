@@ -19,104 +19,138 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 using Grumpy.DAQFramework.Common;
-
 using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
-using System.Xml.Linq;
 
 namespace Grumpy.StatePatternFramework
 {
-    [Flags]
-    public enum IdlingResult
-    {
-        NA = 0,
-        IdlingInterrupted = 1 << 0,
-        CommandPending = 1 << 1,
-        Tick = 1 << 2,
-        Timeout = 1 << 3,
-        ContineousRun = 1 << 4,
-        Any = IdlingInterrupted | CommandPending 
-            | Tick | Timeout | ContineousRun
-    }
-
-    public class StateChangeEventArgs : EventArgs {
-
-        private EnumBase? _newState;
-        private EnumBase? _previousState;
-
-        public StateChangeEventArgs( EnumBase newState, 
-                                     EnumBase? previousState = null )
-        {
-            _previousState = previousState;
-            _newState = newState;
-        }
-
-        public  EnumBase? PreviousState => _previousState;
-        public EnumBase? NewState => _newState;
-    }
-
-    public class StateProcArgs: EventArgs
-    {
-        public StateProcArgs(): base()
-        {
-            IdlingResult = IdlingResult.NA;
-        }
-
-        public StateProcArgs(IdlingResult st ) : base()
-        {
-            IdlingResult = st;
-        }
-
-        public IdlingResult IdlingResult { get; set; }
-    }
-
-    public delegate void StateChangeEventHandler(object sender, 
-                                                 StateChangeEventArgs e);
+    /// <summary>
+    /// Represents the base class for a state machine.
+    /// </summary>
     public class StateMachineBase
     {
+        /// <summary>
+        /// The timeout for starting the engine.
+        /// </summary>
         protected const int EngineStartTimeout = 100;
+        /// <summary>
+        /// The period in milliseconds to check the engine start.
+        /// </summary>
         protected const int EngineStartCheckPeriodMs = 15;
+        /// <summary>
+        /// The default timeout for terminating the worker.
+        /// </summary>
         protected const int DefaultWorkerTerminationTimeoutMs = 10000;
+        /// <summary>
+        /// The depth of the state history.
+        /// </summary>
         protected const int HistoryDepth = 128;
+
+        /// <summary>
+        /// The default capacity of the command queue.
+        /// </summary>
         protected const int DefaultCommandQueueCapacity = 256;
 
         #region Members
+        /// <summary>
+        /// The logger instance.
+        /// </summary>
         protected ILogger? _logger = null;
+
+        /// <summary>
+        /// The history of states.
+        /// </summary>
         protected StackBase<StateBase>? _history;
+
+        /// <summary>
+        /// The state transition manager.
+        /// </summary>
         protected StateTransitionManager _transitionManager;
-        
-        protected Thread? _workerThread;                 
+
+        /// <summary>
+        /// The worker thread.
+        /// </summary>
+        protected Thread? _workerThread;
+
+        /// <summary>
+        /// The reset event for the worker.
+        /// </summary>
         AutoResetEvent? _workerResetEvent;
+
+        /// <summary>
+        /// The lock object for the worker.
+        /// </summary>
         protected object _workerLock;
 
+        /// <summary>
+        /// The cancellation token source.
+        /// </summary>
         private CancellationTokenSource? _cts;
 
+        /// <summary>
+        /// The timer for idling.
+        /// </summary>
         private Timer? _idlingTimer;
-        // Maximum time it took to Execute any of the states in FSMPrdMs. 
-        protected long _maxStateExecutionTime;
-        // Keeps number of times it took longer than _periodInTcks
-        // to execute any state function.
-        protected long _missedTriggerCounter;
-        // Time keeper. 
-        protected long _engineTimeOutClock;             
 
+        /// <summary>
+        /// The maximum state execution time in FSMPrdMs.
+        /// </summary>
+        protected long _maxStateExecutionTime;
+
+        /// <summary>
+        /// The counter for missed triggers. Keeps number of times it took longer than _periodInTcks to execute any state function.
+        /// </summary>
+        protected long _missedTriggerCounter;
+
+        /// <summary>
+        /// The clock for engine timeout.
+        /// </summary>
+        protected long _engineTimeOutClock;
+
+        /// <summary>
+        /// The lock object for the state.
+        /// </summary>
         protected object? _stateLock;
 
-        private IdlingResult _lastIdlingResult;
+        /// <summary>
+        /// The last idling exit trigger value.
+        /// </summary>
+        private IdlingExitTrigger _lastIdlingExitTrigger;
 
+        /// <summary>
+        /// The lock object for the idling callback.
+        /// </summary>
         private object _idlingCallBackLock;
+
+        /// <summary>
+        /// Indicates whether the timer fired.
+        /// </summary>
         private bool _timerFired;
 
+        /// <summary>
+        /// The lock object for the current state.
+        /// </summary>
         private object _carrentStateLock;
+
+        /// <summary>
+        /// The current state.
+        /// </summary>
         private StateBase? _currentState;
 
+        /// <summary>
+        /// The queue of pending commands.
+        /// </summary>
         private CommandQueue _pendingCommands;
 
         #endregion Members
 
+        /// <summary>
+        /// Occurs when the state machine transitions from one state to another.
+        /// </summary>
         public event StateChangeEventHandler? StateChangeEvent;
 
         #region Constructors:
+
         /// <summary> Constructor with Name only  as a parameter. 
         ///  </summary>Such device will be considered independent or master.
         public StateMachineBase(string? name,
@@ -135,7 +169,7 @@ namespace Grumpy.StatePatternFramework
             _maxStateExecutionTime = 0;
             _missedTriggerCounter = 0;
             _engineTimeOutClock = 0;
-            _lastIdlingResult = IdlingResult.NA;
+            _lastIdlingExitTrigger = IdlingExitTrigger.NA;
             _timerFired = false;
 
             _cts = new CancellationTokenSource();
@@ -179,19 +213,30 @@ namespace Grumpy.StatePatternFramework
             }
         }
 
+        /// <summary>
+        /// Gets the state queue.
+        /// </summary>
         public StateQueue StateQueue { 
             get; 
             protected set; 
         }
 
+        /// <summary>
+        /// Gets the name of the state machine.
+        /// </summary>
         public string Name { 
             get; 
             private set; 
         }
 
+        /// <summary>
+        /// Gets a value indicating whether the state machine is in a state sequence.
+        /// </summary>
         public bool InStateSequence => StateQueue.Count > 0;
 
-
+        /// <summary>
+        /// Gets the current state.
+        /// </summary>
         public StateBase? CurrentState {
             get {
                 lock (_carrentStateLock) {
@@ -206,76 +251,125 @@ namespace Grumpy.StatePatternFramework
         }
         #endregion //Constructors:
 
+        /// <summary>
+        /// Initializes the state machine, setting up initial states, transitions, and any required resources.
+        /// Override and call this method before starting the state machine.
+        /// </summary>
         virtual public void InitStateMachine() { }
 
+        /// <summary>
+        /// Gets a value indicating whether a command is pending.
+        /// </summary>
         public bool CommandPending => 
                 (_pendingCommands?.Count ?? 0) > 0;
 
-
-
+        /// <summary>
+        /// Purges all pending commands from the command queue.
+        /// </summary>
+        /// <returns>true if the command queue was successfully purged; otherwise, false.</returns>
         public bool PurgeCommands() => _pendingCommands?.Purge() ?? true;
 
 
         #region Public Properties:
-
+        /// <summary>
+        /// Gets a value indicating whether a command can be added.
+        /// </summary>
         public bool CanAddCommand =>
             (_pendingCommands?.Count ?? 0) < 
                     (_pendingCommands?.Depth ?? -1);
 
+        /// <summary>
+        /// Gets the state library which contains all states.
+        /// </summary>
         public StateLibrary? States {
             get; 
             private set;
         }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether to log transitions.
+        /// </summary>
         public bool LogTransitions { 
             get; 
             set;  
         }
 
+        /// <summary>
+        /// Gets a value indicating whether the state machine is running.
+        /// </summary>
         public bool IsRunning => 
-            _workerThread?.IsAlive ?? false;  
+            _workerThread?.IsAlive ?? false;
 
+        /// <summary>
+        /// Gets a value indicating whether the state machine is paused.
+        /// </summary>
         public bool IsPaused =>
             (_workerThread != null) 
             && _workerThread.ThreadState == ThreadState.WaitSleepJoin;
 
+        /// <summary>
+        /// Gets a value indicating whether the state machine is suspended.
+        /// </summary>
         public bool IsSuspended =>
             (_workerThread != null) 
             && _workerThread.ThreadState == ThreadState.Suspended;
 
-        
-
+        /// <summary>
+        /// Gets the maximum state execution time.
+        /// </summary>
         public long MaxSTateExecutionTime {
 
             get => _maxStateExecutionTime;
             protected set => _maxStateExecutionTime = 0;   
         }
 
+        /// <summary>
+        /// Gets the number of missed ticks.
+        /// </summary>
         public long NumberOfMissedTicks {
 
             get => _missedTriggerCounter; 
             protected set => _missedTriggerCounter = value;
         }
 
+        /// <summary>
+        /// Gets a value indicating whether there are missed ticks.
+        /// </summary>
         public bool MissedTicks => _missedTriggerCounter > 0;
 
+        /// <summary>
+        /// Gets the state transition manager.
+        /// </summary>
         public StateTransitionManager? TransitionManager => 
                                             _transitionManager;
-
 
         #endregion // Public Properties:
 
         #region Protected Methods   
 
+        /// <summary>
+        /// Pops a command from the queue.
+        /// </summary>
+        /// <returns>The popped command if available; otherwise, null.</returns>
         protected CommandBase? PopCommand() =>
             (_pendingCommands?.TryDequeue(out CommandBase? cmd) ?? false)
             ? cmd
             : null;
 
+        /// <summary>
+        /// Enqueues a command to the command queue.
+        /// </summary>
+        /// <param name="cmd">The command to enqueue.</param>
+        /// <returns>true if the command was successfully enqueued; otherwise, false.</returns>
         protected bool EnqueueCommand(CommandBase cmd) =>
             (_pendingCommands?.TryEnqueue(cmd) ?? false);
 
 
+        /// <summary>
+        /// Adds a state to the state machine.
+        /// </summary>
+        /// <param name="state">The state to add.</param>
+        /// <returns>The total number of states in the state machine after the addition.</returns>
         protected int AddState(StateBase state)
         {
             if( States == null) { States = [];}
@@ -293,6 +387,11 @@ namespace Grumpy.StatePatternFramework
             return States.Count;
         }
 
+        /// <summary>
+        /// Adds multiple states to the state machine from a list.
+        /// </summary>
+        /// <param name="states">The list of states to add.</param>
+        /// <returns>The total number of states in the state machine after the addition.</r
         protected int AddStatesFromList(List<StateBase> states)
         {
             int errCntr = 0;
@@ -323,6 +422,11 @@ namespace Grumpy.StatePatternFramework
             return statesAdded;
         }
 
+        /// <summary>
+        /// Raises an event to signal that the state has changed.
+        /// </summary>
+        /// <param name="newState">The new state that the state machine has transitioned to.</param>
+        /// <param name="previousState">The previous state before the transition.</param>
         protected virtual void RaiseStateChangeEvent( StateIDBase newState,
                                                       EnumBase previousState)
         {
@@ -358,8 +462,14 @@ namespace Grumpy.StatePatternFramework
         }
         #endregion Protected Methods
 
-
         #region Public Methods:
+
+        /// <summary>
+        /// Gets the state by name.
+        /// </summary>
+        /// <param name="name">The name of the state.</param>
+        /// <param name="st">The state to get.</param>
+        /// <returns>true if the state was found; otherwise, false.</returns>
         public bool GetState(string name, ref StateBase? st)
         {
             if ( States is null || States.Count < 1) {
@@ -372,12 +482,22 @@ namespace Grumpy.StatePatternFramework
             return st is not null;
         }
 
+        /// <summary>
+        /// Gets the history of states that the state machine has transitioned through.
+        /// </summary>
         public List<StateBase> StateHistory => 
             _history?.PeekAllAsList() ?? new List<StateBase>();
 
+        /// <summary>
+        /// Gets the previous state before the current state transition.
+        /// </summary>
         public StateBase? PreviousState => 
             _history?.Peek(out StateBase? last) ?? false? last : null;
 
+        /// <summary>
+        /// Initializes the next state.
+        /// </summary>
+        /// <param name="nextState">The next state to initialize.</param>
         private void IntitNextState(StateBase nextState)
         {
             if (nextState is null) {
@@ -420,6 +540,10 @@ namespace Grumpy.StatePatternFramework
             }
         }
 
+        /// <summary>
+        /// The callback for the idling wake-up.
+        /// </summary>
+        /// <param name="info">The callback information.</param>
         public void IdlingWakeUpCallBack(object info)
         {
             bool lockTaken = false;
@@ -459,12 +583,19 @@ namespace Grumpy.StatePatternFramework
             }
         }
 
+        /// <summary>
+        /// Determines whether the state machine could continue.
+        /// </summary>
+        /// <returns>true if the state machine could continue; otherwise, false.</returns>
         private bool CouldContinue() => 
             !(_cts?.Token.IsCancellationRequested ?? false) 
             && CurrentState is not null 
             && CurrentState.ID != StateIDBase.Stop 
             && CurrentState.ID != StateIDBase.End;
 
+        /// <summary>
+        /// The engine logic of the state machine.
+        /// </summary>
         protected virtual void Engine()
         {
             // Reset timeout marker.
@@ -491,21 +622,21 @@ namespace Grumpy.StatePatternFramework
             _logger?.LogInformation($"State machine " +
                 $"\"{Name}\" engine started. ");
 
-            _lastIdlingResult = IdlingResult.NA;
+            _lastIdlingExitTrigger = IdlingExitTrigger.NA;
 
             while (CouldContinue()) { 
 
                 while (CurrentState.IsActive) {
 
                     CurrentState.StateProc(
-                        new StateProcArgs(_lastIdlingResult) );
+                        new StateProcArgs(_lastIdlingExitTrigger) );
                    
                     if (CurrentState.IsActive) {
 
-                        _lastIdlingResult = 
+                        _lastIdlingExitTrigger = 
                             CurrentState.UsesIdling ? 
                                 Idling() : 
-                                IdlingResult.ContineousRun;
+                                IdlingExitTrigger.ContineousRun;
                     }
 
                     if (_cts?.Token.IsCancellationRequested ?? false) {
@@ -535,6 +666,9 @@ namespace Grumpy.StatePatternFramework
             _logger?.LogInformation($"State machine \"{Name}\" stopping engine.");
         }
 
+        /// <summary>
+        /// Disarms the idling timer.
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void DisarmIdlingTimer()
         {
@@ -544,7 +678,7 @@ namespace Grumpy.StatePatternFramework
 
                 _idlingTimer?.Dispose();
                 _idlingTimer = null;
-                _lastIdlingResult = IdlingResult.NA;
+                _lastIdlingExitTrigger = IdlingExitTrigger.NA;
             }
             catch ( Exception ex_) {
 
@@ -557,6 +691,11 @@ namespace Grumpy.StatePatternFramework
             }
         }
 
+        /// <summary>
+        /// Selects the next state.
+        /// </summary>
+        /// <param name="nextState">The next state to select.</param>
+        /// <returns>true if the next state was selected; otherwise, false.</returns>
         private bool SelectNextState(out StateBase? nextState)
         {
             if ((StateQueue?.Count ?? 0) > 0) {
@@ -636,6 +775,11 @@ namespace Grumpy.StatePatternFramework
             return nextState is not null;
         }
 
+        /// <summary>
+        /// Handles custom transitions.
+        /// </summary>
+        /// <param name="nextState">The next state to transition to.</param>
+        /// <returns>true if the custom transition was handled; otherwise, false.</returns>
         virtual protected bool CustomTransitionHandler(
                                     out StateBase? nextState)
         {
@@ -643,6 +787,11 @@ namespace Grumpy.StatePatternFramework
             return (nextState is not null);
         }
 
+        /// <summary>
+        /// Adds transitions to the state machine.
+        /// </summary>
+        /// <param name="transitions">The list of transitions to add.</param>
+        /// <returns>The number of transitions added.</returns>
         public int AddTransitions( List<Tuple<StateBase, 
                                    StateResult, 
                                    StateBase>> transitions)
@@ -655,6 +804,13 @@ namespace Grumpy.StatePatternFramework
             return _transitionManager?.Count ?? 0;
         }
 
+        /// <summary>
+        /// Adds a transition to the state machine.
+        /// </summary>
+        /// <param name="currentState">The current state.</param>
+        /// <param name="status">The status that triggers the transition.</param>
+        /// <param name="nextState">The next state.</param>
+        /// <returns>true if the transition was added; otherwise, false.</returns>
         public bool AddTransition ( string currentState, 
                                     StateResult status, 
                                     string nextState)
@@ -749,6 +905,13 @@ namespace Grumpy.StatePatternFramework
             }
         }
 
+        /// <summary>
+        /// Adds a transition to the state machine.
+        /// </summary>
+        /// <param name="currentState">The current state ID.</param>
+        /// <param name="status">The status that triggers the transition.</param>
+        /// <param name="nextState">The next state ID.</param>
+        /// <returns>true if the transition was added; otherwise, false.</returns>
         public bool AddTransition(StateIDBase currentState,
                                   StateResult status, 
                                   StateIDBase nextState)
@@ -848,6 +1011,13 @@ namespace Grumpy.StatePatternFramework
             }    
         }
 
+        /// <summary>
+        /// Adds a transition to the state machine.
+        /// </summary>
+        /// <param name="currentState">The current state.</param>
+        /// <param name="status">The status that triggers the transition.</param>
+        /// <param name="nextState">The next state.</param>
+        /// <returns>The number of transitions added.</returns>
         public int AddTransition( StateBase currentState, 
                                   StateResult status, 
                                   StateBase nextState)
@@ -905,7 +1075,10 @@ namespace Grumpy.StatePatternFramework
             return _transitionManager?.Count ?? 0;
         }
 
-
+        /// <summary>
+        /// Starts the state machine engine, initiating the processing of states and transitions.
+        /// </summary>
+        /// <returns>true if the engine started successfully; otherwise, false.</returns>
         public bool StartEngine()
         {
             // If there is no thread or it is not alive.
@@ -969,6 +1142,11 @@ namespace Grumpy.StatePatternFramework
             }
         }
 
+
+        /// <summary>
+        /// Checks if the engine thread is currently running.
+        /// </summary>
+        /// <returns>true if the engine thread is running; otherwise, false.</returns>
         private bool EngineThreadIsRunning()
         {
             for (int i = EngineStartTimeout/EngineStartCheckPeriodMs; i >= 0; i--) {
@@ -980,38 +1158,48 @@ namespace Grumpy.StatePatternFramework
             return false;
         }
 
-        private IdlingResult Idling()
+        /// <summary>
+        /// Handles the idling state of the state machine and determines the exit trigger.
+        /// </summary>
+        /// <returns>The trigger that caused the idling state to exit.</returns>
+        private IdlingExitTrigger Idling()
         {
             if (CommandPending) { 
-                return IdlingResult.CommandPending; 
+                return IdlingExitTrigger.CommandPending; 
             }
 
             if (_workerResetEvent == null) { 
-                return IdlingResult.ContineousRun;
+                return IdlingExitTrigger.ContineousRun;
             }
 
             if( _cts != null 
                 && _cts.Token.IsCancellationRequested) {
 
-                return IdlingResult.IdlingInterrupted;
+                return IdlingExitTrigger.IdlingInterrupted;
             }
 
             _workerResetEvent.WaitOne();
 
             lock (_workerLock) {
 
-                IdlingResult r = CommandPending?
-                    IdlingResult.CommandPending :
+                IdlingExitTrigger r = CommandPending?
+                    IdlingExitTrigger.CommandPending :
                         _timerFired ? 
-                            IdlingResult.Tick : 
-                            IdlingResult.IdlingInterrupted;
+                            IdlingExitTrigger.Tick : 
+                            IdlingExitTrigger.IdlingInterrupted;
 
                 _timerFired = false;
                 return r;
             }
         }
 
-        public  void ResetTimeOutClock( int roundTInMs = 100, 
+
+        /// <summary>
+        /// Resets the timeout clock for the state machine.
+        /// </summary>
+        /// <param name="roundTInMs">The round trip time in milliseconds.</param>
+        /// <param name="offsetInMs">The offset time in milliseconds.</param>
+        public void ResetTimeOutClock( int roundTInMs = 100, 
                                         int offsetInMs = 0 )
         {
             DateTime dt  = DateTime.Now;
@@ -1027,6 +1215,10 @@ namespace Grumpy.StatePatternFramework
             _maxStateExecutionTime = 1;
         }
 
+        /// <summary>
+        /// Resumes the worker thread if it is paused.
+        /// </summary>
+        /// <returns>true if the worker thread was successfully resumed; otherwise, false.</returns>
         public bool ResumeWorker()
         {
             lock (_workerLock) {
@@ -1050,6 +1242,10 @@ namespace Grumpy.StatePatternFramework
             }
         }
 
+        /// <summary>
+        /// Aborts the worker thread, stopping its execution immediately.
+        /// </summary>
+        /// <returns>true if the worker thread was successfully aborted; otherwise, false.</returns>
         public bool AbortWorkerThread()
         {
             try {
@@ -1083,6 +1279,12 @@ namespace Grumpy.StatePatternFramework
             }
         }
 
+        /// <summary>
+        /// Waits for the worker thread to terminate.
+        /// </summary>
+        /// <param name="timeoutMs">The maximum time to wait for the worker thread to terminate, in milliseconds.</param>
+        /// <param name="abortIfTimeout">If true, aborts the worker thread if the timeout is reached.</param>
+        /// <returns>true if the worker thread terminated within the timeout period; otherwise, false.</returns>
         public bool JoinWorker(
                     int timeoutMs = 
                         DefaultWorkerTerminationTimeoutMs,
@@ -1137,100 +1339,8 @@ namespace Grumpy.StatePatternFramework
                 }
             }
         }
+        
         #endregion Public Methods
-    }
-
-    public class StateMachine<TCommand>: 
-        StateMachineBase where TCommand: CommandBase
-    {
-        public StateMachine(string? name,
-                            bool logTransitions = false,
-                            ILogger? logger = null) :
-            base(name, logTransitions, logger) { }
-
-        public override void InitStateMachine() =>
-            base.InitStateMachine();
-      
-        public bool EnqueueCommand(TCommand cmd) =>
-            base.EnqueueCommand(cmd);
-
-        public new TCommand? PopCommand() =>
-            base.PopCommand() as TCommand;
-    }
-
-    public class StateWorker
-    {
-        protected ILogger? _logger = null;
-
-        private Thread? thread;
-        private AutoResetEvent? resetEvent;
-        private CancellationTokenSource cts;
-
-        private readonly object workerLock = new();
-
-        public StateWorker(ILogger? logger = null) {
-            _logger = logger;
-            cts = new CancellationTokenSource();
-            resetEvent = new AutoResetEvent(false);
-
-        }
-
-
-        public void Start(Action<CancellationToken> workerLogic) {
-            lock (workerLock) {
-                if (thread != null) return;
-                thread = new Thread(() => workerLogic(cts.Token));
-                thread.Start();
-            }
-        }
-
-        public void StopWorkerThread() {
-            lock (workerLock) {
-                cts?.Cancel();
-                thread?.Join();
-                thread = null;
-            }
-        }
-
-        public bool PauseWorker() {
-            lock (workerLock) {
-         
-                if (thread == null) return false;
-
-                resetEvent?.Reset();
-                return true;
-            }
-        }
-
-        public bool ResumeWorker() {
-            lock (workerLock) {
-
-                if ( (thread == null) 
-                    || (thread.ThreadState == ThreadState.Unstarted)) {
-
-                    _logger?.LogWarning($"State Machine worker: " +
-                        $"an attempt to resume nonexisting or " +
-                        $"unstarted worker thread.");
-
-                    return false;
-                }
-
-                if (thread.ThreadState == ThreadState.WaitSleepJoin) {
-
-                    resetEvent?.Set();
-                }
-
-                return true;
-            }
-        }
-
-        public bool IsRunning => thread?.IsAlive ?? false;
-
-        public bool IsPaused =>
-            (thread != null) && thread.ThreadState == ThreadState.WaitSleepJoin;
-
-        public bool IsSuspended =>
-            (thread != null) && thread.ThreadState == ThreadState.Suspended;
     }
 
 }

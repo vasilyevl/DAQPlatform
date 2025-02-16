@@ -150,61 +150,82 @@ namespace DAQFramework.Utilities
         */
 
         public static bool SaveTextFile(string text, string? directory,
-                    string? fileName)
+                    string? fileName, bool append = false, 
+                    bool overwrite = true)
         {
-            if (directory == null) { directory = string.Empty; }
-            if (fileName == null) { fileName = string.Empty; }
+            if (directory == null) { 
+                directory = string.Empty; 
+            }
 
-
+            if (fileName == null) { 
+                fileName = string.Empty; 
+            }
 
             string filePathName = Path.Combine(directory, fileName!);
 
             if (string.IsNullOrEmpty(filePathName))
             {
-                LastError = "FileUtilities. Can't save file. File path and name are empty.";
-                return false;
+                return FailExit("FileUtilities. Can't save file. " +
+                    "File path and name are empty.");
             }
 
             var dir = Path.GetDirectoryName(filePathName);
 
             if (!Directory.Exists(dir))
             {
-                LastError = $"FileUtilities. Can't save file. Folder {dir} does not exist.";
-                return false;
+                return FailExit($"FileUtilities. Can't save file. " +
+                    $"Folder {dir} does not exist.");
             }
 
             try
             {
-                File.WriteAllText(filePathName, text);
+                if (!File.Exists(filePathName) || overwrite) {
+                    File.WriteAllText(filePathName, text);
+                }
+                else if (append) {
+                    File.AppendAllText(filePathName, text);
+                }
+                else {
+                    return FailExit($"FileUtilities. File already exists");
+                }
+
                 return true;
             }
-            catch (Exception e)
-            {
-                LastError = $"Failed to save {filePathName}. Exception: {e.Message}";
-                return false;
+            catch (Exception e) {
+
+                return FailExit( $"Failed to save {filePathName}. " +
+                    $"Exception: {e.Message}");
             }
         }
 
-        public static bool SaveTextFileWithDialog(string text, string directory,
-                            string fileName, string filter = null!, bool overwrite = false)
+
+        private static bool FailExit(string message) { 
+        
+            LastError = message;
+            return false;
+        }
+
+        public static bool SaveTextFileWithDialog(string text, 
+            string directory, string fileName, 
+            string filter = null!, bool overwrite = false)
         {
             string filePathName = Path.Combine(directory, fileName);
 
             if (string.IsNullOrEmpty(filePathName))
             {
-                return false;
+                return FailExit("File name can't be empty.");
             }
 
             if (text == null)
             {
-                LastError = "FileUtilities. Can't save text to file. Text is null.";
-                return false;
+                return FailExit("FileUtilities. " +
+                    "Can't save text to file. Text is null.");
             }
 
             if (string.IsNullOrEmpty(fileName))
             {
-                LastError = "FileUtilities. Can't save file. File name is empty.";
-                return false;
+                return FailExit( "FileUtilities. Can't save file. " +
+                    "File name is empty.");
             }
 
             var dir = Path.GetDirectoryName(filePathName);
@@ -212,22 +233,20 @@ namespace DAQFramework.Utilities
 
             if (!Directory.Exists(dir))
             {
-                LastError = $"FileUtilities. Can't save file. Folder {dir} does not exist.";
-                return false;
+                return FailExit($"FileUtilities. Can't save file. " +
+                    $"Folder {dir} does not exist.");
             }
 
             if (!Directory.Exists(directory))
             {
                 try
                 {
-
                     Directory.CreateDirectory(directory);
                 }
                 catch
                 {
-
-                    LastError = $"FileUtilities. Can't create folder {directory}.";
-                    return false;
+                    return FailExit($"FileUtilities. " +
+                        $"Can't create folder {directory}.");
                 }
             }
 
@@ -238,22 +257,19 @@ namespace DAQFramework.Utilities
             }
             catch (Exception e)
             {
-                LastError = $"Failed to save {filePathName}. Exception: {e.Message}";
-                return false;
+                return FailExit($"Failed to save {filePathName}. " +
+                    $"Exception: {e.Message}");
             }
         }
 
 
-        public static bool ReadTextFile(string directory, string fileName, out string? text, string? filter = null)
+        public static bool ReadTextFile(string directory, 
+            string fileName, out string? text, 
+            string? filter = null)
         {
             string filePathName = Path.Combine(directory, fileName);
             text = null!;
 
-            if (!File.Exists(filePathName))
-            {
-                return false;
-
-            }
 
             try
             {
@@ -265,9 +281,8 @@ namespace DAQFramework.Utilities
             }
             catch (Exception e)
             {
-                LastError = $"Faild to read text file {filePathName}. " +
-                    $"Exception {e.Message}";
-                return false;
+                return FailExit($"Faild to read text file " +
+                    $"{filePathName}. Exception {e.Message}");
             }
         }
 
@@ -349,7 +364,8 @@ namespace DAQFramework.Utilities
             return true;
         }
 
-        public static bool CreateFolder(string folderPath, out string errorMessage, int timeoutMs = DefaultFolderCleanUpTimeoutMs)
+        public static bool CreateFolder(string folderPath, 
+            out string errorMessage, int timeoutMs = DefaultFolderCleanUpTimeoutMs)
         {
             errorMessage = string.Empty;
 
@@ -440,12 +456,10 @@ namespace DAQFramework.Utilities
 
             if (!Directory.Exists(folder))
             {
-
                 if (!CreateFolder(folder, out errorMessage, timeoutMs))
                 {
-                    LastError = $"FileExportHelper. FolderCleanup(). " +
-                        $"Folder: {folder}. Error: {errorMessage}";
-                    return false;
+                    return FailExit( $"FileExportHelper. FolderCleanup(). " +
+                        $"Folder: {folder}. Error: {errorMessage}");
                 }
             }
 

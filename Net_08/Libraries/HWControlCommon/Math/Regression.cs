@@ -23,6 +23,8 @@ See the original code and licence here:
 */
 
 
+using System.Runtime.ConstrainedExecution;
+
 namespace Utilities.Math
 {
     public static class Regression
@@ -97,6 +99,37 @@ namespace Utilities.Math
             slope = sCo / ssX;
         }
         
-    }
+        public static double StDev(double[] data) 
+        {
+            if ((data?.Length ?? 0) == 0) {
+             
+                throw new ArgumentException("Array can't be empty.");
+            }
 
+            double sum = 0;
+            double sumOfSquares = 0;
+
+            // Single loop to calculate sum and sum of squares
+            for(int i = 0; i < data.Length; i++)  
+            {
+                sum += data[i];
+                sumOfSquares += data[i] * data[i];
+            }
+
+            double mean = sum / data.Length;
+            double variance = (sumOfSquares / data.Length) - (mean * mean);
+
+            return System.Math.Sqrt(variance);
+        }
+
+        public static double StDev(List<double> values) {
+
+            if ((values?.Count ?? 0) == 0) {
+
+                throw new ArgumentException("List cannot be empty.");
+            }
+
+            return StDev(values.ToArray());
+        }
+    }
 }

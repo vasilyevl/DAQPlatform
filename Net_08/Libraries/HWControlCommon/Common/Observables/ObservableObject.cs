@@ -24,14 +24,16 @@ using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
 namespace Grumpy.DAQFramework.Common
-
-{    /// <summary>
+{    
+    /// <summary>
      /// Represents an observable object that provides notifications when properties change.
      /// Implements <see cref="INotifyPropertyChanged"/> to support data binding.
      /// </summary>
     public class ObservableObject : INotifyPropertyChanged
     {
-        bool _useExceptions;
+        private bool _useExceptions;
+        private string _lastError;
+        private object _lock;
 
         /// <summary>
         /// Occurs when a property value changes.
@@ -45,8 +47,42 @@ namespace Grumpy.DAQFramework.Common
         public ObservableObject(bool useExceptions = true)
         {
             _useExceptions = useExceptions;
+            _lastError = string.Empty;
+            _lock = new object();
         }
 
+        /// <summary>
+        /// Gets the last error message recorded by the class.
+        /// </summary>
+        /// <remarks>
+        /// This property is thread-safe, ensuring consistent behavior in multi-threaded environments.
+        /// The getter returns a cloned copy of the error message to avoid unintended modifications.
+        /// The setter updates the error message, replacing <c>null</c> values with an empty string.
+        /// Any method which can trigger the error message, sets LastError to string.Empty before execution.
+        /// </remarks>
+        /// <value>
+        /// A <see cref="string"/> representing the last error message. 
+        /// Returns an empty string if no error is recorded.
+        /// </value>
+        public string LastError {
+            
+            get {
+
+                lock (_lock) {
+
+                    return (string)_lastError.Clone();
+                }
+            }
+
+            private set {
+
+                lock (_lock) {
+    
+                    _lastError = value is null ? string.Empty : value;
+                }
+            }
+        }
+    
         /// <summary>
         /// Raises the <see cref="PropertyChanged"/> event for a specified property.
         /// </summary>
@@ -64,8 +100,10 @@ namespace Grumpy.DAQFramework.Common
             PropertyChangedEventHandler pc = PropertyChanged!;
 
             if (pc != null) {
+
                 pc(this, new PropertyChangedEventArgs(string.Empty));
             }
+
             return;
         }
 
@@ -77,26 +115,32 @@ namespace Grumpy.DAQFramework.Common
         /// <exception cref="ArgumentException">Thrown when the property is not found, and exceptions are enabled.</exception>
         protected virtual void OnPropertyChanged(string propertyName)
         {
+            LastError = string.Empty;
+
             Type tmpType = GetType();
             System.Reflection.PropertyInfo tmpProperty = 
-                tmpType.GetProperty(propertyName)!;
+                                    tmpType.GetProperty(propertyName)!;
 
-            if (tmpProperty != null)
-            {
+            if (tmpProperty != null) {
+                
                 PropertyChangedEventHandler pc = PropertyChanged!;
 
-                if (pc != null) { 
+                if (pc != null) {
+                
                     pc(this, new PropertyChangedEventArgs(propertyName));
                 }
+                
                 return;
             }
-            else
-            {
+            else {
+             
+                LastError = $"Property {propertyName} not found.";
+
                 if (_useExceptions) {
-                    throw new ArgumentException(
-                        $"Property {propertyName} not found.");
+
+                    throw new ArgumentException(LastError);
                 }
-            }     
+            }
         }
 
         /// <summary>
@@ -112,18 +156,18 @@ namespace Grumpy.DAQFramework.Common
         protected bool SetProperty<T>( ref T field, T value, ICommand command,  
                               [CallerMemberName] string propertyName = null!)
         {
-            if( SetProperty<T>(ref field, value, propertyName )) {
+            if ( SetProperty<T>(ref field, value, propertyName )) {
 
                 if (command.CanExecute(field)) {
 
                     command.Execute(field);
                 }
+                
                 return true;
             }
 
             return false;
         }
-
 
         /// <summary>
         /// Sets the specified field to the given value and raises the <see cref="PropertyChanged"/> event 
@@ -146,22 +190,31 @@ namespace Grumpy.DAQFramework.Common
         protected bool SetProperty<T>( ref T field, T value, 
                              [CallerMemberName] string propertyName = null!)
         {
+            LastError = string.Empty;
+
             if (!EqualityComparer<T>.Default.Equals(field, value))
             {
                 field = value;
+                
                 try {
+            
                     OnPropertyChanged(propertyName);
                     return true;
                 }
-                catch {
+                catch (Exception ex){
+
+                    LastError = ex.Message;
                     
                     if (_useExceptions) {
+                    
                         throw;
                     }
+
                     return false;
                     
                 }
             }
+
             return false;
         }
 
@@ -182,11 +235,11 @@ namespace Grumpy.DAQFramework.Common
         /// <c>true</c> if the field value changed and the command was executed; otherwise, <c>false</c>.
         /// </returns>
         protected bool SetProperty(ref double field, 
-            double value, 
-            ICommand command,
+            double value, ICommand command,
             [CallerMemberName] string propertyName = null!,
             double tolernacePPM = 100)
         {
+
             if (SetProperty(ref field,value, propertyName, tolernacePPM)) {
 
                 if (command.CanExecute(field)) {
@@ -198,7 +251,6 @@ namespace Grumpy.DAQFramework.Common
 
             return false;
         }
-
 
         /// <summary>
         /// Sets the specified <see cref="double"/> field to the given value if the difference exceeds a specified error tolerance,
@@ -219,28 +271,36 @@ namespace Grumpy.DAQFramework.Common
         /// Re-throws any exception raised by <see cref="OnPropertyChanged"/> unless exceptions are suppressed 
         /// by the <c>_doNotUseExceptions</c> field.
         /// </exception>
-
         protected bool SetProperty(ref double field, double value, 
             [CallerMemberName] string propertyName = null!, 
             double error = 1.0e-6 )
         {
+            LastError = string.Empty;
+            
             if (Math.Abs(field - value)> Math.Abs(error)) {
+                
                 field = value;
+                
                 try {
+            
                     OnPropertyChanged(propertyName);
                     return true;
                 }
-                catch {
+                catch (Exception ex) {
+                    
+                    LastError = ex.Message;
 
                     if (_useExceptions) {
+                    
                         throw;        
                     }
+
                     return false;
                 }
             }
+
             return false;
         }
-
 
         /// <summary>
         /// Sets the specified field to the given value and raises the <see cref="PropertyChanged"/> event 
@@ -265,9 +325,11 @@ namespace Grumpy.DAQFramework.Common
         {
             if (!EqualityComparer<T>.Default.Equals(field, value))
             {
+                LastError = string.Empty;
                 field = value;
                 var lambda = expr as LambdaExpression;
                 MemberExpression memberExpression;
+                
 
                 if (lambda.Body is UnaryExpression) {
 
@@ -275,21 +337,28 @@ namespace Grumpy.DAQFramework.Common
                     memberExpression = (MemberExpression)unaryExpr.Operand;
                 }
                 else {
+                    
                     memberExpression = (MemberExpression)lambda.Body;
                 }
 
                 try {
+            
                     OnPropertyChanged(memberExpression.Member.Name);
                     return true;
                 }
-                catch {
+                catch (Exception ex) { 
+
+                    LastError = ex.Message; 
                     
-                    if (_useExceptions) {
-                        throw;
-                    }
-                    return false; ;
+                    if (_useExceptions) { 
+            
+                        throw; 
+                    } 
+                    
+                    return false;
                 }
             }
+
             return false;
         }
 
@@ -318,12 +387,15 @@ namespace Grumpy.DAQFramework.Common
         protected bool SetProperty(ref double field, double value, 
             Expression<Func<double>> expr, double error = 1.0e-9)
         {
+            LastError = string.Empty;
+
             if ( double.IsNaN(field) ||  
                 (Math.Abs(field - value) > Math.Abs(error)) ) {
 
                 field = value;
                 var lambda = expr as LambdaExpression;
                 MemberExpression memberExpression;
+                
 
                 if (lambda.Body is UnaryExpression) {
 
@@ -331,24 +403,30 @@ namespace Grumpy.DAQFramework.Common
                     memberExpression = (MemberExpression)unaryExpr.Operand;
                 }
                 else {
+
                     memberExpression = (MemberExpression)lambda.Body;
                 }
 
                 try {
+
                     OnPropertyChanged(memberExpression.Member.Name);
                     return true;
                 }
-                catch  {
+                catch (Exception ex) {
 
+                    LastError = ex.Message;
+                    
                     if (_useExceptions) {
-                       throw;
+                       
+                        throw;
                     }
-                    return false; ;
+                    
+                    return false;
                 }
             }
+
             return false;
         }
-
 
         /// <summary>
         /// Raises the <see cref="PropertyChanged"/> event for the property identified by an expression.
@@ -372,11 +450,11 @@ namespace Grumpy.DAQFramework.Common
                 memberExpression = (MemberExpression)unaryExpr.Operand;
             }
             else {
+
                 memberExpression = (MemberExpression)lambda.Body;
             }
 
              OnPropertyChanged(memberExpression.Member.Name);
-
         }
     }
 }

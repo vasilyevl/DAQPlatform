@@ -28,8 +28,20 @@ namespace Grumpy.DAQFramework.Common
         /// <summary>
         /// Constructors
         /// </summary>
+        /// 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ObservableCollectionEx{T}"/> class that is empty.
+        /// </summary>
         public ObservableCollectionEx() : base() { }
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ObservableCollectionEx{T}"/> class that contains elements copied from the specified list.
+        /// </summary>
+        /// <param name="l">The list whose elements are copied to the new list.</param>
         public ObservableCollectionEx(List<T> l) : base(l) { }
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ObservableCollectionEx{T}"/> class that contains elements copied from the specified collection.
+        /// </summary>
+        /// <param name="l">The collection whose elements are copied to the new list.</param>
         public ObservableCollectionEx(IEnumerable<T> l) : base(l) { }
 
         #region Sorting
