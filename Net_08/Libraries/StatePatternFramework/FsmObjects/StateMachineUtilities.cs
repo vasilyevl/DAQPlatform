@@ -8,10 +8,10 @@ namespace Grumpy.StatePatternFramework.FsmObjects
             _ioResultToStateStatus =
                 new Dictionary<Results, StateResult>()
         {
-            { Results.Success, StateResult.Completed },
+            { Results.Success, StateResult.Success },
             { Results.Error, StateResult.Error },
-            { Results.Cancelled, StateResult.Completed },
-            { Results.Warning, StateResult.Completed }
+            { Results.Cancelled, StateResult.Success },
+            { Results.Warning, StateResult.Success }
         };
 
         public static StateResult FromIOResult(Results result) {
@@ -20,7 +20,7 @@ namespace Grumpy.StatePatternFramework.FsmObjects
                 return _ioResultToStateStatus[result];
             }
             else {
-                return StateResult.NotAvailable;
+                return StateResult.NA;
             }
         }
 
@@ -28,9 +28,9 @@ namespace Grumpy.StatePatternFramework.FsmObjects
         _commandStatusToStateStatus =
             new Dictionary<CommandState, StateResult>()
 {
-                {CommandState.Success, StateResult.Completed},
-                {CommandState.Ignored, StateResult.Completed},
-                {CommandState.Rejected, StateResult.Completed},
+                {CommandState.Success, StateResult.Success},
+                {CommandState.Ignored, StateResult.Success},
+                {CommandState.Rejected, StateResult.Success},
                 {CommandState.Failed, StateResult.Error},
                 {CommandState.Timeout, StateResult.Error},
             };
@@ -40,7 +40,7 @@ namespace Grumpy.StatePatternFramework.FsmObjects
                 return _commandStatusToStateStatus[status];
             }
             else {
-                return StateResult.NotAvailable;
+                return StateResult.NA;
             }
         }
     }

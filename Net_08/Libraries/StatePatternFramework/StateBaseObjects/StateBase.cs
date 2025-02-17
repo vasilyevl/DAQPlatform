@@ -20,6 +20,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 using Grumpy.DAQFramework.Common;
 using Microsoft.Extensions.Logging;
+using System.ComponentModel;
 
 namespace Grumpy.StatePatternFramework
 {
@@ -29,11 +30,13 @@ namespace Grumpy.StatePatternFramework
     public class IOResultToFsmStatusException : ArgumentException
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="IOResultToFsmStatusException"/> class.
+        /// Initializes a new instance of the 
+        /// <see cref="IOResultToFsmStatusException"/> class.
         /// </summary>
         /// <param name="description">The description of the exception.</param>
         /// <param name="r">The IO result that caused the exception.</param>
-        public IOResultToFsmStatusException(string description, Results r) : base(description) {
+        public IOResultToFsmStatusException(string description, Results r) : 
+            base(description) {
             IoResult = r;
         }
 
@@ -53,11 +56,16 @@ namespace Grumpy.StatePatternFramework
         public const int MinTimeoutLimitMs = 15;
 
         private EnumBase _id;
+
         protected static ILogger? _logger = null;
         protected object _contextLock;
-        private volatile StateResult _exequtionResult;
+        private volatile StateResult _executionResult;
         private int _periodMs;
         private int _minPeriodMs;
+        private string? _lastError;
+        private object _stateResultLock;
+        private object _abortLock;
+        private bool _abortRequested;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="StateBase"/> class.
@@ -66,7 +74,14 @@ namespace Grumpy.StatePatternFramework
         /// <param name="en">The state ID.</param>
         /// <param name="period">The period in milliseconds.</param>
         /// <param name="logger">The logger instance.</param>
-        public StateBase(StateMachineBase? context, StateIDBase en, int period = InfiniteTimeout, ILogger? logger = null) {
+        public StateBase(StateMachineBase? context, 
+            StateIDBase en, 
+            int period = InfiniteTimeout, 
+            ILogger? logger = null) {
+
+
+            _stateResultLock = new object();
+
             Context = context;
             LastError = string.Empty;
 
@@ -87,7 +102,7 @@ namespace Grumpy.StatePatternFramework
         /// </summary>
         public void ClearError() => LastError = null;
 
-        private string? _lastError;
+        
         /// <summary>
         /// Gets or sets the last error.
         /// </summary>
@@ -136,6 +151,7 @@ namespace Grumpy.StatePatternFramework
         /// </summary>
         public bool UsesIdling => UsesWatchDog || TimeoutIsInfinite;
 
+
         /// <summary>
         /// Sets the timeout to infinite.
         /// </summary>
@@ -167,10 +183,13 @@ namespace Grumpy.StatePatternFramework
         public bool IsActive => Result == StateResult.Working;
 
         /// <summary>
-        /// Determines whether the specified state is equal to the current state.
+        /// Determines whether the specified state is equal to the 
+        /// current state.
         /// </summary>
-        /// <param name="other">The state to compare with the current state.</param>
-        /// <returns>true if the specified state is equal to the current state; otherwise, false.</returns>
+        /// <param name="other">The state to compare with the 
+        /// current state.</param>
+        /// <returns>true if the specified state is equal to the 
+        /// current state; otherwise, false.</returns>
         public bool Equals(StateBase? other) {
             if (other is null)
                 return false;
@@ -180,10 +199,13 @@ namespace Grumpy.StatePatternFramework
         }
 
         /// <summary>
-        /// Determines whether the specified object is equal to the current state.
+        /// Determines whether the specified object is equal to the 
+        /// current state.
         /// </summary>
-        /// <param name="other">The object to compare with the current state.</param>
-        /// <returns>true if the specified object is equal to the current state; otherwise, false.</returns>
+        /// <param name="other">The object to compare with the 
+        /// current state.</param>
+        /// <returns>true if the specified object is equal to the 
+        /// current state; otherwise, false.</returns>
         public override bool Equals(object? other) {
             if (other is null)
                 return false;
@@ -201,7 +223,8 @@ namespace Grumpy.StatePatternFramework
         /// </summary>
         /// <param name="a">The first state to compare.</param>
         /// <param name="b">The second state to compare.</param>
-        /// <returns>true if the two states are equal; otherwise, false.</returns>
+        /// <returns>true if the two states are equal; 
+        /// otherwise, false.</returns>
         public static bool operator ==(StateBase a, StateBase b) {
             if (a is null)
                 return b is null ? true : false;
@@ -214,7 +237,8 @@ namespace Grumpy.StatePatternFramework
         /// </summary>
         /// <param name="a">The first state to compare.</param>
         /// <param name="b">The second state to compare.</param>
-        /// <returns>true if the two states are not equal; otherwise, false.</returns>
+        /// <returns>true if the two states are not equal; 
+        /// otherwise, false.</returns>
         public static bool operator !=(StateBase a, StateBase b) {
             if (a is null)
                 return b is null ? false : true;
@@ -230,19 +254,18 @@ namespace Grumpy.StatePatternFramework
             return base.GetHashCode();
         }
 
-        private object _stateResultLock = new object();
         /// <summary>
         /// Gets or sets the result of the state execution.
         /// </summary>
         public StateResult Result {
             get {
                 lock (_stateResultLock) {
-                    return _exequtionResult;
+                    return _executionResult;
                 }
             }
             protected set {
                 lock (_stateResultLock) {
-                    _exequtionResult = value;
+                    _executionResult = value;
                 }
             }
         }
@@ -260,12 +283,55 @@ namespace Grumpy.StatePatternFramework
         /// <summary>
         /// Called when the state is exited.
         /// </summary>
-        public virtual void Exit() { }
+        public virtual void Exit() {
+
+            var result = Result;
+
+            lock (_abortLock) {
+
+                if (_abortRequested && (result == StateResult.Working || result == StateResult.Idling)) {
+                    Result = StateResult.Aborted;
+                }
+                _abortRequested = false;
+            }
+        }
 
         /// <summary>
         /// Processes the state logic.
         /// </summary>
         /// <param name="args">The state process arguments.</param>
         abstract public void StateProc(StateProcArgs args);
+
+
+        /// <summary>
+        /// Requests the state machine to abort. If the state machine 
+        /// is idling, it wakes it up and sets the abort flag.
+        /// </summary>
+        public void RequestAbort() {
+            if (Context?.IsIdling ?? false) {
+
+                Context?.ResumeWorker();
+            }
+            // Set the abort flag
+            AbortRequested = true;
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether the state 
+        /// machine should abort.
+        /// </summary>
+        public bool AbortRequested {
+            get {
+                lock (_abortLock) {
+                    return _abortRequested;
+                };
+            }
+            private set {
+                lock (_abortLock) {
+                    _abortRequested = value;
+                }
+            } 
+
+        }
     }
 }
