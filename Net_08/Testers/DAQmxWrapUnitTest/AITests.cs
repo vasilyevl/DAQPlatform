@@ -11,22 +11,8 @@ namespace Grumpy.DAQmxWrapUnitTest
 {
     public class QAQmxAITestClass
     {
-
         private readonly ITestOutputHelper _testOutputHelper;
-        private string deviceName = "Dev1";//"TestDevice";
-        private string aiChannels = "ai0:1";
-        private string nameToAssign = "";
-        private int physicalChannels = 2;
-        private int samplesPerChannel = 1;
-        private double timeoutS = 3.0;
-        private AiTermination inputTermination = AiTermination.NRSE;
-        private string timingSource = "";
-        private double samplingRate = 1000.0;
-        private int runs = 25; 
-        private int finiteSamplesPerChannel = 100;
-        private ReadbacklFillMode readbackFillMode = ReadbacklFillMode.ByChannel;
 
-        
         public QAQmxAITestClass(ITestOutputHelper testOutputHelper) {
             _testOutputHelper = testOutputHelper;
         }
@@ -34,71 +20,68 @@ namespace Grumpy.DAQmxWrapUnitTest
         [Fact]
         public void Test1AISingleSamplesSoftwareTrigger() {
 
-            double[] data = new double[samplesPerChannel * physicalChannels];
-
+            
             _testOutputHelper.WriteLine("TestAILines Started.");
-            IntPtr handle = IntPtr.Zero;
 
-            _testOutputHelper.WriteLine("Creating a task...");
+            double[] data = new double[DAQmxTestHelper.SamplesPerChannel * 
+                DAQmxTestHelper.NumberOfPhysicalChannels];
+            IntPtr handle = DAQmxTestHelper.CreateAndConfigureAioTask(testOutputHelper: _testOutputHelper);
+            int result;
 
-            Int32 result = DAQmx.CreateTask("myAiTask", out handle);
-            Assert.True(DAQmx.Success(result),
-                DAQmx.GetErrorDescription(result));
+            for (int rn = 0; rn < DAQmxTestHelper.Runs; rn++) {
 
-            _testOutputHelper.WriteLine($"Task created. " +
-                $"Handle: {string.Format("{0:X}", handle)}.");
-
-            result = DAQmx.CreateAIVoltageChannel(handle, 
-                $"{deviceName}/{aiChannels}", nameToAssign, inputTermination, 
-                -10.0, 10.0, VoltageUnits.Volts, null);
-
-            Assert.True(DAQmx.Success(result),
-                DAQmx.GetErrorDescription(result));
-
-            _testOutputHelper.WriteLine($"AI Channel(s) " +
-                $"created for {aiChannels}.");
-
-            for (int r = 0; r < runs; r++) {
-
+                _testOutputHelper.WriteLine($"\n\nRun {rn+1} out of " +
+                    $"{DAQmxTestHelper.Runs}.");
+                
                 result = DAQmx.StartTask(handle);
-                Assert.True(DAQmx.Success(result),
+                Assert.True(DAQmx.Success(result), 
                     DAQmx.GetErrorDescription(result));
 
-                _testOutputHelper.WriteLine($"AI task  started.");
+                _testOutputHelper.WriteLine($"AI task  started.\n");
+         
+                for (int rd = 0; rd < DAQmxTestHelper.ReadsPerRun; rd++) {
+                
+                    _testOutputHelper.WriteLine($"Read {rd + 1} out of " +
+                        $"{DAQmxTestHelper.ReadsPerRun}.");
 
+                    _testOutputHelper.WriteLine("Reading data using " +
+                        "ReadAnalogF64");
 
-                _testOutputHelper.WriteLine("Reading data using ReadAnalogF64");
+                    result = DAQmx.ReadAnalogF64(handle, 
+                        DAQmxTestHelper.SamplesPerChannel,
+                        DAQmxTestHelper.TimeoutS, 
+                        DAQmxTestHelper.ReadbackFillMode, 
+                        data,
+                        out int samplesRead);
 
-                result = DAQmx.ReadAnalogF64(handle, samplesPerChannel,
-                    timeoutS, readbackFillMode, data,
-                    out int samplesRead);
+                    Assert.True(DAQmx.Success(result),
+                                              DAQmx.GetErrorDescription(result));
 
-                Assert.True(DAQmx.Success(result),
-                                          DAQmx.GetErrorDescription(result));
+                    StringBuilder sb = new StringBuilder();
 
-                StringBuilder sb = new StringBuilder();
-                sb.Append("Sample");
+                    sb.Append("Sample");
 
-                for (int ch = 0; ch < physicalChannels; ch++) {
+                    for (int ch = 0; ch < DAQmxTestHelper.NumberOfPhysicalChannels; ch++) {
 
-                    sb.Append($"\tChannel {ch}");
-                }
-                sb.Append("\n");
+                        sb.Append($"\tChannel {ch}");
+                    }
+                    sb.Append("\n");
 
-                for (int i = 0; i < samplesRead; i++) {
+                    for (int i = 0; i < samplesRead; i++) {
 
-                    sb.Append($" {i + 1} ");
-                    for (int ch = 0; ch < physicalChannels; ch++) {
+                        sb.Append($" {i + 1} ");
+                        for (int ch = 0; ch < DAQmxTestHelper.NumberOfPhysicalChannels; ch++) {
 
-                        sb.Append($"\t\t{data[i * physicalChannels + ch]:F2}.");
+                            sb.Append($"\t\t{data[i * DAQmxTestHelper.NumberOfPhysicalChannels + ch]:F2}.");
+                        }
+
+                        sb.Append("\n");
                     }
 
-                    sb.Append("\n");
+                    _testOutputHelper.WriteLine($"Read {samplesRead} samples " +
+                        $"out of {DAQmxTestHelper.SamplesPerChannel} requested.\n" +
+                        $"{sb.ToString()}");
                 }
-
-                _testOutputHelper.WriteLine($"Read {samplesRead} samples " +
-                    $"out of {samplesPerChannel} requested.\n" +
-                    $"{sb.ToString()}");
 
                 result = DAQmx.IsTaskDone(handle, out bool isDone);
 
@@ -126,45 +109,37 @@ namespace Grumpy.DAQmxWrapUnitTest
             _testOutputHelper.WriteLine(" Analog read complete");
         }
 
+
         [Fact]
         public void Test2AIFiniteSamplesSoftwareTrigger() {
 
-            double[] data = new double[finiteSamplesPerChannel * physicalChannels];
+            double[] data = new double[DAQmxTestHelper.FiniteSamplesPerChannel * 
+                DAQmxTestHelper.NumberOfPhysicalChannels];
             
             _testOutputHelper.WriteLine("TestAILines Started.");
-            IntPtr handle = IntPtr.Zero;
 
-            _testOutputHelper.WriteLine("Creating a task...");
-
-            Int32 result = DAQmx.CreateTask("myAiTask", out handle);
-
-            Assert.True(DAQmx.Success(result),
-                DAQmx.GetErrorDescription(result));
+            IntPtr handle = DAQmxTestHelper.CreateAndConfigureAioTask(
+                testOutputHelper: _testOutputHelper);
+     
+            Assert.True(handle > 0, "Failed to create task.");
 
             _testOutputHelper.WriteLine($"Task created. Handle: " +
                 $"{string.Format("{0:X}", handle)}.");
 
-            result = DAQmx.CreateAIVoltageChannel(handle,
-                $"{deviceName}/{aiChannels}", nameToAssign, inputTermination,
-                -10.0, 10.0, VoltageUnits.Volts, null);
+            int result = DAQmx.TaskControl(handle, TaskAction.Verify);
 
             Assert.True(DAQmx.Success(result),
-                DAQmx.GetErrorDescription(result));
-
-            _testOutputHelper.WriteLine($"AI Channel(s) created for." +
-                $" {deviceName}/{aiChannels}");
-
-            result = DAQmx.TaskControl(handle, TaskAction.Verify);
-
-            Assert.True(DAQmx.Success(result),
-                    $"Channel verification failed {DAQmx.GetErrorDescription(result)}");
+                    $"Channel verification failed " +
+                    $"{DAQmx.GetErrorDescription(result)}");
 
             _testOutputHelper.WriteLine($"Channel verified.");
 
-
-            result = DAQmx.ConfigureTiming(handle, timingSource,
-                samplingRate, ActiveEdge.Rising,
-                SamplingMode.FiniteSamples, finiteSamplesPerChannel);
+            result = DAQmx.ConfigureTiming(handle, 
+                DAQmxTestHelper.TimingSource,
+                DAQmxTestHelper.SamplingRate, 
+                ActiveEdge.Rising,
+                SamplingMode.FiniteSamples, 
+                DAQmxTestHelper.FiniteSamplesPerChannel);
 
             Assert.True(DAQmx.Success(result),
                 DAQmx.GetErrorDescription(result));
@@ -173,7 +148,8 @@ namespace Grumpy.DAQmxWrapUnitTest
             _testOutputHelper.WriteLine($"AI timing  configured.");
 
             Assert.True(DAQmx.Success(result),
-                    $"Timing verification failed {DAQmx.GetErrorDescription(result)}");
+                    $"Timing verification failed " +
+                    $"{DAQmx.GetErrorDescription(result)}");
 
             _testOutputHelper.WriteLine($"Timing verified.");
 
@@ -192,10 +168,14 @@ namespace Grumpy.DAQmxWrapUnitTest
             EndTime = DateTime.Now;
             Assert.True(DAQmx.Success(result),
                 DAQmx.GetErrorDescription(result));
-            _testOutputHelper.WriteLine($"Task complete in {(EndTime - StartTime).TotalMilliseconds}ms.");
+            _testOutputHelper.WriteLine($"Task complete in " +
+                $"{(EndTime - StartTime).TotalMilliseconds}ms.");
 
-            result = DAQmx.ReadAnalogF64(handle, finiteSamplesPerChannel,
-                timeoutS, readbackFillMode, data,
+            result = DAQmx.ReadAnalogF64(handle, 
+                DAQmxTestHelper.FiniteSamplesPerChannel,
+                DAQmxTestHelper.TimeoutS, 
+                DAQmxTestHelper.ReadbackFillMode, 
+                data,
                 out int samplesRead);
 
             Assert.True(DAQmx.Success(result),
@@ -203,23 +183,27 @@ namespace Grumpy.DAQmxWrapUnitTest
 
             StringBuilder sb = new StringBuilder();
             sb.Append("Sample");
-            for (int ch = 0; ch < physicalChannels; ch++) {
+
+            for (int ch = 0; ch < DAQmxTestHelper.NumberOfPhysicalChannels; ch++) {
                 sb.Append($"\tChannel {ch}");
             }
+
             sb.Append("\n");
 
             for (int i = 0; i < samplesRead; i++) {
 
                 sb.Append($"  {i + 1} ");
-                for (int ch = 0; ch < physicalChannels; ch++) {
+          
+                for (int ch = 0; ch < DAQmxTestHelper.NumberOfPhysicalChannels; ch++) {
 
-                    sb.Append($"\t\t{data[i * physicalChannels + ch]:F2}.");
+                    sb.Append($"\t\t{data[i * DAQmxTestHelper.NumberOfPhysicalChannels + ch]:F2}.");
                 }
+
                 sb.Append("\n");
             }
 
             _testOutputHelper.WriteLine($"Read {samplesRead} samples " +
-                $"out of {finiteSamplesPerChannel} requested.\n" +
+                $"out of {DAQmxTestHelper.FiniteSamplesPerChannel} requested.\n" +
                 $"{sb.ToString()}");
 
             result = DAQmx.IsTaskDone(handle, out bool isDone);
@@ -247,12 +231,14 @@ namespace Grumpy.DAQmxWrapUnitTest
             _testOutputHelper.WriteLine(" Analog read complete");
         }
 
-
-
-        public int EventCallback(IntPtr taskHandle, int status, ref IntPtr callbackData) {
+        public int EventCallback(IntPtr taskHandle, 
+            int status, 
+            ref IntPtr callbackData) {
             EndTime = DateTime.Now;
 
-            _testOutputHelper.WriteLine($"Event callback called with status {status}. Time laps: {(EndTime - StartTime).TotalMilliseconds}ms.");
+            _testOutputHelper.WriteLine($"Event callback called " +
+                $"with status {status}. Time laps: " +
+                $"{(EndTime - StartTime).TotalMilliseconds}ms.");
             
             return 0;
         }
@@ -264,42 +250,32 @@ namespace Grumpy.DAQmxWrapUnitTest
         [Fact]
         public void Test3AIFiniteSamplesSoftwareTriggerWEvent() {
 
-            double[] data = new double[finiteSamplesPerChannel * physicalChannels];
+            double[] data = new double[DAQmxTestHelper.FiniteSamplesPerChannel * 
+                DAQmxTestHelper.NumberOfPhysicalChannels];
 
             _testOutputHelper.WriteLine("TestAILines Started.");
-            IntPtr handle = IntPtr.Zero;
 
             _testOutputHelper.WriteLine("Creating a task...");
 
-            Int32 result = DAQmx.CreateTask("myAiTask", out handle);
+            IntPtr handle = DAQmxTestHelper.CreateAndConfigureAioTask(
+                testOutputHelper: _testOutputHelper);
+
+            Assert.True(handle > 0, "Failed to create task.");
+
+            int result = DAQmx.TaskControl(handle, TaskAction.Verify);
 
             Assert.True(DAQmx.Success(result),
-                DAQmx.GetErrorDescription(result));
-
-            _testOutputHelper.WriteLine($"Task created. Handle: " +
-                $"{string.Format("{0:X}", handle)}.");
-
-            result = DAQmx.CreateAIVoltageChannel(handle,
-                $"{deviceName}/{aiChannels}", nameToAssign, inputTermination,
-                -10.0, 10.0, VoltageUnits.Volts, null);
-
-            Assert.True(DAQmx.Success(result),
-                DAQmx.GetErrorDescription(result));
-
-            _testOutputHelper.WriteLine($"AI Channel(s) created for." +
-                $" {deviceName}/{aiChannels}");
-
-            result = DAQmx.TaskControl(handle, TaskAction.Verify);
-
-            Assert.True(DAQmx.Success(result),
-                    $"Channel verification failed {DAQmx.GetErrorDescription(result)}");
+                    $"Channel verification failed " +
+                    $"{DAQmx.GetErrorDescription(result)}");
 
             _testOutputHelper.WriteLine($"Channel verified.");
 
-
-            result = DAQmx.ConfigureTiming(handle, timingSource,
-                samplingRate, ActiveEdge.Rising,
-                SamplingMode.FiniteSamples, finiteSamplesPerChannel);
+            result = DAQmx.ConfigureTiming(handle, 
+                DAQmxTestHelper.TimingSource,
+                DAQmxTestHelper.SamplingRate, 
+                ActiveEdge.Rising,
+                SamplingMode.FiniteSamples, 
+                DAQmxTestHelper.FiniteSamplesPerChannel);
 
             Assert.True(DAQmx.Success(result),
                 DAQmx.GetErrorDescription(result));
@@ -308,13 +284,16 @@ namespace Grumpy.DAQmxWrapUnitTest
             _testOutputHelper.WriteLine($"AI timing  configured.");
 
             Assert.True(DAQmx.Success(result),
-                    $"Timing verification failed {DAQmx.GetErrorDescription(result)}");
+                    $"Timing verification failed " +
+                    $"{DAQmx.GetErrorDescription(result)}");
 
             _testOutputHelper.WriteLine($"Timing verified.");
 
-            DAQmxDoneCallbackDelegate cbhandle = new DAQmxDoneCallbackDelegate(EventCallback);
+            DAQmxDoneCallbackDelegate cbhandle = 
+                new DAQmxDoneCallbackDelegate(EventCallback);
 
-            CallbackHandle callbackHandler = CallbackService.RegisterDoneEvent(handle, cbhandle, this);
+            CallbackHandle callbackHandler = 
+                CallbackService.RegisterDoneEvent(handle, cbhandle, this);
 
             StartTime = DateTime.Now;
             result = DAQmx.StartTask(handle);
@@ -325,33 +304,42 @@ namespace Grumpy.DAQmxWrapUnitTest
 
             _testOutputHelper.WriteLine("Reading data using ReadAnalogF64");
 
-            result = DAQmx.ReadAnalogF64(handle, finiteSamplesPerChannel,
-                timeoutS, readbackFillMode, data,
+            result = DAQmx.ReadAnalogF64(handle, 
+                DAQmxTestHelper.FiniteSamplesPerChannel,
+                DAQmxTestHelper.TimeoutS, 
+                DAQmxTestHelper.ReadbackFillMode, data,
                 out int samplesRead);
 
             Assert.True(DAQmx.Success(result),
                  DAQmx.GetErrorDescription(result));
 
             StringBuilder sb = new StringBuilder();
+            
             sb.Append("Sample");
-            for (int ch = 0; ch < physicalChannels; ch++) {
+            
+            for (int ch = 0; ch < DAQmxTestHelper.NumberOfPhysicalChannels; ch++) {
                 sb.Append($"\tChannel {ch}");
             }
+
             sb.Append("\n");
 
             for (int i = 0; i < samplesRead; i++) {
 
                 sb.Append($"  {i + 1} ");
-                for (int ch = 0; ch < physicalChannels; ch++) {
+                for (int ch = 0; 
+                    ch < DAQmxTestHelper.NumberOfPhysicalChannels; 
+                    ch++) {
 
-                    sb.Append($"\t\t{data[i * physicalChannels + ch]:F2}.");
+                    sb.Append(
+                        $"\t\t{data[i * DAQmxTestHelper.NumberOfPhysicalChannels + ch]:F2}.");
                 }
                 sb.Append("\n");
             }
 
-            _testOutputHelper.WriteLine($"Read {samplesRead} samples " +
-                $"out of {finiteSamplesPerChannel} requested.\n" +
-                $"{sb.ToString()}");
+            _testOutputHelper.WriteLine(
+                $"Read {samplesRead} samples " +
+                $"out of {DAQmxTestHelper.FiniteSamplesPerChannel} " +
+                $"requested.\n{sb.ToString()}");
 
             result = DAQmx.IsTaskDone(handle, out bool isDone);
 
@@ -377,8 +365,5 @@ namespace Grumpy.DAQmxWrapUnitTest
 
             _testOutputHelper.WriteLine(" Analog read complete");
         }
-
-
-
     }
 }

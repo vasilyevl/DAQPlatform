@@ -213,8 +213,6 @@ namespace Grumpy{
 			return result;
 		}
 
-
-
 		int DAQmxCLIWrapper::WriteDigitalLines(IntPtr taskHandle,
 			int32 numSampsPerChan, bool autoStart, double timeout,
 			ReadbacklFillMode interleaveMode,
@@ -229,7 +227,6 @@ namespace Grumpy{
 			sampsPerChanWritten = sampsPerChanWrittenLocal;
 			return result;
 		}
-
 
 		int DAQmxCLIWrapper::WriteDigitalScalarU32(IntPtr taskHandle,
 			bool autostart, double timeout, uInt32 data) {
@@ -253,7 +250,6 @@ namespace Grumpy{
 			return result;
 		}
 
-
 		int DAQmxCLIWrapper::WriteDigitalU16(IntPtr taskHandle, int32 numSampsPerChan,
 			bool autoStart, double timeout, ReadbacklFillMode interleaveMode,
 			array<uInt16>^ data, [Out] int% samplesPerChannelWritten) {
@@ -268,7 +264,6 @@ namespace Grumpy{
 			samplesPerChannelWritten = sampsPerChanWrittenLocal;
 			return result;
 		}
-
 
 		int DAQmxCLIWrapper::WriteDigitalU8(IntPtr taskHandle, int32 numSampsPerChan,
 			bool autoStart, double timeout, ReadbacklFillMode interleaveMode,
@@ -285,7 +280,6 @@ namespace Grumpy{
 			return result;
 		}
 
-
 		int  DAQmxCLIWrapper::ConfigureTiming(long long taskHandle,
 			String^ source, double rate, ActiveEdge activeEdge,
 			SamplingMode sampleMode, long long sampsPerChan) {
@@ -294,7 +288,6 @@ namespace Grumpy{
 				ConvertToCString(source), rate, (int)activeEdge,
 				(int)sampleMode, sampsPerChan);
 		}
-
 
 		int DAQmxCLIWrapper::ReadAnalogF64(IntPtr taskHandle,
 			int32 sampsPerChan, double timeout,
@@ -363,7 +356,6 @@ namespace Grumpy{
 			return result;
 		}
 
-
 		int DAQmxCLIWrapper::ReadBinaryUI32(IntPtr taskHandle,
 			int32 sampsPerChan, double timeout,
 			ReadbacklFillMode groupMode, array<uInt32>^ dat,
@@ -377,7 +369,6 @@ namespace Grumpy{
 			sampsPerChanRead = sampsPerChanReadLocal;
 			return result;
 		}
-
 
 		int DAQmxCLIWrapper::CreateCOPulseFrequencyChannel(
 			IntPtr taskHandle, 

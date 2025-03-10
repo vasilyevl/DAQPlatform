@@ -7,8 +7,8 @@ namespace Grumpy.DAQmxWrapUnitTest
     public class QAQmxDITestClass
     {
         private readonly ITestOutputHelper _testOutputHelper;
-        private string deviceName = "Dev1";//"TestDevice";
-        private string diChannels = "port0/line0:3";
+
+        
 
         public QAQmxDITestClass(ITestOutputHelper testOutputHelper) {
 
@@ -23,7 +23,7 @@ namespace Grumpy.DAQmxWrapUnitTest
 
             _testOutputHelper.WriteLine("Creating a task...");
 
-            Int32 result = DAQmx.CreateTask("myTask", out handle);
+            Int32 result = DAQmx.CreateTask(DAQmxTestHelper.DiTaskName, out handle);
 
             Assert.True(DAQmx.Success(result), 
                 DAQmx.GetErrorDescription(result));
@@ -32,21 +32,21 @@ namespace Grumpy.DAQmxWrapUnitTest
                 $"{string.Format("{0:X}", handle)}.");
             
             result = DAQmx.CreateDIChannel(handle,
-                $"{deviceName}/{diChannels}", "myDIChannel", 
+                $"{DAQmxTestHelper.DeviceName}/{DAQmxTestHelper.DiChannels}", "myDIChannel", 
                 DIOLineGrouping.ChanForAllLines);
 
             Assert.True(DAQmx.Success(result), 
                 DAQmx.GetErrorDescription(result));
 
             _testOutputHelper.WriteLine($"DI Channel created " +
-                $"for {diChannels}.");
+                $"for {DAQmxTestHelper.DiChannels}.");
 
             result = DAQmx.StartTask(handle);
 
             Assert.True(DAQmx.Success(result), 
                 DAQmx.GetErrorDescription(result));
 
-            _testOutputHelper.WriteLine($"DI task {diChannels} started.");
+            _testOutputHelper.WriteLine($"DI task {DAQmxTestHelper.DiChannels} started.");
 
 
             byte[] data = new byte[10];
@@ -102,7 +102,8 @@ namespace Grumpy.DAQmxWrapUnitTest
 
             _testOutputHelper.WriteLine("Creating a task...");
 
-            Int32 result = DAQmx.CreateTask("myTask", out handle);
+            Int32 result = DAQmx.CreateTask(DAQmxTestHelper.DiTaskName, 
+                out handle);
 
             Assert.True(DAQmx.Success(result), 
                 DAQmx.GetErrorDescription(result));
@@ -111,24 +112,28 @@ namespace Grumpy.DAQmxWrapUnitTest
                 $"{string.Format("{0:X}", handle)}.");
 
             result = DAQmx.CreateDIChannel(handle, 
-                $"{deviceName}/{diChannels}", 
-                "myDIChannel", DIOLineGrouping.ChanForAllLines);
+                $"{DAQmxTestHelper.DeviceName}/{DAQmxTestHelper.DiChannels}", 
+                DAQmxTestHelper.DiChannelNameToAssign, 
+                DIOLineGrouping.ChanForAllLines);
 
             Assert.True(DAQmx.Success(result), 
                 DAQmx.GetErrorDescription(result));
 
             _testOutputHelper.WriteLine($"DI Channel created " +
-                $"for {diChannels}.");
+                $"for {DAQmxTestHelper.DiChannels}.");
 
             result = DAQmx.StartTask(handle);
 
             Assert.True(DAQmx.Success(result), 
                 DAQmx.GetErrorDescription(result));
 
-            _testOutputHelper.WriteLine($"DI task {diChannels} started.");
+            _testOutputHelper.WriteLine($"DI task " +
+                $"{DAQmxTestHelper.DiChannels} started.");
 
             uint[] data32 = new uint[10];
-            _testOutputHelper.WriteLine("Reading data using ReadDigit32");
+            _testOutputHelper.WriteLine("Reading " +
+                "data using ReadDigit32");
+
             for (int i = 0; i < 10; i++) {
 
                 result = DAQmx.ReadDigitU32(handle, 2, 1.0,
@@ -177,7 +182,8 @@ namespace Grumpy.DAQmxWrapUnitTest
             IntPtr handle = IntPtr.Zero;
 
             _testOutputHelper.WriteLine("Creating a task...");
-            Int32 result = DAQmx.CreateTask("myTask", out handle);
+            Int32 result = DAQmx.CreateTask(DAQmxTestHelper.DiTaskName, 
+                out handle);
 
             Assert.True(DAQmx.Success(result), 
                 DAQmx.GetErrorDescription(result));
@@ -186,21 +192,22 @@ namespace Grumpy.DAQmxWrapUnitTest
                 $"{string.Format("{0:X}", handle)}.");
 
             result = DAQmx.CreateDIChannel(handle, 
-                $"{deviceName}/{diChannels}", 
-                "myDIChannel", DIOLineGrouping.ChanForAllLines);
+                $"{DAQmxTestHelper.DeviceName}/{DAQmxTestHelper.DiChannels}", 
+                DAQmxTestHelper.DiChannelNameToAssign, 
+                DIOLineGrouping.ChanForAllLines);
 
             Assert.True(DAQmx.Success(result), 
                 DAQmx.GetErrorDescription(result));
 
             _testOutputHelper.WriteLine($"DI Channel created for " +
-                $"{diChannels}.");
+                $"{DAQmxTestHelper.DiChannels}.");
 
             result = DAQmx.StartTask(handle);
 
             Assert.True(DAQmx.Success(result), 
                 DAQmx.GetErrorDescription(result));
 
-            _testOutputHelper.WriteLine($"DI task {diChannels} started.");
+            _testOutputHelper.WriteLine($"DI task {DAQmxTestHelper.DiChannels} started.");
 
             _testOutputHelper.WriteLine(" ReadDigitalLines complete");
 
