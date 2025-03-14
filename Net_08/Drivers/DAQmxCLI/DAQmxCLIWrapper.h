@@ -73,11 +73,13 @@ namespace Grumpy{
 			ChanForAllLines = DAQmx_Val_ChanForAllLines	// 10205  One Channel For All Lines
 		};
 
-		public enum class ReadbacklFillMode
+		public enum class ReadWriteFillMode
 		{
 			ByChannel = DAQmx_Val_GroupByChannel, 	// 0  Group by Channel
 			ByScan = DAQmx_Val_GroupByScanNumber	// 1  Group by Scan Number
 		};
+
+
 
 		public enum class TaskAction
 		{
@@ -431,7 +433,7 @@ namespace Grumpy{
 			*/
 			static int ReadAnalogF64(IntPtr taskHandle,
 				int32 sampsPerChan, double timeout, 
-				ReadbacklFillMode groupMode,
+				ReadWriteFillMode groupMode,
 				array<double>^ data,
 				[Out] int% samplsPerChanRead);
 
@@ -485,10 +487,152 @@ namespace Grumpy{
 			*
 			* @see DAQmxReadBinaryI16
 			*/
+
+
 			static int ReadBinaryI16(IntPtr taskHandle,
 				int32 sampsPerChan, double timeout,
-				ReadbacklFillMode groupMode, array<int16>^ data,
+				ReadWriteFillMode groupMode, array<int16>^ data,
 				uInt32 bufferSizeInSamples, [Out] int% sampsPerChanRead);
+
+
+			/**
+			* @brief Writes multiple floating-point samples to an analog output channel in a DAQmx task.
+			*
+			* This function wraps the NI-DAQmx `DAQmxWriteAnalogF64` function. It writes multiple floating-point
+			* samples to the specified analog output channel(s) in the task.
+			*
+			* @param[in] taskHandle The handle to the task that contains the analog output channel(s) to which you want to write samples.
+			* @param[in] sampsPerChan The number of samples per channel to write.
+			* @param[in] autoStart Specifies whether or not to automatically start the task if it is not already running.
+			* @param[in] timeout The amount of time, in seconds, to wait for the function to write the samples.
+			*                    If the time elapses before the function writes the samples, the function returns an error.
+			* @param[in] groupMode Specifies whether the samples are interleaved or non-interleaved.
+			*                      Use `ReadWriteFillMode::ByChannel` to write samples for each channel consecutively.
+			*                      Use `ReadWriteFillMode::ByScan` to write one sample for each channel in each scan.
+			* @param[in] data The array of data to write to the analog output channel(s). The array must contain the number of samples specified by `sampsPerChan` for each channel in the task.
+			* @param[out] sampsPerChanWritten The actual number of samples per channel successfully written. This parameter is passed by reference and will be set by the function.
+			* @return Returns 0 on success, or a non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			*/
+			static int WriteAnalogF64(IntPtr taskHandle,
+				int32 sampsPerChan, bool autoStart, double timeout,
+				ReadWriteFillMode groupMode, array<double>^ data,
+				[Out] int% sampsPerChanWritten);
+
+
+
+			/**
+			* @brief Writes a single floating-point sample to an analog output channel in a DAQmx task.
+			*
+			* This function wraps the NI-DAQmx `DAQmxWriteAnalogScalarF64` function. It writes a single floating-point
+			* sample to the specified analog output channel in the task.
+			*
+			* @param[in] taskHandle The handle to the task that contains the analog output channel to which you want to write the sample.
+			* @param[in] autoStart Specifies whether or not to automatically start the task if it is not already running.
+			* @param[in] timeout The amount of time, in seconds, to wait for the function to write the sample.
+			*                    If the time elapses before the function writes the sample, the function returns an error.
+			* @param[in] data The data value to write to the analog output channel.
+			* @return Returns 0 on success, or a non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			*/
+			static int WriteAnalogScalarF64(IntPtr taskHandle,
+				bool autoStart, double timeout, double data);
+
+
+
+			/**
+			* @brief Writes multiple 16-bit integer samples to an analog output channel in a DAQmx task.
+			*
+			* This function wraps the NI-DAQmx `DAQmxWriteBinaryI16` function. It writes multiple 16-bit integer
+			* samples to the specified analog output channel(s) in the task.
+			*
+			* @param[in] taskHandle The handle to the task that contains the analog output channel(s) to which you want to write samples.
+			* @param[in] sampsPerChan The number of samples per channel to write.
+			* @param[in] autoStart Specifies whether or not to automatically start the task if it is not already running.
+			* @param[in] timeout The amount of time, in seconds, to wait for the function to write the samples.
+			*                    If the time elapses before the function writes the samples, the function returns an error.
+			* @param[in] groupMode Specifies whether the samples are interleaved or non-interleaved.
+			*                      Use `ReadWriteFillMode::ByChannel` to write samples for each channel consecutively.
+			*                      Use `ReadWriteFillMode::ByScan` to write one sample for each channel in each scan.
+			* @param[in] data The array of data to write to the analog output channel(s). The array must contain the number of samples specified by `sampsPerChan` for each channel in the task.
+			* @param[out] sampsPerChanWritten The actual number of samples per channel successfully written. This parameter is passed by reference and will be set by the function.
+			* @return Returns 0 on success, or a non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			*/
+			static int WriteBinaryI16(IntPtr taskHandle,
+				int32 sampsPerChan, bool autoStart, double timeout,
+				ReadWriteFillMode groupMode, array<int16>^ data,
+				[Out] int% sampsPerChanWritten);
+
+
+			/**
+			* @brief Writes multiple 32-bit integer samples to an analog output channel in a DAQmx task.
+			*
+			* This function wraps the NI-DAQmx `DAQmxWriteBinaryI32` function. It writes multiple 32-bit integer
+			* samples to the specified analog output channel(s) in the task.
+			*
+			* @param[in] taskHandle The handle to the task that contains the analog output channel(s) to which you want to write samples.
+			* @param[in] sampsPerChan The number of samples per channel to write.
+			* @param[in] autoStart Specifies whether or not to automatically start the task if it is not already running.
+			* @param[in] timeout The amount of time, in seconds, to wait for the function to write the samples.
+			*                    If the time elapses before the function writes the samples, the function returns an error.
+			* @param[in] groupMode Specifies whether the samples are interleaved or non-interleaved.
+			*                      Use `ReadWriteFillMode::ByChannel` to write samples for each channel consecutively.
+			*                      Use `ReadWriteFillMode::ByScan` to write one sample for each channel in each scan.
+			* @param[in] dat The array of data to write to the analog output channel(s). The array must contain the number of samples specified by `sampsPerChan` for each channel in the task.
+			* @param[out] sampsPerChanWritten The actual number of samples per channel successfully written. This parameter is passed by reference and will be set by the function.
+			* @return Returns 0 on success, or a non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			*/
+			static int WriteBinaryI32(IntPtr taskHandle,
+				int32 sampsPerChan, bool autoStart, double timeout,
+				ReadWriteFillMode groupMode, array<int32>^ dat,
+				[Out] int% sampsPerChanWritten);
+
+
+			/**
+			 * @brief Writes multiple 16-bit unsigned integer samples to an analog output channel in a DAQmx task.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxWriteBinaryU16` function. It writes multiple 16-bit unsigned integer
+			 * samples to the specified analog output channel(s) in the task.
+			 *
+			 * @param[in] taskHandle The handle to the task that contains the analog output channel(s) to which you want to write samples.
+			 * @param[in] sampsPerChan The number of samples per channel to write.
+			 * @param[in] autoStart Specifies whether or not to automatically start the task if it is not already running.
+			 * @param[in] timeout The amount of time, in seconds, to wait for the function to write the samples.
+			 *                    If the time elapses before the function writes the samples, the function returns an error.
+			 * @param[in] groupMode Specifies whether the samples are interleaved or non-interleaved.
+			 *                      Use `ReadWriteFillMode::ByChannel` to write samples for each channel consecutively.
+			 *                      Use `ReadWriteFillMode::ByScan` to write one sample for each channel in each scan.
+			 * @param[in] dat The array of data to write to the analog output channel(s). The array must contain the number of samples specified by `sampsPerChan` for each channel in the task.
+			 * @param[out] sampsPerChanWritten The actual number of samples per channel successfully written. This parameter is passed by reference and will be set by the function.
+			 * @return Returns 0 on success, or a non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			 */
+			static int WriteBinaryUI16(IntPtr taskHandle,
+				int32 sampsPerChan, bool autoStart, double timeout,
+				ReadWriteFillMode groupMode, array<uInt16>^ dat,
+				[Out] int% sampsPerChanWritten);
+
+
+			/**
+			* @brief Writes multiple 32-bit unsigned integer samples to an analog output channel in a DAQmx task.
+			*
+			* This function wraps the NI-DAQmx `DAQmxWriteBinaryU32` function. It writes multiple 32-bit unsigned integer
+			* samples to the specified analog output channel(s) in the task.
+			*
+			* @param[in] taskHandle The handle to the task that contains the analog output channel(s) to which you want to write samples.
+			* @param[in] sampsPerChan The number of samples per channel to write.
+			* @param[in] autoStart Specifies whether or not to automatically start the task if it is not already running.
+			* @param[in] timeout The amount of time, in seconds, to wait for the function to write the samples.
+			*                    If the time elapses before the function writes the samples, the function returns an error.
+			* @param[in] groupMode Specifies whether the samples are interleaved or non-interleaved.
+			*                      Use `ReadWriteFillMode::ByChannel` to write samples for each channel consecutively.
+			*                      Use `ReadWriteFillMode::ByScan` to write one sample for each channel in each scan.
+			* @param[in] dat The array of data to write to the analog output channel(s). The array must contain the number of samples specified by `sampsPerChan` for each channel in the task.
+			* @param[out] sampsPerChanWritten The actual number of samples per channel successfully written. This parameter is passed by reference and will be set by the function.
+			* @return Returns 0 on success, or a non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			*/
+			static int WriteBinaryUI32(IntPtr taskHandle,
+				int32 sampsPerChan, bool autoStart, double timeout,
+				ReadWriteFillMode groupMode, array<uInt32>^ dat,
+				[Out] int% sampsPerChanWritten);
+
 
 			/**
 			* @brief Reads multiple binary samples as 16-bit unsigned integers from a task.
@@ -518,7 +662,7 @@ namespace Grumpy{
 			*/
 			static int ReadBinaryUI16(IntPtr taskHandle,
 				int32 sampsPerChan, double timeout,
-				ReadbacklFillMode groupMode, array<uInt16>^ data,
+				ReadWriteFillMode groupMode, array<uInt16>^ data,
 				uInt32 bufferSizeInSamples, [Out] int% sampsPerChanRead);
 
 			/**
@@ -549,7 +693,7 @@ namespace Grumpy{
 			*/
 			static int ReadBinaryI32(IntPtr taskHandle,
 				int32 sampsPerChan, double timeout,
-				ReadbacklFillMode groupMode, array<int32>^ data,
+				ReadWriteFillMode groupMode, array<int32>^ data,
 				uInt32 bufferSizeInSamples, [Out] int% sampsPerChanRead);
 
 			/**
@@ -580,7 +724,7 @@ namespace Grumpy{
 			*/
 			static int ReadBinaryUI32(IntPtr taskHandle,
 				int32 sampsPerChan, double timeout,
-				ReadbacklFillMode groupMode, array<uInt32>^ dat,
+				ReadWriteFillMode groupMode, array<uInt32>^ dat,
 				uInt32 bufferSizeInSamples, [Out] int% sampsPerChanRead);
 
 			/**
@@ -1045,7 +1189,7 @@ namespace Grumpy{
 			*/
 			static int ReadDigitalLines(IntPtr taskHandle,
 								uInt32 numSampsPerChan, double timeout,
-									ReadbacklFillMode interleaveMode,
+									ReadWriteFillMode interleaveMode,
 									array<Byte>^ data,
 									uInt32 bufferSize,
 									[Out] int% sampsPerChanRead,
@@ -1102,7 +1246,7 @@ namespace Grumpy{
 			*/
 			static int ReadDigitU32(IntPtr taskHandle,
 				int samplesPerChannel, double timeout, 
-				ReadbacklFillMode interleaveMode,
+				ReadWriteFillMode interleaveMode,
 				array<uInt32> ^data, uInt32 arraySize,
 				[Out] int% sampsPerChanRead);
 
@@ -1135,7 +1279,7 @@ namespace Grumpy{
 			 */
 			static int ReadDigitU16(IntPtr taskHandle,
 				int samplesPerChannel, double timeout,
-				ReadbacklFillMode interleaveMode,
+				ReadWriteFillMode interleaveMode,
 				array<uInt16>^ data, uInt32 arraySize,
 				[Out] int% sampsPerChanRead);
 
@@ -1168,7 +1312,7 @@ namespace Grumpy{
 			*/
 			static int ReadDigitU8(IntPtr taskHandle,
 				int samplesPerChannel, double timeout,
-				ReadbacklFillMode interleaveMode,
+				ReadWriteFillMode interleaveMode,
 				array<uInt8>^ data, uInt32 arraySize,
 				[Out] int% sampsPerChanRead);
 
@@ -1201,7 +1345,7 @@ namespace Grumpy{
 			*/
 			static int WriteDigitalLines(IntPtr taskHandle,
 				int32 numSampsPerChan, bool autoStart, double timeout,
-				ReadbacklFillMode interleaveMode,
+				ReadWriteFillMode interleaveMode,
 				array<Byte>^ data,
 				[Out] int% sampsPerChanWritten);
 
@@ -1258,7 +1402,7 @@ namespace Grumpy{
 			*/
 			static int WriteDigitalU8(IntPtr taskHandle, int32 numSampsPerChan,
 				bool autoStart, double timeout, 
-				ReadbacklFillMode interleaveMode,
+				ReadWriteFillMode interleaveMode,
 				array<uInt8>^ data, [Out] int% samplesPerChannelWritten);
 
 			/**
@@ -1290,7 +1434,7 @@ namespace Grumpy{
 			 */
 			static int WriteDigitalU16(IntPtr taskHandle, int32 numSampsPerChan,
 				bool autoStart, double timeout, 
-				ReadbacklFillMode interleaveMode,
+				ReadWriteFillMode interleaveMode,
 				array<uInt16>^ data, [Out] int% samplesPerChannelWritten);
 
 			/**
@@ -1322,7 +1466,7 @@ namespace Grumpy{
 			 */
 			static int WriteDigitalU32(IntPtr taskHandle, int32 numSampsPerChan,
 				bool autostart, double timeout, 
-				ReadbacklFillMode interleaveMode, 
+				ReadWriteFillMode interleaveMode, 
 				array<uInt32>^ data, [Out] int% samplesPerChannelWritten);
 
 			/**

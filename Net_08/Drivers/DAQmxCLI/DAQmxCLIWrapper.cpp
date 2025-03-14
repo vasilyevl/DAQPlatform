@@ -135,7 +135,7 @@ namespace Grumpy{
 
 		int DAQmxCLIWrapper::ReadDigitalLines(IntPtr taskHandle,
 			uInt32 numSamplesPerChan, double timeout,
-			ReadbacklFillMode interleaveMode,
+			ReadWriteFillMode interleaveMode,
 			array<Byte>^ data, uInt32 bufferSize,
 			[Out] int% sampsPerChanRead, [Out] int% bytesPerSample) {
 
@@ -165,7 +165,7 @@ namespace Grumpy{
 
 		int DAQmxCLIWrapper::ReadDigitU32(IntPtr taskHandle,
 			int samplesPerChannel, double timeout,
-			ReadbacklFillMode interleaveMode, array<uInt32>^ data, 
+			ReadWriteFillMode interleaveMode, array<uInt32>^ data, 
 			uInt32 arraySize, [Out] int% sampsPerChanRead) {
 
 			pin_ptr<uInt32> dataPtr = &data[0];
@@ -182,7 +182,7 @@ namespace Grumpy{
 
 		int DAQmxCLIWrapper::ReadDigitU16(IntPtr taskHandle,
 			int samplesPerChannel, double timeout,
-			ReadbacklFillMode interleaveMode, array<uInt16>^ data, 
+			ReadWriteFillMode interleaveMode, array<uInt16>^ data, 
 			uInt32 arraySize, [Out] int% sampsPerChanRead) {
 
 			pin_ptr<uInt16> dataPtr = &data[0];
@@ -198,7 +198,7 @@ namespace Grumpy{
 
 		int DAQmxCLIWrapper::ReadDigitU8(IntPtr taskHandle,
 			int samplesPerChannel, double timeout,
-			ReadbacklFillMode interleaveMode, array<uInt8>^ data, 
+			ReadWriteFillMode interleaveMode, array<uInt8>^ data, 
 			uInt32 arraySize, [Out] int% sampsPerChanRead) {
 
 			pin_ptr<uInt8> dataPtr = &data[0];
@@ -215,7 +215,7 @@ namespace Grumpy{
 
 		int DAQmxCLIWrapper::WriteDigitalLines(IntPtr taskHandle,
 			int32 numSampsPerChan, bool autoStart, double timeout,
-			ReadbacklFillMode interleaveMode,
+			ReadWriteFillMode interleaveMode,
 			array<Byte>^ data,
 			[Out] int% sampsPerChanWritten) {
 
@@ -236,7 +236,7 @@ namespace Grumpy{
 		}
 
 		int DAQmxCLIWrapper::WriteDigitalU32(IntPtr taskHandle, int32 numSampsPerChan,
-			bool autoStart, double timeout, ReadbacklFillMode interleaveMode,
+			bool autoStart, double timeout, ReadWriteFillMode interleaveMode,
 			array<uInt32>^ data, [Out] int% samplesPerChannelWritten) {	
 		
 			pin_ptr<uInt32> dataPtr = &data[0];
@@ -251,7 +251,7 @@ namespace Grumpy{
 		}
 
 		int DAQmxCLIWrapper::WriteDigitalU16(IntPtr taskHandle, int32 numSampsPerChan,
-			bool autoStart, double timeout, ReadbacklFillMode interleaveMode,
+			bool autoStart, double timeout, ReadWriteFillMode interleaveMode,
 			array<uInt16>^ data, [Out] int% samplesPerChannelWritten) {
 
 			pin_ptr<uInt16> dataPtr = &data[0];
@@ -266,7 +266,7 @@ namespace Grumpy{
 		}
 
 		int DAQmxCLIWrapper::WriteDigitalU8(IntPtr taskHandle, int32 numSampsPerChan,
-			bool autoStart, double timeout, ReadbacklFillMode interleaveMode,
+			bool autoStart, double timeout, ReadWriteFillMode interleaveMode,
 			array<uInt8>^ data, [Out] int% samplesPerChannelWritten) {
 
 			pin_ptr<uInt8> dataPtr = &data[0];
@@ -291,18 +291,33 @@ namespace Grumpy{
 
 		int DAQmxCLIWrapper::ReadAnalogF64(IntPtr taskHandle,
 			int32 sampsPerChan, double timeout,
-			ReadbacklFillMode groupMode,
+			ReadWriteFillMode groupMode,
 			array<double>^ data,
 			[Out] int% samplsPerChanRead) {
 
 			pin_ptr<float64> dataPtr = &data[0];
 			int32 sampsPerChanReadLocal;
 			int result = DAQmxReadAnalogF64((TaskHandle) taskHandle, 
-				 sampsPerChan, timeout, (bool32) groupMode, 
+				 sampsPerChan, timeout, (bool32)groupMode, 
 				dataPtr, data->Length, &sampsPerChanReadLocal, NULL);
 			samplsPerChanRead = sampsPerChanReadLocal;
 			return result;
 		}
+
+		int DAQmxCLIWrapper::WriteAnalogF64(IntPtr taskHandle,
+			int32 sampsPerChan, bool autoStart, double timeout,
+			ReadWriteFillMode groupMode, array<double>^ data,
+			[Out] int% sampsPerChanWritten) {
+
+			pin_ptr<float64> dataPtr = &data[0];
+			int32 sampsPerChanWrittenLocal;
+			int result = DAQmxWriteAnalogF64((TaskHandle)taskHandle,
+				sampsPerChan, autoStart, timeout, (bool32) groupMode,
+				dataPtr, &sampsPerChanWrittenLocal, NULL);
+			sampsPerChanWritten = sampsPerChanWrittenLocal;
+			return result;
+		}
+
 
 		int DAQmxCLIWrapper::ReadAnalogScalarF64(IntPtr taskHandle,
 			double timeout, [Out] double% data) {
@@ -314,9 +329,17 @@ namespace Grumpy{
 			return result;
 		}
 
+
+		int DAQmxCLIWrapper::WriteAnalogScalarF64(IntPtr taskHandle,
+			bool autoStart, double timeout, double data) {
+
+			return DAQmxWriteAnalogScalarF64((TaskHandle)taskHandle,
+				autoStart, timeout, data, NULL);
+		}
+
 		int DAQmxCLIWrapper::ReadBinaryI16(IntPtr taskHandle,
 			int32 sampsPerChan, double timeout,
-			ReadbacklFillMode groupMode, array<int16>^ data,
+			ReadWriteFillMode groupMode, array<int16>^ data,
 			uInt32 bufferSizeInSamples, [Out] int% sampsPerChanRead)
 		{
 			pin_ptr<int16> dataPtr = &data[0];
@@ -328,9 +351,23 @@ namespace Grumpy{
 			return result;
 		}
 
+		int DAQmxCLIWrapper::WriteBinaryI16(IntPtr taskHandle,
+			int32 sampsPerChan, bool autoStart, double timeout,
+			ReadWriteFillMode groupMode, array<int16>^ data,
+			[Out] int% sampsPerChanWritten)
+		{
+			pin_ptr<int16> dataPtr = &data[0];
+			int32 sampsPerChanWrittenLocal;
+			int result = DAQmxWriteBinaryI16((TaskHandle)taskHandle,
+				sampsPerChan, autoStart, timeout, (bool32)groupMode,
+				dataPtr, &sampsPerChanWrittenLocal, NULL);
+			sampsPerChanWritten = sampsPerChanWrittenLocal;
+			return result;
+		}
+
 		int DAQmxCLIWrapper::ReadBinaryI32(IntPtr taskHandle,
 			int32 sampsPerChan, double timeout,
-			ReadbacklFillMode groupMode, array<int32>^ dat,
+			ReadWriteFillMode groupMode, array<int32>^ dat,
 			uInt32 bufferSizeInSamples, [Out] int% sampsPerChanRead)
 		{
 			pin_ptr<int32> dataPtr = &dat[0];
@@ -342,9 +379,23 @@ namespace Grumpy{
 			return result;
 		}
 
+		int DAQmxCLIWrapper::WriteBinaryI32(IntPtr taskHandle,
+			int32 sampsPerChan, bool autoStart, double timeout,
+			ReadWriteFillMode groupMode, array<int32>^ dat,
+			[Out] int% sampsPerChanWritten)
+		{
+			pin_ptr<int32> dataPtr = &dat[0];
+			int32 sampsPerChanWrittenLocal;
+			int result = DAQmxWriteBinaryI32((TaskHandle)taskHandle,
+				sampsPerChan, autoStart, timeout, (bool32)groupMode,
+				dataPtr, &sampsPerChanWrittenLocal, NULL);
+			sampsPerChanWritten = sampsPerChanWrittenLocal;
+			return result;
+		}
+
 		int DAQmxCLIWrapper::ReadBinaryUI16(IntPtr taskHandle,
 			int32 sampsPerChan, double timeout,
-			ReadbacklFillMode groupMode, array<uInt16>^ dat,
+			ReadWriteFillMode groupMode, array<uInt16>^ dat,
 			uInt32 bufferSizeInSamples, [Out] int% sampsPerChanRead)
 		{
 			pin_ptr<uInt16> dataPtr = &dat[0];
@@ -356,9 +407,23 @@ namespace Grumpy{
 			return result;
 		}
 
+		int DAQmxCLIWrapper::WriteBinaryUI16(IntPtr taskHandle,
+			int32 sampsPerChan, bool autoStart, double timeout,
+			ReadWriteFillMode groupMode, array<uInt16>^ dat,
+			[Out] int% sampsPerChanWritten)
+		{
+			pin_ptr<uInt16> dataPtr = &dat[0];
+			int32 sampsPerChanWrittenLocal;
+			int result = DAQmxWriteBinaryU16((TaskHandle)taskHandle,
+				sampsPerChan, autoStart, timeout, (bool32)groupMode,
+				dataPtr, &sampsPerChanWrittenLocal, NULL);
+			sampsPerChanWritten = sampsPerChanWrittenLocal;
+			return result;
+		}
+
 		int DAQmxCLIWrapper::ReadBinaryUI32(IntPtr taskHandle,
 			int32 sampsPerChan, double timeout,
-			ReadbacklFillMode groupMode, array<uInt32>^ dat,
+			ReadWriteFillMode groupMode, array<uInt32>^ dat,
 			uInt32 bufferSizeInSamples, [Out] int% sampsPerChanRead)
 		{
 			pin_ptr<uInt32> dataPtr = &dat[0];
@@ -370,6 +435,22 @@ namespace Grumpy{
 			return result;
 		}
 
+
+
+
+		int DAQmxCLIWrapper::WriteBinaryUI32(IntPtr taskHandle,
+			int32 sampsPerChan, bool autoStart, double timeout,
+			ReadWriteFillMode groupMode, array<uInt32>^ dat,
+			[Out] int% sampsPerChanWritten)
+		{
+			pin_ptr<uInt32> dataPtr = &dat[0];
+			int32 sampsPerChanWrittenLocal;
+			int result = DAQmxWriteBinaryU32((TaskHandle)taskHandle,
+				sampsPerChan, autoStart, timeout, (bool32)groupMode,
+				dataPtr, &sampsPerChanWrittenLocal, NULL);
+			sampsPerChanWritten = sampsPerChanWrittenLocal;
+			return result;
+		}
 		int DAQmxCLIWrapper::CreateCOPulseFrequencyChannel(
 			IntPtr taskHandle, 
 			String^ counter, String^ nameToAssignToChannel, 
