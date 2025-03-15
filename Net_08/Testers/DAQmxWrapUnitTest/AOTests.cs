@@ -1,9 +1,8 @@
 ﻿using Grumpy.DAQmxNetApi;
 using DAQmx = Grumpy.DAQmxNetApi.DAQmxCLIWrapper;
-using Xunit;
+
 using Xunit.Abstractions;
-using System;
-using System.Text;
+
 
 namespace Grumpy.DAQmxWrapUnitTest
 {
@@ -19,7 +18,10 @@ namespace Grumpy.DAQmxWrapUnitTest
         public void Test1AOSingleSample() {
             _testOutputHelper.WriteLine("TestAOLines Started.");
 
-            IntPtr handle = DAQmxTestHelper.CreateAndConfigureAioTask(testOutputHelper: _testOutputHelper);
+            IntPtr handle = DAQmxTestHelper.CreateAndConfigureAioTask(
+                testOutputHelper: _testOutputHelper,
+                channels: DAQmxTestHelper.AoChannels,
+                taskName: DAQmxTestHelper.AoTaskName);
             int result;
 
             result = DAQmx.StartTask(handle);
@@ -46,9 +48,13 @@ namespace Grumpy.DAQmxWrapUnitTest
 
         [Fact]
         public void Test2AOFiniteSamples() {
+
             _testOutputHelper.WriteLine("TestAOLines Started.");
 
-            IntPtr handle = DAQmxTestHelper.CreateAndConfigureAioTask(testOutputHelper: _testOutputHelper);
+            IntPtr handle = DAQmxTestHelper.CreateAndConfigureAioTask(
+                testOutputHelper: _testOutputHelper,
+                channels: DAQmxTestHelper.AoChannels,
+                taskName: DAQmxTestHelper.AoTaskName);
             Assert.True(handle > 0, "Failed to create task.");
 
             int result = DAQmx.TaskControl(handle, TaskAction.Verify);
@@ -64,8 +70,11 @@ namespace Grumpy.DAQmxWrapUnitTest
             _testOutputHelper.WriteLine("Timing verified.");
 
             double[] data = new double[DAQmxTestHelper.FiniteSamplesPerChannel * DAQmxTestHelper.NumberOfPhysicalChannels];
+
+            double inc = 10.0 / data.Length;
+
             for (int i = 0; i < data.Length; i++) {
-                data[i] = i * 0.1; // Example data
+                data[i] = i * inc; // Example data
             }
 
             result = DAQmx.StartTask(handle);

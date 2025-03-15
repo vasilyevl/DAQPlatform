@@ -1,12 +1,8 @@
 ﻿using Grumpy.DAQmxNetApi;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using DAQmx = Grumpy.DAQmxNetApi.DAQmxCLIWrapper;
+
 using System.Runtime.CompilerServices;
 using Xunit.Abstractions;
-using DAQmx = Grumpy.DAQmxNetApi.DAQmxCLIWrapper;
 
 
 namespace Grumpy.DAQmxWrapUnitTest
@@ -15,6 +11,7 @@ namespace Grumpy.DAQmxWrapUnitTest
     {
         public const string DeviceName = "PCIe-6323_Sim";//"TestDevice";
         public const string AiChannels = "ai0:1";
+        public const string AoChannels = "ao0:1";
         public const string NameToAssign = "";
         public const int NumberOfPhysicalChannels = 2;
         public const int SamplesPerChannel = 1;
@@ -25,8 +22,10 @@ namespace Grumpy.DAQmxWrapUnitTest
         public const int Runs = 5;
         public const int ReadsPerRun = 5;
         public const int FiniteSamplesPerChannel = 100;
-        public const ReadbacklFillMode ReadbackFillMode = ReadbacklFillMode.ByChannel;
+        public const ReadWriteFillMode ReadbackFillMode = ReadWriteFillMode.ByChannel;
+        public const ReadWriteFillMode WriteFillMode = ReadWriteFillMode.ByChannel;
         public const string AiTaskName = "myAiTask";
+        public const string AoTaskName = "myAoTask";
         public const double VoltageRangeMax = 10.0;
         public const double VoltageRangeMin = -10.0;
         public const string DiTaskName = "myDiTask";
@@ -42,7 +41,7 @@ namespace Grumpy.DAQmxWrapUnitTest
         public static  IntPtr CreateAndConfigureAioTask(
             string taskName = DAQmxTestHelper.AiTaskName,
             string deviceName = DAQmxTestHelper.DeviceName,
-            string aiChannels = DAQmxTestHelper.AiChannels,
+            string channels = DAQmxTestHelper.AiChannels,
             double minVoltage = DAQmxTestHelper.VoltageRangeMin,
             double maxVoltagw = DAQmxTestHelper.VoltageRangeMax,
             ITestOutputHelper? testOutputHelper = null) {
@@ -57,21 +56,32 @@ namespace Grumpy.DAQmxWrapUnitTest
             testOutputHelper?.WriteLine($"Task created. " +
                     $"Handle: {string.Format("{0:X}", handle)}.");
 
-            result = DAQmx.CreateAIVoltageChannel(handle,
-                $"{deviceName}/{aiChannels}",
-                string.Empty,
-                DAQmxTestHelper.InputTermination,
-                minVoltage,
-                maxVoltagw,
-                VoltageUnits.Volts,
-                null);
+            if (channels.Contains("ai")) {
+                result = DAQmx.CreateAIVoltageChannel(handle,
+                    $"{deviceName}/{channels}",
+                    string.Empty,
+                    DAQmxTestHelper.InputTermination,
+                    minVoltage,
+                    maxVoltagw,
+                    VoltageUnits.Volts,
+                    null);
+            }
+            else {
+                result = DAQmx.CreateAOVoltageChannel(handle,
+                    $"{deviceName}/{channels}",
+                    string.Empty,
+                    minVoltage,
+                    maxVoltagw,
+                    VoltageUnits.Volts,
+                    null);
 
-            Assert.True(DAQmx.Success(result),
+            }
+                Assert.True(DAQmx.Success(result),
                 $"Channel creation failed. " +
                 $"{DAQmx.GetErrorDescription(result)}");
 
-            testOutputHelper?.WriteLine($"AI Channel(s) " +
-                $"created for {aiChannels}.");
+            testOutputHelper?.WriteLine($"Channel(s) " +
+                $"created for {channels}.");
 
             return handle;
         }

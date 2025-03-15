@@ -61,10 +61,6 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
         private int _retriggerTimeout;
         private int _retriggerFilterEnable;
 
-
-
-
-
         public DAQTrigger() : base() {
             _source = string.Empty;
             _triggerType = TriggerTypes.None;

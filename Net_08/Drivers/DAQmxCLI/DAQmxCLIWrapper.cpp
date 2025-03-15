@@ -74,7 +74,7 @@ namespace Grumpy{
 
 		int DAQmxCLIWrapper::CreateAOVoltageChannel(IntPtr taskHandle, 
 			String^ physicalChannel, String^ nameToAssignToChannel, 
-			double minVal, double maxVal, int units, 
+			double minVal, double maxVal, VoltageUnits units,
 			String^ customScaleName) {
 
 			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
@@ -86,7 +86,7 @@ namespace Grumpy{
 
 
 			int result = DAQmxCreateAOVoltageChan(taskHandleLocal, physicalChannelChar, 
-				nameToAssignToChannelChar, minVal, maxVal, units, customScaleNameChar);
+				nameToAssignToChannelChar, minVal, maxVal, (int) units, customScaleNameChar);
 			
 			FreeCString(nameToAssignToChannelChar);
 			FreeCString(customScaleNameChar);

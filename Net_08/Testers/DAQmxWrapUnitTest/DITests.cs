@@ -55,7 +55,7 @@ namespace Grumpy.DAQmxWrapUnitTest
             for (int i = 0; i < 10; i++) {
 
                 result = DAQmx.ReadDigitalLines(handle, 2, 1.0,
-                    ReadbacklFillMode.ByChannel,
+                    DAQmxTestHelper.ReadbackFillMode,
                     data, (uint)data.Length, out int samplesRead, 
                     out int bytesPerSample);
 
@@ -137,7 +137,7 @@ namespace Grumpy.DAQmxWrapUnitTest
             for (int i = 0; i < 10; i++) {
 
                 result = DAQmx.ReadDigitU32(handle, 2, 1.0,
-                    ReadbacklFillMode.ByChannel,
+                    DAQmxTestHelper.ReadbackFillMode,
                     data32, (uint)data32.Length, out int samplesRead);
 
                 Assert.True(DAQmx.Success(result),
@@ -218,7 +218,7 @@ namespace Grumpy.DAQmxWrapUnitTest
             for (int i = 0; i < 10; i++) {
 
                 result = DAQmx.ReadDigitU32(handle, 2, 1.0,
-                    ReadbacklFillMode.ByChannel,
+                    DAQmxTestHelper.ReadbackFillMode,
                     data, (uint)data.Length, out int samplesRead);
 
                 Assert.True(DAQmx.Success(result),

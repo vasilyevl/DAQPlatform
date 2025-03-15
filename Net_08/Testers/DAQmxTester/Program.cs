@@ -69,6 +69,9 @@ namespace Grumpy.DAQmxTester
         }
 
 
+
+
+
         static string? Serialize<T>(T o) where T : ConfigurationBase {
 
             var serialized = o.SerializeToString(out string? error);
@@ -121,7 +124,7 @@ namespace Grumpy.DAQmxTester
             }
 
             ChannelConfiguration channel4 = new ChannelConfiguration();
-            string error4 = string.Empty;
+            string? error4 = string.Empty;
 
             if (channel4?.CopyFrom(channel3!, out error4) ?? false) {
 
@@ -167,6 +170,32 @@ namespace Grumpy.DAQmxTester
 
         static void Main(string[] args) {
 
+            DAQmxAOTestClass testClass = new DAQmxAOTestClass();
+
+            Console.WriteLine("Running Test1AOSingleSample...");
+            testClass.Test1AOSingleSample();
+
+            Console.WriteLine("Running Test2AOFiniteSamples...");
+            testClass.Test2AOFiniteSamples();
+
+            Console.WriteLine("All AO tests completed.");
+
+
+            var testAiClass = new DAQmxAITestClass();
+
+            testAiClass.Test1AISingleSamplesSoftwareTrigger();
+            testAiClass.Test2AIFiniteSamplesSoftwareTrigger();
+            testAiClass.Test3AIFiniteSamplesSoftwareTriggerWEvent();
+
+            Console.WriteLine("All AI tests completed.");
+
+            var TestDITestClass = new DAQmxDITestClass();
+
+            TestDITestClass.Test1DILines();
+            TestDITestClass.Test2DIReadU32();
+            TestDITestClass.Test3DIReadU16();
+
+            Console.WriteLine("All DI tests completed.");
             // Test1();
 
             Test2(out List<ChannelConfiguration> channels);

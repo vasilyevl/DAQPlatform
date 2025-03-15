@@ -794,7 +794,7 @@ namespace Grumpy{
 			*/
 			static int CreateAOVoltageChannel(IntPtr taskHandle,
 				String^ physicalChannel, String^ nameToAssignToChannel, 
-				double minVal, double maxVal, int units, 
+				double minVal, double maxVal, VoltageUnits units,
 				String^ customScaleName);
 
 			/**

@@ -111,7 +111,7 @@ namespace DAQFramework.Common.Configuration
 
   
 
-        public string LastError
+        public string? LastError
         {
             get;
             protected set;
