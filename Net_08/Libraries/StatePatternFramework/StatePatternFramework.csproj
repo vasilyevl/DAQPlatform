@@ -8,7 +8,12 @@
     <BaseOutputPath>..\..\bin\</BaseOutputPath>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Optimize>True</Optimize>
+  </PropertyGroup>
+
   <ItemGroup>
+    <ProjectReference Include="..\Common\Common.csproj" />
     <ProjectReference Include="..\HWControlCommon\DAQFramework.csproj" />
   </ItemGroup>
 

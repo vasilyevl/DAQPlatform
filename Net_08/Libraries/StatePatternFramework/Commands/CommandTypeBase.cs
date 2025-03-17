@@ -19,7 +19,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 using Grumpy.DAQFramework.Common;
-
+using Grumpy.Common;
 namespace Grumpy.StatePatternFramework
 {
     public class CommandTypeBase : EnumBase

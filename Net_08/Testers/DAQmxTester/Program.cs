@@ -195,7 +195,19 @@ namespace Grumpy.DAQmxTester
             TestDITestClass.Test2DIReadU32();
             TestDITestClass.Test3DIReadU16();
 
-            Console.WriteLine("All DI tests completed.");
+
+            var doTest = new DAQmxDOTestClass();
+            doTest.Test1DOLines();          
+            doTest.Test2DOWriteU32();
+            doTest.Test3DOWriteScalar();
+
+            Console.WriteLine("All Do tests completed.");
+
+
+            var counterTest = new CounterTest();
+
+            counterTest.TestCreateCOPulseChanTime();
+
             // Test1();
 
             Test2(out List<ChannelConfiguration> channels);

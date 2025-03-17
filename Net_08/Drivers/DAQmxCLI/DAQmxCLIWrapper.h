@@ -61,6 +61,20 @@ namespace Grumpy{
 			FromCustomScale = DAQmx_Val_FromCustomScale		// 10065  From Custom Scale
 		};
 
+		public enum class TimeUnits {
+			Seconds = DAQmx_Val_Seconds,					// 10364  Seconds
+			Ticks = DAQmx_Val_Ticks,						// 10304  Ticks
+			Hertz = DAQmx_Val_Hz							// 10373  Hertz
+		};
+
+		public enum class DioState
+		{
+			Low = DAQmx_Val_Low,						// 10214  Low
+			High = DAQmx_Val_High						// 10192  High
+		};
+
+
+
 		public enum class ActiveEdge
 		{
 			Rising = DAQmx_Val_Rising,		// 10280  Rising	
@@ -910,7 +924,7 @@ namespace Grumpy{
 			*/
 			static int CreateCOPulseChanTime(IntPtr taskHandle,
 				String^ counter, String^ nameToAssignToChannel, 
-				int units, int idleState, 
+				TimeUnits units, DioState idleState, 
 				double initialDelay, double lowTime, double highTime);
 			
 			/**

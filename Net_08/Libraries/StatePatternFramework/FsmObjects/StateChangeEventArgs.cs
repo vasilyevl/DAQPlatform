@@ -18,6 +18,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+using Grumpy.Common;
 using Grumpy.DAQFramework.Common;
 
 namespace Grumpy.StatePatternFramework

@@ -214,16 +214,25 @@ namespace Grumpy{
 		}
 
 		int DAQmxCLIWrapper::WriteDigitalLines(IntPtr taskHandle,
-			int32 numSampsPerChan, bool autoStart, double timeout,
+			int32 numSampsPerChan, 
+			bool autoStart, 
+			double timeout,
 			ReadWriteFillMode interleaveMode,
 			array<Byte>^ data,
 			[Out] int% sampsPerChanWritten) {
 
 			pin_ptr<uInt8> dataPtr = &data[0];
 			int32 sampsPerChanWrittenLocal;
-			int result  = DAQmxWriteDigitalLines((TaskHandle)taskHandle,
-				numSampsPerChan, autoStart, timeout, (int)interleaveMode,
-				dataPtr, &sampsPerChanWrittenLocal, NULL);
+			int result  = DAQmxWriteDigitalLines(
+				(TaskHandle)taskHandle,
+				numSampsPerChan, 
+				autoStart, 
+				timeout, 
+				(int)interleaveMode,
+				dataPtr, 
+				&sampsPerChanWrittenLocal, 
+				NULL);
+
 			sampsPerChanWritten = sampsPerChanWrittenLocal;
 			return result;
 		}
@@ -453,18 +462,27 @@ namespace Grumpy{
 		}
 		int DAQmxCLIWrapper::CreateCOPulseFrequencyChannel(
 			IntPtr taskHandle, 
-			String^ counter, String^ nameToAssignToChannel, 
-			int units, int idleState, double initialDelay, 
-			double freq, double dutyCycle) {
+			String^ counter, 
+			String^ nameToAssignToChannel, 
+			int units, 
+			int idleState, 
+			double initialDelay, 
+			double freq, 
+			double dutyCycle) {
 
 			char* nameToAssignToChannelChar = 
 				ConvertToCString(nameToAssignToChannel);
 			char* counterChar = ConvertToCString(counter);
 
-			int result = DAQmxCreateCOPulseChanFreq((TaskHandle)taskHandle,
-				counterChar, nameToAssignToChannelChar, 
-				units, idleState, 
-				initialDelay, freq, dutyCycle);
+			int result = DAQmxCreateCOPulseChanFreq(
+				(TaskHandle)taskHandle,
+				counterChar, 
+				nameToAssignToChannelChar, 
+				units, 
+				idleState, 
+				initialDelay, 
+				freq, 
+				dutyCycle);
 
 			FreeCString(nameToAssignToChannelChar);
 			FreeCString(counterChar);
@@ -473,16 +491,25 @@ namespace Grumpy{
 		};
 
 		int DAQmxCLIWrapper::CreateCOPulseChanTime(IntPtr taskHandle, 
-			String^ counter, String^ nameToAssignToChannel, int units, 
-			int idleState, double initialDelay, 
-			double lowTime, double highTime) {
+			String^ counter, 
+			String^ nameToAssignToChannel, 
+			TimeUnits units,
+			DioState idleState,
+			double initialDelay, 
+			double lowTime, 
+			double highTime) {
 
 			char* nameToAssignToChannelChar = 
 				ConvertToCString(nameToAssignToChannel);
 			char* counterChar = ConvertToCString(counter);
 			int result = DAQmxCreateCOPulseChanTime((TaskHandle)taskHandle,
-				counterChar, nameToAssignToChannelChar, units, idleState, 
-				initialDelay, lowTime, highTime);
+				counterChar, 
+				nameToAssignToChannelChar, 
+				(int) units, 
+				(int) idleState, 
+				initialDelay, 
+				lowTime, 
+				highTime);
 
 			FreeCString(nameToAssignToChannelChar);
 			FreeCString(counterChar);
@@ -491,16 +518,22 @@ namespace Grumpy{
 		};
 		
 		int DAQmxCLIWrapper::CreateCICountEdgesChan(IntPtr taskHandle, 
-			String^ counter, String^ nameToAssignToChannel, int edge, 
-			int initialCount, int countDirection) {
+			String^ counter, 
+			String^ nameToAssignToChannel, 
+			int edge, 
+			int initialCount, 
+			int countDirection) {
 
 			char* nameToAssignToChannelChar =
 				ConvertToCString(nameToAssignToChannel);
 			char* counterChar = ConvertToCString(counter);
 
 			int result = DAQmxCreateCICountEdgesChan((TaskHandle)taskHandle,
-				counterChar, nameToAssignToChannelChar, edge, 
-				initialCount, countDirection);
+				counterChar, 
+				nameToAssignToChannelChar, 
+				edge, 
+				initialCount, 
+				countDirection);
 
 			FreeCString(nameToAssignToChannelChar);
 			FreeCString(counterChar);

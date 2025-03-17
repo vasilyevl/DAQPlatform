@@ -10,6 +10,13 @@ namespace Grumpy.DAQmxTester
         public const string DeviceName = "PCIe-6323_Sim";//"TestDevice";
         public const string AiChannels = "ai0:1";
         public const string AoChannels = "ao0:1";
+        public const string DiChannels = "port0/line0:3";
+        public const int NumberOfDiChannels = 4;
+        public const string DoChannels = "port0/line0:3";
+        public const string CounterChannel = "ctr0";
+        public const string CounterAssignedName = "PulseGenerator";
+        public const int NumberOfDoChannels = 4;
+        public const int NumberOfDoSamples = 10;
         public const string NameToAssign = "";
         public const int NumberOfPhysicalChannels = 2;
         public const int SamplesPerChannel = 1;
@@ -24,12 +31,13 @@ namespace Grumpy.DAQmxTester
         public const ReadWriteFillMode WriteFillMode = ReadWriteFillMode.ByChannel;
         public const string AiTaskName = "myAiTask";
         public const string AoTaskName = "myAoTask";
+        public const string DoTaskName = "myDoTask";
         public const double VoltageRangeMax = 10.0;
         public const double VoltageRangeMin = -10.0;
         public const string DiTaskName = "myDiTask";
-        public const string DiChannels = "port0/line0:3";
+ 
         public const string DiChannelNameToAssign = "diChannel";
-
+        public const string DoChannelNameToAssign = "doChannel";
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string GenerateChannelName(
             string channelName,
