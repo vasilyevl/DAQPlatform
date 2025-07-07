@@ -1,28 +1,78 @@
-﻿using System.ComponentModel;
+﻿/*
+Copyright (c) 2025 vasilyevl (Grumpy). Permission is hereby granted, 
+free of charge, to any person obtaining a copy of this software
+and associated documentation files (the "Software"),to deal in the Software 
+without restriction, including without limitation the rights to use, copy, 
+modify, merge, publish, distribute, sublicense, and/or sell copies of the 
+Software, and to permit persons to whom the Software is furnished to do so, 
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included 
+in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,FITNESS FOR A 
+PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
+OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+using System.ComponentModel;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
-namespace Grumpy.Common
+namespace Grumpy.Common.BaseObjects
 {
-    public class ObservableObject : INotifyPropertyChanged
+    public class ObservableDisposableBase : DisposableBase, INotifyPropertyChanged
     {
-        bool _noExceptions;
+        private bool _noExceptions;
+        private readonly object _lastErrorLock = new object();
+        private string _lastError = string.Empty;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public ObservableObject(bool noExceptions = false) {
+        public ObservableDisposableBase(bool noExceptions = false) {
+
             _noExceptions = noExceptions;
         }
+
+        protected override void DisposeManagedResources() {
+
+            PropertyChanged = null;
+            _lastError = null!;
+
+        }
+
+        public string LastError {
+            get {
+
+                lock (_lastErrorLock) {
+
+                    return _lastError;
+                }
+            }
+            protected set {
+
+                lock (_lastErrorLock) {
+
+                    _lastError = value;
+                }
+            }
+        }
+
 
         public void RaisePropertyChanged(string name) {
             OnPropertyChanged(name);
         }
 
         public void RaisePropertyChanged() {
+
             PropertyChangedEventHandler? pc = PropertyChanged;
 
             if (pc != null) {
+
                 pc(this, new PropertyChangedEventArgs(string.Empty));
             }
             return;
@@ -32,25 +82,38 @@ namespace Grumpy.Common
 
             Type? tmpType = GetType();
 
-            System.Reflection.PropertyInfo? tmpProperty = tmpType?.GetProperty(propertyName) ?? null;
+            System.Reflection.PropertyInfo? tmpProperty = 
+                tmpType?.GetProperty(propertyName) ?? null;
 
             if (tmpProperty != null) {
+
                 PropertyChangedEventHandler pc = PropertyChanged!;
 
                 if (pc != null) {
+
                     pc(this, new PropertyChangedEventArgs(propertyName));
                 }
                 return;
             }
             else {
+                lock (_lastErrorLock) {
+
+                    _lastError = $"Property {propertyName} not found.";
+                }
+                
                 if (!_noExceptions) {
-                    throw new ArgumentException($"Property {propertyName} not found.");
+                   
+                    throw new ArgumentException(
+                        $"Property {propertyName} not found.");
                 }
             }
         }
 
+        protected bool SetProperty<T>( ref T field, 
+            T value, 
+            ICommand command, 
+            [CallerMemberName] string propertyName = null!) {
 
-        protected bool SetProperty<T>(ref T field, T value, ICommand command, [CallerMemberName] string propertyName = null) {
             if (SetProperty<T>(ref field, value, propertyName)) {
 
                 if (command.CanExecute(field)) {
@@ -63,28 +126,45 @@ namespace Grumpy.Common
             return false;
         }
 
+        protected bool SetProperty<T>(ref T field, 
+            T value, 
+            [CallerMemberName] string propertyName = null!) {
 
+            lock (_lastErrorLock) { 
 
-        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null) {
+                _lastError = string.Empty; 
+            }
+
             if (!EqualityComparer<T>.Default.Equals(field, value)) {
+                
                 field = value;
+                
                 try {
+                
                     OnPropertyChanged(propertyName);
                     return true;
                 }
                 catch (ArgumentException ex) {
 
                     if (_noExceptions) {
+
+                        lock (_lastErrorLock) {
+                            _lastError = ex.Message;
+                        }
                         return false;
                     }
-                    throw ex;
+                    throw;
                 }
             }
             return false;
         }
 
-        protected bool SetProperty(ref double field, double value, ICommand command,
-            [CallerMemberName] string? propertyName = null, double tolernacePPM = 100) {
+        protected bool SetProperty(ref double field, 
+            double value, 
+            ICommand command,
+            [CallerMemberName] string? propertyName = null, 
+            double tolernacePPM = 100) {
+            
             if (SetProperty(ref field, value, propertyName!, tolernacePPM)) {
 
                 if (command.CanExecute(field)) {
@@ -97,29 +177,49 @@ namespace Grumpy.Common
             return false;
         }
 
-        protected bool SetProperty(ref double field, double value,
-            [CallerMemberName] string? propertyName = null, double error = 1.0e-6) {
+        protected bool SetProperty(ref double field, 
+            double value,
+            [CallerMemberName] string? propertyName = null, 
+            double error = 1.0e-6) {
+
+            lock (_lastErrorLock) {
+
+                _lastError = string.Empty;
+            }
+
             if (Math.Abs(field - value) > Math.Abs(error)) {
+            
                 field = value;
+                
                 try {
+                
                     OnPropertyChanged(propertyName!);
                     return true;
                 }
                 catch (ArgumentException ex) {
 
                     if (_noExceptions) {
+
+                        _lastError = ex.Message;
                         return false;
                     }
-                    throw ex;
+                    throw;
                 }
             }
             return false;
         }
 
+        protected bool SetProperty<T>(ref T field, 
+            T value, 
+            Expression<Func<T>> expr) {
 
+            lock (_lastErrorLock) {
 
-        protected bool SetProperty<T>(ref T field, T value, Expression<Func<T>> expr) {
+                _lastError = string.Empty;
+            }
+
             if (!EqualityComparer<T>.Default.Equals(field, value)) {
+                
                 field = value;
                 var lambda = expr as LambdaExpression;
                 MemberExpression memberExpression;
@@ -130,27 +230,36 @@ namespace Grumpy.Common
                     memberExpression = (MemberExpression)unaryExpr.Operand;
                 }
                 else {
+                
                     memberExpression = (MemberExpression)lambda.Body;
                 }
 
                 try {
+                    
                     OnPropertyChanged(memberExpression.Member.Name);
                     return true;
                 }
                 catch (ArgumentException ex) {
 
                     if (_noExceptions) {
+
+                        _lastError = ex.Message;
                         return false;
                     }
-                    throw ex;
+                    throw;
                 }
             }
             return false;
         }
 
-
         protected bool SetProperty(ref double field, double value,
             Expression<Func<double>> expr, double error = 1.0e-9) {
+
+            lock (_lastErrorLock) {
+
+                _lastError = string.Empty;
+            }
+
             if (double.IsNaN(field) ||
                 (Math.Abs(field - value) > Math.Abs(error))) {
 
@@ -164,28 +273,42 @@ namespace Grumpy.Common
                     memberExpression = (MemberExpression)unaryExpr.Operand;
                 }
                 else {
+
                     memberExpression = (MemberExpression)lambda.Body;
                 }
 
                 try {
+
                     OnPropertyChanged(memberExpression.Member.Name);
                     return true;
                 }
                 catch (ArgumentException ex) {
 
                     if (_noExceptions) {
+
+                        lock (_lastErrorLock) {
+
+                            _lastError = ex.Message;
+                        }
+
+                        _lastError = ex.Message;
                         return false;
                     }
-                    throw ex;
+                    throw;
                 }
             }
             return false;
         }
 
-
         protected void RaisePropertyChanged<T>(Expression<Func<T>> expr) {
+
             var lambda = expr as LambdaExpression;
             MemberExpression memberExpression;
+
+            lock (_lastErrorLock) {
+
+                _lastError = string.Empty;
+            }
 
             if (lambda.Body is UnaryExpression) {
 
@@ -193,15 +316,25 @@ namespace Grumpy.Common
                 memberExpression = (MemberExpression)unaryExpr.Operand;
             }
             else {
+
                 memberExpression = (MemberExpression)lambda.Body;
             }
 
             try {
+
                 OnPropertyChanged(memberExpression.Member.Name);
             }
             catch (ArgumentException ex) {
-                if (!_noExceptions) {
-                    throw ex;
+
+                if (_noExceptions) {
+                    lock (_lastErrorLock) {
+
+                        _lastError = ex.Message;
+                    }
+                    return;
+                }
+                else {
+                    throw;
                 }
             }
         }

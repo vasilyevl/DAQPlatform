@@ -31,7 +31,7 @@ using System.Net.Sockets;
 using System.Net;
 using System.IO.Ports;
 
-using Grumpy.DAQFramework.Configuration;
+using Grumpy.SDAQFramework.Configuration;
 
 
 

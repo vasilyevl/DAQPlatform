@@ -18,14 +18,15 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using Grumpy.DAQFramework.Common;
-using Grumpy.DAQFramework.Configuration;
+
+using Grumpy.SDAQFramework.Common;
+using Grumpy.SDAQFramework.Configuration;
 
 using Serilog;
 
 using Prts = System.IO.Ports;
 
-namespace Grumpy.DAQFramework.Drivers.SerialInterface
+namespace Grumpy.SDAQFramework.Drivers.SerialInterface
 {
     public class SeriaInterfaceDriver : ISerialInterface {
 

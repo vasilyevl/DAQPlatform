@@ -18,8 +18,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using DAQFramework.Common.Configuration;
-
+using Grumpy.Common.BaseObjects;
 using Grumpy.DAQmxNetApi;
 
 using Newtonsoft.Json;
@@ -62,6 +61,11 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
         private int _retriggerFilterEnable;
 
         public DAQTrigger() : base() {
+            Reset();
+        }
+
+        public override void Reset() {
+
             _source = string.Empty;
             _triggerType = TriggerTypes.None;
             _edge = ActiveEdge.Rising;
@@ -75,6 +79,26 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
             _retriggerFilterEnable = 0;
         }
 
+
+        public override Boolean CopyFrom(object src) {
+            if (src is not DAQTrigger srcTrigger) {
+                return false;
+            }
+
+            _source = srcTrigger._source;
+            _triggerType = srcTrigger._triggerType;
+            _edge = srcTrigger._edge;
+            _analogTriggerLevel = srcTrigger._analogTriggerLevel;
+            _hysteresis = srcTrigger._hysteresis;
+            _delay = srcTrigger._delay;
+            _minimumPulseWidth = srcTrigger._minimumPulseWidth;
+            _retriggerDelay = srcTrigger._retriggerDelay;
+            _retriggerCount = srcTrigger._retriggerCount;
+            _retriggerTimeout = srcTrigger._retriggerTimeout;
+            _retriggerFilterEnable = srcTrigger._retriggerFilterEnable;
+
+            return true;
+        }
         public TriggerTypes TriggerType {
             get => _triggerType;
             set => _triggerType = value;
@@ -102,6 +126,8 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
     }
     public class DAQTiming: ConfigurationBase, IEquatable<DAQTiming>
     {
+        public const double Epsilon = 1.0E-8;
+
         private string? _clockSource;
         private double _clockRate;
         private ActiveEdge _edge;
@@ -114,16 +140,10 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
         
         public DAQTiming():base() {
 
-            _clockSource = string.Empty;
-            _clockRate = 1000.0;
-            _edge = ActiveEdge.Rising;
-            _samplingMode = SamplingMode.ContineousSamples;
-            _sampleasPerChannel = 1000;
-            _triggerSource = null;
-            _referenceTriggerSource = null;
-            _triggerActiveEdge = ActiveEdge.Rising;
-            _referenceTriggerActiveEdge = ActiveEdge.Rising;
+            Reset();
         }
+
+
 
         public DAQTiming(string clockSource, 
                          double clockRate, 
@@ -147,6 +167,39 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
             _triggerActiveEdge = triggerActiveEdge;
             _referenceTriggerActiveEdge = referenceTriggerActiveEdge;
         }
+
+
+        public override void Reset() {
+
+            _clockSource = string.Empty;
+            _clockRate = 1000.0;
+            _edge = ActiveEdge.Rising;
+            _samplingMode = SamplingMode.ContineousSamples;
+            _sampleasPerChannel = 1000;
+            _triggerSource = null;
+            _referenceTriggerSource = null;
+            _triggerActiveEdge = ActiveEdge.Rising;
+            _referenceTriggerActiveEdge = ActiveEdge.Rising;
+        }
+
+        public override Boolean CopyFrom(object src) {
+            if (src is not DAQTiming srcTiming) {
+                return false;
+            }
+
+            _clockSource = srcTiming._clockSource;
+            _clockRate = srcTiming._clockRate;
+            _edge = srcTiming._edge;
+            _samplingMode = srcTiming._samplingMode;
+            _sampleasPerChannel = srcTiming._sampleasPerChannel;
+            _triggerSource = srcTiming._triggerSource;
+            _referenceTriggerSource = srcTiming._referenceTriggerSource;
+            _triggerActiveEdge = srcTiming._triggerActiveEdge;
+            _referenceTriggerActiveEdge = srcTiming._referenceTriggerActiveEdge;
+
+            return true;
+        }
+
 
         [JsonProperty]
         public string? ClockSource {

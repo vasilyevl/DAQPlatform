@@ -18,11 +18,12 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using DAQFramework.Common.Configuration;
+
+using Grumpy.Common.BaseObjects;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 
-namespace Grumpy.DAQFramework.Configuration
+namespace Grumpy.SDAQFramework.Configuration
 {
     public interface IInterfaceConfiguration
     {
@@ -32,7 +33,7 @@ namespace Grumpy.DAQFramework.Configuration
     }
 
     [JsonObject(MemberSerialization = MemberSerialization.OptIn)]
-    public class InterfaceConfiguration :  IInterfaceConfiguration
+    public class InterfaceConfiguration : ConfigurationBase,  IInterfaceConfiguration
     {
         private const InterfaceSelector _DefaultInterface = 
                                         InterfaceSelector.Auto;
@@ -54,6 +55,25 @@ namespace Grumpy.DAQFramework.Configuration
             Network = (src?.Network is not null) ? 
                 (src.Network.Clone( out string? error) as TcpIpConnectionConfiguration) : 
                 null;
+        }
+
+        public override void Reset() {
+            Network = null;
+            SerialPort = null;
+            ActiveInterface = _DefaultInterface;
+        }
+
+        public override bool CopyFrom(object src) {
+            if (src is IInterfaceConfiguration config) {
+
+                ActiveInterface = config.ActiveInterface;
+                Network = config.Network?.Clone(out string? error) as TcpIpConnectionConfiguration;
+                SerialPort = config.SerialPort?.Clone(out error) as SerialPortConfiguration;
+
+                return true;
+            }
+
+            return false;
         }
 
         [JsonProperty]
@@ -95,16 +115,6 @@ namespace Grumpy.DAQFramework.Configuration
 
                 return false;
             }
-        }
-
-        public  bool CopyFrom(object src) {
-            var s = src as IInterfaceConfiguration;
-
-            return (s is null) ? false : CopyFrom(s);
-        }
-
-        public void Reset() {
-            Network = null;
         }
     }
 }

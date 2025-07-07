@@ -47,7 +47,7 @@ namespace Grumpy.DAQmxWrapUnitTest
                     _testOutputHelper.WriteLine("Reading data using " +
                         "ReadAnalogF64");
 
-                    result = DAQmx.ReadAnalogF64(handle, 
+                    result = DAQmx.ReadAnalogLines(handle, 
                         DAQmxTestHelper.SamplesPerChannel,
                         DAQmxTestHelper.TimeoutS, 
                         DAQmxTestHelper.ReadbackFillMode, 
@@ -171,7 +171,7 @@ namespace Grumpy.DAQmxWrapUnitTest
             _testOutputHelper.WriteLine($"Task complete in " +
                 $"{(EndTime - StartTime).TotalMilliseconds}ms.");
 
-            result = DAQmx.ReadAnalogF64(handle, 
+            result = DAQmx.ReadAnalogLines(handle, 
                 DAQmxTestHelper.FiniteSamplesPerChannel,
                 DAQmxTestHelper.TimeoutS, 
                 DAQmxTestHelper.ReadbackFillMode, 
@@ -304,7 +304,7 @@ namespace Grumpy.DAQmxWrapUnitTest
 
             _testOutputHelper.WriteLine("Reading data using ReadAnalogF64");
 
-            result = DAQmx.ReadAnalogF64(handle, 
+            result = DAQmx.ReadAnalogLines(handle, 
                 DAQmxTestHelper.FiniteSamplesPerChannel,
                 DAQmxTestHelper.TimeoutS, 
                 DAQmxTestHelper.ReadbackFillMode, data,

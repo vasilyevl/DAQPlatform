@@ -18,7 +18,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using DAQFramework.Common.Configuration;
+using Grumpy.Common.BaseObjects;
 using Newtonsoft.Json;
 
 namespace Grumpy.DAQmxDeviceServer.Configuration
@@ -29,7 +29,7 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
 
         public DAQmxDeviceServerConfiguration():base() {
 
-            _channels = null;      
+            Reset();   
         }
 
 
@@ -51,6 +51,22 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
                 .ToList();
 
             return channeles;
+        }
+
+        public override bool CopyFrom(object src) {
+
+            if (src is DAQmxDeviceServerConfiguration config) {
+
+                Channels = config.Channels;
+                return true;
+            }
+
+            return false;
+        }
+
+        public override void Reset() {
+
+            _channels = null;
         }
     }  
 }

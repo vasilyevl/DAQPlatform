@@ -20,7 +20,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-namespace Grumpy.DAQFramework.IO
+namespace Grumpy.SDAQFramework.IO
 {
     public interface ISwitchState : IEquatable<Object?>, IEquatable<SwitchSt>
     {

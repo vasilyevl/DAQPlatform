@@ -20,7 +20,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 using Newtonsoft.Json;
 
-namespace Grumpy.DAQFramework.Configuration
+namespace Grumpy.SDAQFramework.Configuration
 {
     public interface ITcpIpConnectionConfiguration
     {

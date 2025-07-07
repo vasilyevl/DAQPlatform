@@ -18,9 +18,9 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using Grumpy.DAQFramework.Drivers.MMTimer;
+using Grumpy.SDAQFramework.Drivers.MMTimer;
 using System.Diagnostics;
-using DAQFramework.Utilities;
+using Grumpy.SDAQFramework.Utilities;
 
 namespace ConsoleApp1
 {

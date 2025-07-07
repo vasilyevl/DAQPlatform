@@ -28,7 +28,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Grumpy.DAQFramework.IO
+namespace Grumpy.SDAQFramework.IO
 {
     [JsonObject(MemberSerialization = MemberSerialization.OptIn)]
     public class SwitchControl : IEquatable<object>, IEquatable<SwitchCtrl>,

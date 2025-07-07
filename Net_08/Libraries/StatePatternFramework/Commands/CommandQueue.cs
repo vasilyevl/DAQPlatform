@@ -18,7 +18,8 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using Grumpy.DAQFramework.Common;
+
+using Grumpy.SDAQFramework.Common;
 
 namespace Grumpy.StatePatternFramework
 {
@@ -36,7 +37,7 @@ namespace Grumpy.StatePatternFramework
 
         public CommandQueue(int capacity = DeafaultQueueLength): base(capacity) {
 
-            Depth = capacity;
+            MaxDepth = capacity;
         }
 
         public event EventHandler? CommandAdded;
@@ -45,7 +46,7 @@ namespace Grumpy.StatePatternFramework
 
         public override bool Push(CommandBase cmd, bool force = false) {
      
-            if ((Depth < 0) || (Count < Depth)) {
+            if ((MaxDepth < 0) || (Count < MaxDepth)) {
 
                 try {
 
@@ -98,7 +99,7 @@ namespace Grumpy.StatePatternFramework
                     new CommandQueueEnueueException(
                         $"Exception while adding command " +
                         $"{cmd.Type}. " +
-                        $"Queue at capacity {Depth}");
+                        $"Queue at capacity {MaxDepth}");
 
                 OnCommandAdded(cmd, cmd.State, ex);
 

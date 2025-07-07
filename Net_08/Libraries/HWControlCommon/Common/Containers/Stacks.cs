@@ -1,4 +1,5 @@
 ﻿/*
+ 
 Copyright (c) 2024 vasilyevl (Grumpy). Permission is hereby granted, 
 free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"),to deal in the Software 
@@ -16,9 +17,15 @@ PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGH
 HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 */
 
-namespace Grumpy.DAQFramework.Common
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+
+namespace Grumpy.SDAQFramework.Common
 {
     public interface IStack<T>
     {
@@ -40,9 +47,9 @@ namespace Grumpy.DAQFramework.Common
 
         bool Push(T value, bool force = true);
 
-        bool Pop(out T? last);
+        bool Pop(out T last);
 
-        bool Peek(out T? last);
+        bool Peek(out T last);
 
         bool Clean();
 
@@ -157,7 +164,7 @@ namespace Grumpy.DAQFramework.Common
             }
         }
 
-        public bool Pop(out T? last)
+        public bool Pop(out T last)
         {
             lock (_stackLock) {
 
@@ -170,7 +177,7 @@ namespace Grumpy.DAQFramework.Common
             }
         }
 
-        public bool Peek(out T? last)
+        public bool Peek(out T last)
         {
             lock (_stackLock) {
 
@@ -178,7 +185,7 @@ namespace Grumpy.DAQFramework.Common
             }
         }
 
-        private bool _Peak(out T? last)
+        private bool _Peak(out T last)
         {
             if (_stack.Count > 0) {
                 LinkedListNode<T> node = _stack.Last!;
@@ -215,30 +222,35 @@ namespace Grumpy.DAQFramework.Common
             }
         }
 
-        public T[] PeekAllAsArray(bool reverseOrder = true) {
-            
+        public T[] PeekAllAsArray(bool lastFirst = true)
+        {
             lock (_stackLock) {
 
-                T[]? array = null;
-
-                if ((_stack?.Count ?? 0) > 0) {
-
-                    array = _stack?.ToArray();
-
-                    if ((array is not null) && reverseOrder) {
-
+                if (_stack.Count > 0) {
+                    T[] array = _stack.ToArray();
+                    if (lastFirst) {
                         Array.Reverse(array);
                     }
+                    return array;
                 }
 
-                return array!;
+                return null!;
             }
         }
 
         public List<T> PeekAllAsList(bool recentFirst = true)
         {
-            if ((_stack?.Count ?? 0) > 0) {
-                return new List<T>(PeekAllAsArray(recentFirst));
+            if (_stack.Count > 0) {
+
+                T[] array = PeekAllAsArray( recentFirst );
+
+                List<T> list = new List<T>();
+
+                foreach (var item in array) {
+                    list.Add(item);
+                }
+
+                return list;
             }
 
             return null!;

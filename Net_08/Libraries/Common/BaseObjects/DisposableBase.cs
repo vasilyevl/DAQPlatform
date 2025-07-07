@@ -1,5 +1,5 @@
 ﻿/*
-Copyright (c) 2024 vasilyevl (Grumpy). Permission is hereby granted, 
+Copyright (c) 2025 vasilyevl (Grumpy). Permission is hereby granted, 
 free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"),to deal in the Software 
 without restriction, including without limitation the rights to use, copy, 
@@ -18,17 +18,35 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace DAQFramework.Common.Configuration
+namespace Grumpy.Common.BaseObjects
 {
-    public interface IConfigurationBase
+    public class DisposableBase:  IDisposable
     {
-        string FileName { get; set; }
+        private bool _disposed;
 
-        bool PopulateFromFile(string filePath, out string? error);
-        bool PopulateFromFile<T>(string filePath, out string? error) where T : ConfigurationBase;
-        bool PopulateFromString(string jsonString, out string? error);
-        bool PopulateFromString<T>(string jsonString, out string? error) where T : ConfigurationBase;
-        bool SerializeToFile(string filePath, out string? error);
-        bool SerializeToString(out string? serialized, out string? error);
+        public void Dispose() {
+            _Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void _Dispose(bool disposing) {
+
+            if (!_disposed) {
+
+                if (disposing) {
+                    DisposeManagedResources();
+                }
+
+                DisposeUnmanagedResources();
+                _disposed = true;
+            }
+        }
+
+        ~DisposableBase() => _Dispose(false);
+        
+
+        protected virtual void DisposeManagedResources() {}
+
+        protected virtual void DisposeUnmanagedResources() { }
     }
 }

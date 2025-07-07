@@ -1,4 +1,4 @@
-﻿using Grumpy.DAQFramework.Common;
+﻿using Grumpy.SDAQFramework.Common;
 
 namespace Grumpy.StatePatternFramework.FsmObjects
 {

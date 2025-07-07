@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics;
-using Grumpy.DAQFramework.Drivers.MMTimer;
+using Grumpy.SDAQFramework.Drivers.MMTimer;
 using System.Runtime.InteropServices;
 using System.Timers;
 

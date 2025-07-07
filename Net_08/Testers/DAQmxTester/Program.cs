@@ -18,7 +18,8 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using DAQFramework.Common.Configuration;
+
+using Grumpy.Common.BaseObjects;
 using Grumpy.DAQmxDeviceServer.Configuration;
 using Grumpy.DAQmxNetApi;
 
@@ -26,13 +27,14 @@ namespace Grumpy.DAQmxTester
 {
     internal class Program
     {
+        static protected DAQmxTestHelper _helper = new DAQmxTestHelper();
         static ChannelConfiguration ConfigureNewAiChannel() {
 
             ChannelConfiguration channel = new ChannelConfiguration();
 
             channel.SetType(IOTypes.AnalogInput);
             channel.Alias = "MyInput";
-            channel.PhysicalChannel = "Dev1/ai0";
+            channel.PhysicalChannel = $"{_helper.Config.DeviceName}{_helper.Config.SingleAiChannel}";
             channel.OperationModes = [ IOModes.OnDemand ,
                                        IOModes.FiniteSamples ,
                                        IOModes.ContinuousSamples ];
@@ -42,10 +44,9 @@ namespace Grumpy.DAQmxTester
             return channel;
         }
 
-
         static ChannelConfiguration? DeserializeAiChannel(string source) {
 
-            if (ConfigurationBase.DeserializeFromString(
+            if (ConfigurationExtensions.DeserializeFromString(
 
                 source, out ChannelConfiguration? channel2, out string error)) {
 
@@ -69,9 +70,6 @@ namespace Grumpy.DAQmxTester
         }
 
 
-
-
-
         static string? Serialize<T>(T o) where T : ConfigurationBase {
 
             var serialized = o.SerializeToString(out string? error);
@@ -88,7 +86,7 @@ namespace Grumpy.DAQmxTester
             return serialized;
         }
 
-        public static void Test1() {
+        static void Test1() {
 
             Console.WriteLine("\n----------- Test 1 -----------\n");
             Console.WriteLine("Hello, DAQmx!\n\n");
@@ -112,15 +110,16 @@ namespace Grumpy.DAQmxTester
             }
             else {
 
-                if (channel3.SerializeToString(out string? serialized3,
-                                               out string? error3)) {
-                    Console.WriteLine($"Serialized object as string: " +
+                string? serialized3 = channel3.SerializeToString(out string? error3);
+                if (serialized3 != null) {
+                    Console.WriteLine($"Cloned object as string: " +
                         $"\n{serialized3}");
                 }
                 else {
                     Console.WriteLine($"Failed to serialize object. Error: " +
                         $"\n{error3}");
                 }
+
             }
 
             ChannelConfiguration channel4 = new ChannelConfiguration();
@@ -130,15 +129,16 @@ namespace Grumpy.DAQmxTester
 
                 Console.WriteLine($"Copied object from channel3 to channel4.");
 
-                if (channel4.SerializeToString(out string? serialized4,
-                                               out string? error5)) {
+                string? serialized4 = channel4.SerializeToString(out error4);
+                if (serialized4 != null) {
                     Console.WriteLine($"Copied object as string: " +
                             $"\n{serialized4}");
                 }
                 else {
                     Console.WriteLine($"Failed to serialize object. Error: " +
-                            $"\n{error5}");
+                            $"\n{error4}");
                 }
+
             }
             else {
                 Console.WriteLine($"Failed to copy object. Error: " +
@@ -146,14 +146,14 @@ namespace Grumpy.DAQmxTester
             }
         }
 
-        public static void Test2(out List<ChannelConfiguration> channels) {
+        static void Test2(out List<ChannelConfiguration> channels) {
 
             channels = new List<ChannelConfiguration>();
 
             channels.AddRange(TestData.CreateChannels(
                                 IOTypes.AnalogInput,
                                 0, 6,
-                                "Dev1",
+                                _helper.Config.DeviceName,
                                 "AnalogInput",
                                 [IOModes.OnDemand, IOModes.FiniteSamples],
                                 new AIORange(-10.0, 10.0),
@@ -162,7 +162,7 @@ namespace Grumpy.DAQmxTester
             channels.AddRange(TestData.CreateChannels(
                                 IOTypes.AnalogOutput,
                                 0, 2,
-                                "Dev1",
+                                _helper.Config.DeviceName,
                                 "AnalogOutput",
                                 [IOModes.OnDemand, IOModes.FiniteSamples],
                                 new AIORange(-10.0, 10.0)));
@@ -173,33 +173,33 @@ namespace Grumpy.DAQmxTester
             DAQmxAOTestClass testClass = new DAQmxAOTestClass();
 
             Console.WriteLine("Running Test1AOSingleSample...");
-            testClass.Test1AOSingleSample();
+            testClass.AOTestSingleSample();
 
             Console.WriteLine("Running Test2AOFiniteSamples...");
-            testClass.Test2AOFiniteSamples();
+            testClass.AOTestFiniteSamples();
 
             Console.WriteLine("All AO tests completed.");
 
 
             var testAiClass = new DAQmxAITestClass();
 
-            testAiClass.Test1AISingleSamplesSoftwareTrigger();
-            testAiClass.Test2AIFiniteSamplesSoftwareTrigger();
-            testAiClass.Test3AIFiniteSamplesSoftwareTriggerWEvent();
+            testAiClass.AITestSingleSamplesSoftwareTrigger();
+            testAiClass.AITestFiniteSamplesSoftwareTrigger();
+            testAiClass.AITestFiniteSamplesSoftwareTriggerWEvent();
 
             Console.WriteLine("All AI tests completed.");
 
             var TestDITestClass = new DAQmxDITestClass();
 
-            TestDITestClass.Test1DILines();
-            TestDITestClass.Test2DIReadU32();
-            TestDITestClass.Test3DIReadU16();
+            TestDITestClass.DiTestsLines();
+            TestDITestClass.DiTestReadU32();
+            TestDITestClass.DiTestReadU16();
 
 
             var doTest = new DAQmxDOTestClass();
-            doTest.Test1DOLines();          
-            doTest.Test2DOWriteU32();
-            doTest.Test3DOWriteScalar();
+            doTest.DoTestLines();
+            doTest.DoTestWriteU32();
+            doTest.DoTestWriteScalar();
 
             Console.WriteLine("All Do tests completed.");
 
@@ -216,16 +216,17 @@ namespace Grumpy.DAQmxTester
 
             serverConfig.Channels = channels;
             Console.WriteLine($"\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-            if (serverConfig.SerializeToString( out string? serialized, 
-                                                out string? error)) {
 
-                Console.WriteLine($"{serialized}");
-
+            string? serialized = serverConfig.SerializeToString(out string? error);
+            if (serialized != null) {
+                Console.WriteLine($"Serialized object to string: " +
+                    $"\n {serialized}");
             }
             else {
                 Console.WriteLine($"Failed to serialize object. Error: " +
                     $"\n{error}");
             }
+
 
             var channels2 = serverConfig.GetChannels(IOTypes.AnalogOutput, IOModes.FiniteSamples);
 
@@ -234,15 +235,17 @@ namespace Grumpy.DAQmxTester
             };
 
             Console.WriteLine($"\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-            if (serverConfig2.SerializeToString(out  serialized,
-                                                out error)) {
-                Console.WriteLine($"{serialized}");
+
+            string? serialized2 = serverConfig2.SerializeToString(out string? error2);
+            if (serialized2 != null) {
+                Console.WriteLine($"Serialized object to string: " +
+                    $"\n {serialized2}");
             }
             else {
                 Console.WriteLine($"Failed to serialize object. Error: " +
-                    $"\n{error}");
+                    $"\n{error2}");
             }
         }
+
     }
 }
-

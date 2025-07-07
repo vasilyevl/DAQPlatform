@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Grumpy.Common.BaseObjects;
 
-namespace Grumpy.Common
+namespace Grumpy.Common.Inerfaces
 {
-
-
 
     public interface ICalibration<TV, TC>
     {
@@ -17,11 +16,10 @@ namespace Grumpy.Common
 
         public bool Init(TC configuration);
 
-        public TC Configuration();   
+        public TC Configuration();
 
         string ConfigurationAsString();
 
         ErrorRecord GetLastError();
-
     }
 }

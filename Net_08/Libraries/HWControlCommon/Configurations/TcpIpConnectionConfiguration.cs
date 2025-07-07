@@ -18,11 +18,11 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using DAQFramework.Common.Configuration;
-
+using Grumpy.Common;
+using Grumpy.Common.BaseObjects;
 using Newtonsoft.Json;
 
-namespace Grumpy.DAQFramework.Configuration
+namespace Grumpy.SDAQFramework.Configuration
 {
 
     [JsonObject(MemberSerialization = MemberSerialization.OptOut)]
@@ -48,13 +48,17 @@ namespace Grumpy.DAQFramework.Configuration
         [JsonProperty]
         public string Name {
             get { return (string?)_name?.Clone()! ?? null!; }
-            set { SetProperty(ref _name, (string)value?.Clone()! ?? null!, () => Name); }
+            set { SetProperty(ref _name, 
+                (string)value?.Clone()! ?? null!, 
+                () => Name); }
         }
 
         [JsonProperty]
         public string IpAddress {
             get { return (string)_ipAddress?.Clone()! ?? null!; }
-            set { SetProperty(ref _ipAddress, (string)value?.Clone()! ?? null!, () => IpAddress); }
+            set { SetProperty(ref _ipAddress, 
+                (string)value?.Clone()! ?? null!, 
+                () => IpAddress); }
         }
 
         [JsonProperty]
@@ -82,5 +86,42 @@ namespace Grumpy.DAQFramework.Configuration
             set { SetProperty(ref _timeout, value, () => Timeout); }
         }
 
+        public override void Reset() {
+
+            Name = string.Empty;
+            IpAddress = DefaultIP;
+            Port = DefaultPort;
+            DataPort = DefaultPort;
+            MessagePort = DefaultPort;
+            Timeout = DefaultTimeoutMs;
+        }
+
+        public override Boolean CopyFrom(Object src) {
+
+            var source = src as TcpIpConnectionConfiguration;
+
+            if (source == null) {
+
+                return false;
+            }
+
+            try {
+
+                Name = (string)source.Name.Clone();
+                IpAddress = (string)source.IpAddress.Clone();
+                Port = source.Port;
+                DataPort = source.DataPort;
+                MessagePort = source.MessagePort;
+                Timeout = source.Timeout;
+
+                return true;
+            }
+            catch (Exception ex) {
+
+                LastErrorComment = ex.Message;
+                return false;
+
+            }
+        }
     }
 }

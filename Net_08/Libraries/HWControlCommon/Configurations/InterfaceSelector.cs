@@ -26,7 +26,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Grumpy.DAQFramework.Configuration
+namespace Grumpy.SDAQFramework.Configuration
 {
     public enum InterfaceSelector
     {

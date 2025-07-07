@@ -6,7 +6,9 @@
     <Nullable>enable</Nullable>
     <RootNamespace>Grumpy.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
     <BaseOutputPath>..\..\bin\</BaseOutputPath>
-    <Platforms>AnyCPU;x64</Platforms>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Libraries\HWControlCommon\DAQFramework.csproj" />
+    <ProjectReference Include="..\..\Libraries\HWControlCommon\SDAQFramework.csproj" />
     <ProjectReference Include="..\DAQmxCLI\DAQmxNETDriver.vcxproj" />
   </ItemGroup>
 

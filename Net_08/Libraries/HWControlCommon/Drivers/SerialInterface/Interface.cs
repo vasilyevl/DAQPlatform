@@ -18,9 +18,9 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using Grumpy.DAQFramework.Configuration;
+using Grumpy.SDAQFramework.Configuration;
 
-namespace Grumpy.DAQFramework.Drivers.SerialInterface
+namespace Grumpy.SDAQFramework.Drivers.SerialInterface
 {
     public interface ISerialInterface: IGenericDeviceDriver
     {

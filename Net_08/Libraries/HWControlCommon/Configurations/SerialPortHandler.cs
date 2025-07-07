@@ -27,7 +27,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Grumpy.DAQFramework.Configuration
+namespace Grumpy.SDAQFramework.Configuration
 {
     public enum IOStatus
     {

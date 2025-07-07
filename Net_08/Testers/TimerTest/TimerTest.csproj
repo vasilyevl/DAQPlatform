@@ -7,13 +7,16 @@
     <Nullable>enable</Nullable>
     <Platforms>x64</Platforms>
     <BaseOutputPath>..\..\bin</BaseOutputPath>
+    <BaseOutputPath>..\..\bin</BaseOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <ProduceReferenceAssembly>False</ProduceReferenceAssembly>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Libraries\HWControlCommon\DAQFramework.csproj" />
+    <ProjectReference Include="..\..\Libraries\HWControlCommon\SDAQFramework.csproj" />
   </ItemGroup>
 
 </Project>

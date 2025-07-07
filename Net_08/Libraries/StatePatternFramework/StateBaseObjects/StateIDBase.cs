@@ -19,7 +19,8 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 using Grumpy.Common;
-using Grumpy.DAQFramework.Common;
+using Grumpy.Common.BaseObjects;
+using Grumpy.SDAQFramework.Common;
 
 namespace Grumpy.StatePatternFramework
 {

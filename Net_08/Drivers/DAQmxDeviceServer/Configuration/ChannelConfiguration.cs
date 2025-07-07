@@ -18,7 +18,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using DAQFramework.Common.Configuration;
+using Grumpy.Common.BaseObjects;
 using Grumpy.DAQmxNetApi;
 
 using Newtonsoft.Json;
@@ -50,11 +50,11 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
         public const char ChannelNamePartsSeparator = '/';
 
         private string? _alias;
-        private string _physicalChannel;
-        private string _pulseCounter;
+        private string? _physicalChannel;
+        private string? _pulseCounter;
 
         private IOTypes _type;
-        private IOModes[] _operationModes;        
+        private IOModes[]? _operationModes;        
         private AiTermination _aiTermination;
         private DODrive _doDrive;
 
@@ -62,16 +62,7 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
 
         public ChannelConfiguration():base() {
 
-            _type = IOTypes.NA;
-            _aiTermination = AiTermination.Default;
-            _doDrive = DODrive.Any;
-
-            _alias = string.Empty;
-            _physicalChannel = string.Empty;
-            _pulseCounter = string.Empty;
-
-            _operationModes = [];
-            _range = null;        
+            Reset();      
         }
 
         public ChannelConfiguration(string physicalChannel,
@@ -142,6 +133,51 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
         }
 
 
+        public override bool CopyFrom(object? src) {
+
+            var s = src as ChannelConfiguration;
+
+            if (s == null) {
+                LastError = "Source type is not compatible with ChannelConfiguration type";
+                return false;
+            }
+
+            try {
+
+                _alias = (string)(s.Alias?.Clone() ?? string.Empty);
+                _physicalChannel = (string)(s.PhysicalChannel?.Clone() ?? string.Empty);
+                _pulseCounter = (string)(s.LinkedIO?.Clone() ?? string.Empty);
+                _type = s.Type;
+                _operationModes = s.OperationModes;
+                _range = s.Range;
+                _aiTermination = s.AITermination;
+                _doDrive = s.Drive;
+
+                LastError = string.Empty;
+                return true;
+            }
+            catch (Exception ex) {
+
+                LastError = ex.Message;
+                return false;
+            }
+        }
+
+        public override void Reset(){
+
+            _type = IOTypes.NA;
+            _aiTermination = AiTermination.Default;
+            _doDrive = DODrive.Any;
+
+            _alias = string.Empty;
+            _physicalChannel = string.Empty;
+            _pulseCounter = string.Empty;
+
+            _operationModes = [];
+            _range = null;
+
+        }
+
         [JsonProperty]
         [JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
         public IOTypes Type {
@@ -151,13 +187,13 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
 
 
         [JsonProperty]
-        public string Alias { 
+        public string? Alias { 
             get => string.IsNullOrEmpty(_alias) ? _physicalChannel : _alias; 
             set => _alias = value is null? string.Empty : value; 
         }
 
         [JsonProperty]
-        public string PhysicalChannel { 
+        public string? PhysicalChannel { 
             get => _physicalChannel; 
             set => _physicalChannel = value is null ? string.Empty: value; }
 
@@ -205,7 +241,7 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
 
 
         [JsonProperty]
-        public string LinkedIO {
+        public string? LinkedIO {
 
             get => ShouldSerializeLinkedIO() ? 
                         string.Empty : _pulseCounter;
@@ -301,8 +337,7 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
 
         public AIORange() {
 
-            _min = 0.0;
-            _max = 0.0;
+            Reset();
         }
 
         public AIORange(double min, double max) {
@@ -323,6 +358,36 @@ namespace Grumpy.DAQmxDeviceServer.Configuration
 
             get => _max;
             set => _max = value;
+        }
+
+        public override void Reset() {
+
+            _min = 0.0;
+            _max = 0.0;
+        }
+
+        public override bool CopyFrom(object? src) {
+
+            var s = src as AIORange;
+
+            if (s == null) {
+                LastError = "Source type is not compatible with AIORange type";
+                return false;
+            }
+
+            try {
+
+                _min = s.Min;
+                _max = s.Max;
+
+                LastError = string.Empty;
+                return true;
+            }
+            catch (Exception ex) {
+
+                LastError = ex.Message;
+                return false;
+            }
         }
 
         public bool Equals(AIORange? other) =>

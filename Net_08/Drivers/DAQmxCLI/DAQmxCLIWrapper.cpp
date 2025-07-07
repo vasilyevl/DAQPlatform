@@ -31,14 +31,14 @@ namespace Grumpy{
 		int DAQmxCLIWrapper::CreateTask(String^ taskName, 
 			[Out] IntPtr% taskHandle) {
 
-			char* taskNameChar = ConvertToCString(taskName);
+			char* taskNameChar = StringToCharz(taskName);
 
 			TaskHandle taskHandleLocal;
 
 			int result = DAQmxCreateTask(taskNameChar, &taskHandleLocal);
 			taskHandle = (IntPtr)taskHandleLocal;
 
-			FreeCString(taskNameChar);
+			FreeCharz(taskNameChar);
 			return result;
 		};
 
@@ -56,18 +56,18 @@ namespace Grumpy{
 
 			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 			
-			char* nameToAssignToChannelChar = ConvertToCString(nameToAssignToChannel);
-			char* customScaleNameChar = ConvertToCString(customScaleName);
-			char* physicalChannelChar = ConvertToCString(physicalChannel);
+			char* nameToAssignToChannelChar = StringToCharz(nameToAssignToChannel);
+			char* customScaleNameChar = StringToCharz(customScaleName);
+			char* physicalChannelChar = StringToCharz(physicalChannel);
 
 			int result = DAQmxCreateAIVoltageChan(taskHandleLocal, 
 				physicalChannelChar, nameToAssignToChannelChar, 
 				(int) terminalConfig, minVal, maxVal,
 				(int)units, customScaleNameChar);
 
-			FreeCString(nameToAssignToChannelChar);
-			FreeCString(customScaleNameChar);
-			FreeCString(physicalChannelChar);
+			FreeCharz(nameToAssignToChannelChar);
+			FreeCharz(customScaleNameChar);
+			FreeCharz(physicalChannelChar);
 
 			return result;
 		};
@@ -80,17 +80,17 @@ namespace Grumpy{
 			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 
 			char* nameToAssignToChannelChar = 
-				ConvertToCString(nameToAssignToChannel);
-			char* customScaleNameChar = ConvertToCString(customScaleName);
-			char* physicalChannelChar = ConvertToCString(physicalChannel);
+				StringToCharz(nameToAssignToChannel);
+			char* customScaleNameChar = StringToCharz(customScaleName);
+			char* physicalChannelChar = StringToCharz(physicalChannel);
 
 
 			int result = DAQmxCreateAOVoltageChan(taskHandleLocal, physicalChannelChar, 
 				nameToAssignToChannelChar, minVal, maxVal, (int) units, customScaleNameChar);
 			
-			FreeCString(nameToAssignToChannelChar);
-			FreeCString(customScaleNameChar);
-			FreeCString(physicalChannelChar);
+			FreeCharz(nameToAssignToChannelChar);
+			FreeCharz(customScaleNameChar);
+			FreeCharz(physicalChannelChar);
 
 			return result;
 		};
@@ -102,15 +102,15 @@ namespace Grumpy{
 			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 
 			char* nameToAssignToLinesChar = 
-				ConvertToCString(nameToAssignToLines);
-			char* linesChar = ConvertToCString(lines);
+				StringToCharz(nameToAssignToLines);
+			char* linesChar = StringToCharz(lines);
 
 
 			int result = DAQmxCreateDOChan(taskHandleLocal, linesChar, 
 				nameToAssignToLinesChar, (int) lineGrouping);
 			
-			FreeCString(nameToAssignToLinesChar);
-			FreeCString(linesChar);
+			FreeCharz(nameToAssignToLinesChar);
+			FreeCharz(linesChar);
 
 			return result;
 		};
@@ -121,14 +121,14 @@ namespace Grumpy{
 
 			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 
-			char* nameToAssignToLinesChar = ConvertToCString(nameToAssignToLines);
-			char* linesChar = ConvertToCString(lines);
+			char* nameToAssignToLinesChar = StringToCharz(nameToAssignToLines);
+			char* linesChar = StringToCharz(lines);
 
 			int result = DAQmxCreateDIChan(taskHandleLocal, 
 				linesChar, nameToAssignToLinesChar, (int) lineGrouping);
 
-			FreeCString(nameToAssignToLinesChar);
-			FreeCString(linesChar);
+			FreeCharz(nameToAssignToLinesChar);
+			FreeCharz(linesChar);
 
 			return result;
 		};
@@ -294,11 +294,11 @@ namespace Grumpy{
 			SamplingMode sampleMode, long long sampsPerChan) {
 		
 			return DAQmxCfgSampClkTiming((TaskHandle)taskHandle,
-				ConvertToCString(source), rate, (int)activeEdge,
+				StringToCharz(source), rate, (int)activeEdge,
 				(int)sampleMode, sampsPerChan);
 		}
 
-		int DAQmxCLIWrapper::ReadAnalogF64(IntPtr taskHandle,
+		int DAQmxCLIWrapper::ReadAnalogLines(IntPtr taskHandle,
 			int32 sampsPerChan, double timeout,
 			ReadWriteFillMode groupMode,
 			array<double>^ data,
@@ -471,8 +471,8 @@ namespace Grumpy{
 			double dutyCycle) {
 
 			char* nameToAssignToChannelChar = 
-				ConvertToCString(nameToAssignToChannel);
-			char* counterChar = ConvertToCString(counter);
+				StringToCharz(nameToAssignToChannel);
+			char* counterChar = StringToCharz(counter);
 
 			int result = DAQmxCreateCOPulseChanFreq(
 				(TaskHandle)taskHandle,
@@ -484,8 +484,8 @@ namespace Grumpy{
 				freq, 
 				dutyCycle);
 
-			FreeCString(nameToAssignToChannelChar);
-			FreeCString(counterChar);
+			FreeCharz(nameToAssignToChannelChar);
+			FreeCharz(counterChar);
 
 			return result;
 		};
@@ -500,8 +500,8 @@ namespace Grumpy{
 			double highTime) {
 
 			char* nameToAssignToChannelChar = 
-				ConvertToCString(nameToAssignToChannel);
-			char* counterChar = ConvertToCString(counter);
+				StringToCharz(nameToAssignToChannel);
+			char* counterChar = StringToCharz(counter);
 			int result = DAQmxCreateCOPulseChanTime((TaskHandle)taskHandle,
 				counterChar, 
 				nameToAssignToChannelChar, 
@@ -511,8 +511,8 @@ namespace Grumpy{
 				lowTime, 
 				highTime);
 
-			FreeCString(nameToAssignToChannelChar);
-			FreeCString(counterChar);
+			FreeCharz(nameToAssignToChannelChar);
+			FreeCharz(counterChar);
 
 			return result;
 		};
@@ -525,8 +525,8 @@ namespace Grumpy{
 			int countDirection) {
 
 			char* nameToAssignToChannelChar =
-				ConvertToCString(nameToAssignToChannel);
-			char* counterChar = ConvertToCString(counter);
+				StringToCharz(nameToAssignToChannel);
+			char* counterChar = StringToCharz(counter);
 
 			int result = DAQmxCreateCICountEdgesChan((TaskHandle)taskHandle,
 				counterChar, 
@@ -535,8 +535,8 @@ namespace Grumpy{
 				initialCount, 
 				countDirection);
 
-			FreeCString(nameToAssignToChannelChar);
-			FreeCString(counterChar);
+			FreeCharz(nameToAssignToChannelChar);
+			FreeCharz(counterChar);
 
 			return result;
 		};
@@ -547,17 +547,17 @@ namespace Grumpy{
 			double measTime, UInt32 divisor, String^ customScaleName) {
 
 			char* nameToAssignToChannelChar = 
-				ConvertToCString(nameToAssignToChannel);
-			char* counterChar = ConvertToCString(counter);
-			char* customScaleNameChar = ConvertToCString(customScaleName);
+				StringToCharz(nameToAssignToChannel);
+			char* counterChar = StringToCharz(counter);
+			char* customScaleNameChar = StringToCharz(customScaleName);
 
 			int result = DAQmxCreateCIFreqChan((TaskHandle)taskHandle, counterChar,
 				nameToAssignToChannelChar, minVal, maxVal, units, edge, 
 				measMethod, measTime, divisor, customScaleNameChar);
 
-			FreeCString(nameToAssignToChannelChar);
-			FreeCString(counterChar);
-			FreeCString(customScaleNameChar);
+			FreeCharz(nameToAssignToChannelChar);
+			FreeCharz(counterChar);
+			FreeCharz(customScaleNameChar);
 
 			return result;
 		};
@@ -568,18 +568,18 @@ namespace Grumpy{
 			double measTime, UInt32 divisor, String^ customScaleName) {
 
 			char* nameToAssignToChannelChar = 
-				ConvertToCString(nameToAssignToChannel);
-			char* counterChar = ConvertToCString(counter);
-			char* customScaleNameChar = ConvertToCString(customScaleName);
+				StringToCharz(nameToAssignToChannel);
+			char* counterChar = StringToCharz(counter);
+			char* customScaleNameChar = StringToCharz(customScaleName);
 
 			int result = DAQmxCreateCIPeriodChan((TaskHandle)taskHandle,
 				counterChar, nameToAssignToChannelChar, minVal, maxVal, 
 				units, edge, measMethod, measTime, divisor, 
 				customScaleNameChar);
 			
-			FreeCString(nameToAssignToChannelChar);
-			FreeCString(counterChar);
-			FreeCString(customScaleNameChar);
+			FreeCharz(nameToAssignToChannelChar);
+			FreeCharz(counterChar);
+			FreeCharz(customScaleNameChar);
 
 			return result;
 		};
@@ -589,17 +589,17 @@ namespace Grumpy{
 			double maxVal, int units, String^ customScaleName){
 
 			char* nameToAssignToChannelChar = 
-				ConvertToCString(nameToAssignToChannel);
-			char* counterChar = ConvertToCString(counter);
-			char* customScaleNameChar = ConvertToCString(customScaleName);
+				StringToCharz(nameToAssignToChannel);
+			char* counterChar = StringToCharz(counter);
+			char* customScaleNameChar = StringToCharz(customScaleName);
 
 			int result = DAQmxCreateCISemiPeriodChan((TaskHandle)taskHandle,
 				counterChar, nameToAssignToChannelChar, 
 				minVal, maxVal, units, customScaleNameChar);
 
-			FreeCString(nameToAssignToChannelChar);
-			FreeCString(counterChar);
-			FreeCString(customScaleNameChar);
+			FreeCharz(nameToAssignToChannelChar);
+			FreeCharz(counterChar);
+			FreeCharz(customScaleNameChar);
 
 			return result;
 		};
@@ -607,21 +607,21 @@ namespace Grumpy{
 		int DAQmxCLIWrapper::LoadTask(IntPtr taskHandle, 
 									  String^ taskName) {
 			
-			char* taskNameChar = ConvertToCString(taskName);
+			char* taskNameChar = StringToCharz(taskName);
 			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 			int result = DAQmxLoadTask(taskNameChar, &taskHandleLocal);
 			taskHandle = (IntPtr)taskHandleLocal;
-			FreeCString(taskNameChar);
+			FreeCharz(taskNameChar);
 			return result;
 		};
 
 		int DAQmxCLIWrapper::AddGlobalChansToTask(IntPtr taskHandle, 
 				String^ channelNames) {
 
-			char* channelNamesChar = ConvertToCString(channelNames);
+			char* channelNamesChar = StringToCharz(channelNames);
 			int result = DAQmxAddGlobalChansToTask((TaskHandle)taskHandle,
 												   channelNamesChar);
-			FreeCString(channelNamesChar);
+			FreeCharz(channelNamesChar);
 			return result;
 		};
 
@@ -657,10 +657,10 @@ namespace Grumpy{
 		int DAQmxCLIWrapper::ExportSignal(IntPtr taskHandle, 
 			ExportableSignal signal, String^ outputTerminal) {
 
-			char * cString = ConvertToCString(outputTerminal);
+			char * cString = StringToCharz(outputTerminal);
 			int result = DAQmxExportSignal((TaskHandle) taskHandle, 
 				(int)signal, cString);
-			FreeCString(cString);
+			FreeCharz(cString);
 			return result;
 		}
 
@@ -677,5 +677,536 @@ namespace Grumpy{
 			return DAQmxGetReadTotalSampPerChanAcquired(
 										(TaskHandle)taskHandle, &data);
 		}	
+
+
+		int DAQmxCLIWrapper::GetCOPulseTerm(IntPtr taskHandle, String^ channel, 
+			[Out] String^% data, uInt32 bufferSize) {
+
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+			char* dataBuffer = new char[bufferSize];
+
+			int result = DAQmxGetCOPulseTerm(taskHandleLocal, channelChar, 
+				dataBuffer, bufferSize);
+
+			data = gcnew String(dataBuffer);
+
+			FreeCharz(channelChar);
+			delete[] dataBuffer;
+
+			return result;
+		}
+
+		int DAQmxCLIWrapper::SetCOPulseTerm(IntPtr taskHandle, 
+			String^ channel, String^ data) {
+
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+			char* dataChar = StringToCharz(data);
+
+			int result = DAQmxSetCOPulseTerm(taskHandleLocal, 
+				channelChar, dataChar);
+
+			FreeCharz(channelChar);
+			FreeCharz(dataChar);
+
+			return result;
+		}
+
+		int DAQmxCLIWrapper::ResetCOPulseTerm(IntPtr taskHandle, String^ channel) {
+
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+
+			int result = DAQmxResetCOPulseTerm(taskHandleLocal, channelChar);
+
+			FreeCharz(channelChar);
+
+			return result;
+		}
+
+
+		int DAQmxCLIWrapper::GetCOPulseDone(IntPtr taskHandle, 
+			String^ channel, [Out] bool% data)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+
+			// Prepare the output parameter
+			bool32 dataUnmanaged;
+
+			// Call the DAQmx function
+			int32 result = DAQmxGetCOPulseDone(taskHandleLocal, 
+				channelChar, &dataUnmanaged);
+
+			// Convert the unmanaged bool32 to managed bool
+			data = dataUnmanaged != 0;
+
+			FreeCharz(channelChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::GetCIPrescaler(IntPtr taskHandle, 
+			String^ channel, [Out] uInt32% data)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+			uInt32 dataUnmanaged;
+
+			int32 result = DAQmxGetCIPrescaler(taskHandleLocal, 
+				channelChar, &dataUnmanaged);
+			data = dataUnmanaged;
+			FreeCharz(channelChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::SetCIPrescaler(IntPtr taskHandle, 
+			String^ channel, uInt32 data)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+
+			int32 result =  DAQmxSetCIPrescaler(taskHandleLocal, 
+				channelChar, data);
+
+			FreeCharz(channelChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::ResetCIPrescaler(IntPtr taskHandle, 
+			String^ channel)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+
+			int32 result = DAQmxResetCIPrescaler(taskHandleLocal, channelChar);
+
+			FreeCharz(channelChar);
+
+			return result;
+		}
+
+		int DAQmxCLIWrapper::GetCICount(IntPtr taskHandle, String^ channel, 
+			[Out] uInt32% data)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+
+			uInt32 dataUnmanaged;
+
+			int32 result = DAQmxGetCICount(taskHandleLocal, 
+				channelChar, &dataUnmanaged);
+			data = dataUnmanaged;
+			FreeCharz(channelChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::GetCIOutputState(IntPtr taskHandle, 
+			String^ channel, [Out] int32% data)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+			int32 dataUnmanaged;
+
+			int32 result = DAQmxGetCIOutputState(taskHandleLocal, 
+				channelChar, &dataUnmanaged);
+			data = dataUnmanaged;
+			FreeCharz(channelChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::GetCITCReached(IntPtr taskHandle, 
+			String^ channel, [Out] bool% data)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+			bool32 dataUnmanaged;
+
+			int32 result = DAQmxGetCITCReached(taskHandleLocal, 
+				channelChar, &dataUnmanaged);
+			data = dataUnmanaged != 0;
+
+			return result;
+		}
+
+		int DAQmxCLIWrapper::GetCICtrTimebaseMasterTimebaseDiv(IntPtr taskHandle, 
+			String^ channel, [Out] uInt32% data)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+			uInt32 dataUnmanaged;
+
+			int32 result = DAQmxGetCICtrTimebaseMasterTimebaseDiv(taskHandleLocal, 
+				channelChar, &dataUnmanaged);
+			data = dataUnmanaged;
+
+			return result;
+		}
+
+		int DAQmxCLIWrapper::SetCICtrTimebaseMasterTimebaseDiv(IntPtr taskHandle, 
+			String^ channel, uInt32 data)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+
+			return DAQmxSetCICtrTimebaseMasterTimebaseDiv(taskHandleLocal, 
+				channelChar, data);
+		}
+
+		int DAQmxCLIWrapper::ResetCICtrTimebaseMasterTimebaseDiv(IntPtr taskHandle, 
+			String^ channel)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+
+			return DAQmxResetCICtrTimebaseMasterTimebaseDiv(taskHandleLocal, 
+				channelChar);
+		}
+
+		int DAQmxCLIWrapper::GetCIPulseTimeTerm(IntPtr taskHandle, String^ channel, 
+			[Out] String^% data, uInt32 bufferSize)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+			char* dataUnmanaged = new char[bufferSize];
+
+			int32 result = DAQmxGetCIPulseTimeTerm(taskHandleLocal, 
+				channelChar, dataUnmanaged, bufferSize);
+			data = gcnew String(dataUnmanaged);
+
+			delete[] dataUnmanaged;
+			return result;
+		}
+
+		int DAQmxCLIWrapper::SetCIPulseTimeTerm(IntPtr taskHandle, 
+			String^ channel, String^ terminal)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+
+			char* terminalStr = StringToCharz(terminal);
+
+			int32 result =  DAQmxSetCIPulseTimeTerm(taskHandleLocal, 
+				channelChar, terminalStr);
+
+			FreeCharz(channelChar);
+			FreeCharz(terminalStr);
+
+			return result;
+		}
+
+		int DAQmxCLIWrapper::ResetCIPulseTimeTerm(IntPtr taskHandle, 
+			String^ channel)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+
+			int32 result =  DAQmxResetCIPulseTimeTerm(taskHandleLocal, 
+				channelChar);
+
+			FreeCharz(channelChar);
+
+			return result;
+		}
+
+		int DAQmxCLIWrapper::GetCIPulseTimeTermCfg(IntPtr taskHandle, 
+			String^ channel, [Out] int32% data)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+			int32 dataUnmanaged;
+
+			int32 result = DAQmxGetCIPulseTimeTermCfg(taskHandleLocal, 
+				channelChar, &dataUnmanaged);
+			data = dataUnmanaged;
+			FreeCharz(channelChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::SetCIPulseTimeTermCfg(IntPtr taskHandle, 
+			String^ channel, int32 data)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+
+			return DAQmxSetCIPulseTimeTermCfg(taskHandleLocal, 
+				channelChar, data);
+		}
+
+		int DAQmxCLIWrapper::ResetCIPulseTimeTermCfg(IntPtr taskHandle, 
+			String^ channel)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+
+			return DAQmxResetCIPulseTimeTermCfg(taskHandleLocal, channelChar);
+		}
+
+		int DAQmxCLIWrapper::GetCIPulseFreqTerm(IntPtr taskHandle, 
+			String^ channel, [Out] String^% data, uInt32 bufferSize)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+			char* dataUnmanaged = new char[bufferSize];
+
+			int32 result = DAQmxGetCIPulseFreqTerm(taskHandleLocal, 
+				channelChar, dataUnmanaged, bufferSize);
+			data = gcnew String(dataUnmanaged);
+
+			delete[] dataUnmanaged;
+			return result;
+		}
+
+		int DAQmxCLIWrapper::SetCIPulseFreqTerm(IntPtr taskHandle, 
+			String^ channel, String^ terminal)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+			char* terminalChar = StringToCharz(terminal);
+
+			int32 result = DAQmxSetCIPulseFreqTerm(taskHandleLocal, 
+				channelChar, terminalChar);
+
+			FreeCharz(channelChar);
+			FreeCharz(terminalChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::ResetCIPulseFreqTerm(IntPtr taskHandle, 
+			String^ channel)
+		{
+			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
+			char* channelChar = StringToCharz(channel);
+
+			int32 result = DAQmxResetCIPulseFreqTerm(taskHandleLocal, 
+				channelChar);
+
+			FreeCharz(channelChar);
+
+			return result;
+		}
+
+
+
+		int DAQmxCLIWrapper::GetSystemInfoAttribute(int attribute, 
+			[Out] IntPtr% value) {
+
+			void* valueUnmanaged;
+			int32 result = DAQmxGetSystemInfoAttribute(attribute, 
+				&valueUnmanaged);
+
+			value = IntPtr(valueUnmanaged);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::SetDigitalPowerUpStates(String^ deviceName, 
+			String^ channelNames, int state) {
+
+			char* deviceNameChar = StringToCharz(deviceName);
+			char* channelNamesChar = StringToCharz(channelNames);
+
+			int result = DAQmxSetDigitalPowerUpStates(deviceNameChar, 
+				channelNamesChar, state);
+
+			FreeCharz(deviceNameChar);
+			FreeCharz(channelNamesChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::GetDigitalPowerUpStates(String^ deviceName, 
+			String^ channelName, [Out] int% state) {
+
+			char* deviceNameChar = StringToCharz(deviceName);
+			char* channelNameChar = StringToCharz(channelName);
+			int32 stateUnmanaged;
+
+			int32 result = DAQmxGetDigitalPowerUpStates(deviceNameChar, 
+				channelNameChar, &stateUnmanaged);
+
+			state = stateUnmanaged;
+			FreeCharz(deviceNameChar);
+			FreeCharz(channelNameChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::SetDigitalPullUpPullDownStates(String^ deviceName, 
+			String^ channelName, int state) {
+
+			char* deviceNameChar = StringToCharz(deviceName);
+			char* channelNameChar = StringToCharz(channelName);
+
+			int result = DAQmxSetDigitalPullUpPullDownStates(deviceNameChar, 
+				channelNameChar, state);
+
+			FreeCharz(deviceNameChar);
+			FreeCharz(channelNameChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::GetDigitalPullUpPullDownStates(String^ deviceName, 
+			String^ channelName, [Out] int% state) {
+
+			char* deviceNameChar = StringToCharz(deviceName);
+			char* channelNameChar = StringToCharz(channelName);
+			int32 stateUnmanaged;
+
+			int32 result = DAQmxGetDigitalPullUpPullDownStates(deviceNameChar, 
+				channelNameChar, &stateUnmanaged);
+
+			state = stateUnmanaged;
+			FreeCharz(deviceNameChar);
+			FreeCharz(channelNameChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::SetAnalogPowerUpStates(String^ deviceName, 
+			String^ channelNames, 
+			double state, 
+			int channelType) {
+
+			char* deviceNameChar = StringToCharz(deviceName);
+			char* channelNamesChar = StringToCharz(channelNames);
+
+			int result = DAQmxSetAnalogPowerUpStates(deviceNameChar, 
+				channelNamesChar, state, channelType);
+			
+			FreeCharz(deviceNameChar);
+			FreeCharz(channelNamesChar);
+			
+			return result;
+		}
+
+		int DAQmxCLIWrapper::SetAnalogPowerUpStatesWithOutputType(
+			String^ channelNames, 
+			array<double>^ stateArray, 
+			array<AnalogChannelType>^ channelTypeArray) {
+
+			uInt32 arraySize = stateArray->Length;
+
+			array <int32>^ channelTypeArrayInt32 = gcnew array<int32>(arraySize);
+
+			for (int i = 0; i < channelTypeArray->Length; i++) {
+
+				channelTypeArrayInt32[i] = (int32)channelTypeArray[i];
+			}
+
+			char* channelNamesChar = StringToCharz(channelNames);
+
+			pin_ptr<double> stateArrayPtr = &stateArray[0];
+			pin_ptr<int32> channelTypeArrayPtr = &channelTypeArrayInt32[0];
+
+			int result = DAQmxSetAnalogPowerUpStatesWithOutputType(
+				channelNamesChar, 
+				stateArrayPtr, 
+				channelTypeArrayPtr, 
+				arraySize);
+
+			FreeCharz(channelNamesChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::GetAnalogPowerUpStates(String^ deviceName, 
+			String^ channelName, [Out] double% state, int channelType) {
+			char* deviceNameChar = StringToCharz(deviceName);
+			char* channelNameChar = StringToCharz(channelName);
+			float64 stateUnmanaged;
+			int32 result = DAQmxGetAnalogPowerUpStates(deviceNameChar, 
+				channelNameChar, &stateUnmanaged, channelType);
+			state = stateUnmanaged;
+			FreeCharz(deviceNameChar);
+			FreeCharz(channelNameChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::GetAnalogPowerUpStatesWithOutputType(String^ channelNames, 
+			array<double>^ stateArray, 
+			array<AnalogChannelType>^ channelTypeArray,
+			[Out] uInt32% arraySize) {
+
+			char* channelNamesChar = StringToCharz(channelNames);
+
+			pin_ptr<double> stateArrayPtr = &stateArray[0];
+			auto v = (int32)channelTypeArray[0];
+			pin_ptr<int32> channelTypeArrayPtr = &v;
+
+			uInt32 arraySizeUnmanaged;
+			int32 result = DAQmxGetAnalogPowerUpStatesWithOutputType(channelNamesChar, 
+				stateArrayPtr, &v, &arraySizeUnmanaged);
+
+			arraySize = arraySizeUnmanaged;
+
+			FreeCharz(channelNamesChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::SetDigitalLogicFamilyPowerUpState(String^ deviceName, int logicFamily) {
+			char* deviceNameChar = StringToCharz(deviceName);
+			int result = DAQmxSetDigitalLogicFamilyPowerUpState(deviceNameChar, logicFamily);
+			FreeCharz(deviceNameChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::GetDigitalLogicFamilyPowerUpState(String^ deviceName, [Out] int% logicFamily) {
+			char* deviceNameChar = StringToCharz(deviceName);
+			int32 logicFamilyUnmanaged;
+			int32 result = DAQmxGetDigitalLogicFamilyPowerUpState(deviceNameChar, &logicFamilyUnmanaged);
+			logicFamily = logicFamilyUnmanaged;
+			FreeCharz(deviceNameChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::AddNetworkDevice(String^ IPAddress, String^ deviceName, bool attemptReservation, double timeout, [Out] String^% deviceNameOut, uInt32 deviceNameOutBufferSize) {
+			char* IPAddressChar = StringToCharz(IPAddress);
+			char* deviceNameChar = StringToCharz(deviceName);
+			char* deviceNameOutUnmanaged = new char[deviceNameOutBufferSize];
+
+			int32 result = DAQmxAddNetworkDevice(IPAddressChar, deviceNameChar, attemptReservation, timeout, deviceNameOutUnmanaged, deviceNameOutBufferSize);
+			deviceNameOut = gcnew String(deviceNameOutUnmanaged);
+
+			delete[] deviceNameOutUnmanaged;
+			FreeCharz(IPAddressChar);
+			FreeCharz(deviceNameChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::DeleteNetworkDevice(String^ deviceName) {
+			char* deviceNameChar = StringToCharz(deviceName);
+			int result = DAQmxDeleteNetworkDevice(deviceNameChar);
+			FreeCharz(deviceNameChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::ReserveNetworkDevice(String^ deviceName, bool overrideReservation) {
+			char* deviceNameChar = StringToCharz(deviceName);
+			int result = DAQmxReserveNetworkDevice(deviceNameChar, overrideReservation);
+			FreeCharz(deviceNameChar);
+			return result;
+		}
+
+		int DAQmxCLIWrapper::UnreserveNetworkDevice(String^ deviceName) {
+			char* deviceNameChar = StringToCharz(deviceName);
+			int result = DAQmxUnreserveNetworkDevice(deviceNameChar);
+			FreeCharz(deviceNameChar);
+			return result;
+		}
+
+
+		int DAQmxCLIWrapper::WaitUntilTaskDone(IntPtr taskHandle,
+			double timeToWait) {
+			return DAQmxWaitUntilTaskDone((TaskHandle)taskHandle,
+				timeToWait);
+		}
+
+
+		int DAQmxCLIWrapper::ConfigureStartTrigger(IntPtr taskHandle,
+			String^ triggerSource, ActiveEdge activeEdge) {
+
+			char* triggerSourceChar = StringToCharz(triggerSource);
+
+			int result = DAQmxCfgDigEdgeStartTrig((TaskHandle)taskHandle,
+				triggerSourceChar, (int)activeEdge);
+			FreeCharz(triggerSourceChar);
+			return result;
+		}
 	}
 }

@@ -1,6 +1,5 @@
 /*
-
-Copyright (c) 2024 vasilyevl (Grumpy). Permission is hereby granted,
+Copyright (c) 2025 vasilyevl (Grumpy). Permission is hereby granted,
 free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"),to deal in the Software
 without restriction, including without limitation the rights to use, copy,
@@ -23,6 +22,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 using namespace System;
 using namespace System::Runtime::InteropServices;
+
 namespace Grumpy{
 
 	namespace DAQmxNetApi {
@@ -32,14 +32,41 @@ namespace Grumpy{
 
 	#pragma managed
 		
-		public enum class EventType
+		public enum class DigitalPowerUpState: int32
+		{
+			Low = DAQmx_Val_Low,					// 10214 // Low
+			High = DAQmx_Val_High,					// 10192 // High
+			Tristate = DAQmx_Val_Tristate			// 10160 // No Change
+		};
+
+		public enum AnalogChannelType: int32
+		{
+			Voltage = DAQmx_Val_ChannelVoltage,				// 0     // Voltage Channel
+			Current = DAQmx_Val_ChannelCurrent,				// 1     // Current Channel
+			HighImpedance = DAQmx_Val_HighImpedance			// 2     // High-Impedance Channel
+		};
+
+		public enum class AnalogPowerUpState : int32
+		{
+			Low = DAQmx_Val_Low,							// 10214 // Low
+			High = DAQmx_Val_High,							// 10192 // High
+			Tristate = DAQmx_Val_Tristate					// 10160 // No Change
+		};
+
+		public enum class DigitalPullUpPullDownState : int32
+		{
+			PullUp = DAQmx_Val_PullUp,						//  15950 // Pull Up
+			PullDown = DAQmx_Val_PullDown					//  15951 // Pull Down
+		};
+
+		public enum class EventType : int32
 		{
 			Done = 0,
 			EveryNSamplesReceived = 1,
 			EveryNSamplesTransferred = 2
 		};
 
-		public enum class AiTermination
+		public enum class AiTermination : int32
 		{
 			Default = DAQmx_Val_Cfg_Default,			//  -1  Default
 			RSE = DAQmx_Val_RSE,						//  10083 Referenced Single-Ended
@@ -48,54 +75,51 @@ namespace Grumpy{
 			PseudoDifferential = DAQmx_Val_PseudoDiff	//  12529 Pseudo-Differential
 		};
 
-		public enum class DODrive
+		public enum class DODrive : int32
 		{
 			Any = 0,
 			Active = DAQmx_Val_ActiveDrive,             // 12573 Active Drive
 			OpenCollector = DAQmx_Val_OpenCollector     // 12574 Open Collector
 		};
 
-		public enum class VoltageUnits
+		public enum class VoltageUnits : int32
 		{
 			Volts = DAQmx_Val_Volts,						// 10348  Volts	
 			FromCustomScale = DAQmx_Val_FromCustomScale		// 10065  From Custom Scale
 		};
 
-		public enum class TimeUnits {
+		public enum class TimeUnits : int32 
+		{
 			Seconds = DAQmx_Val_Seconds,					// 10364  Seconds
 			Ticks = DAQmx_Val_Ticks,						// 10304  Ticks
 			Hertz = DAQmx_Val_Hz							// 10373  Hertz
 		};
 
-		public enum class DioState
+		public enum class DioState : int32
 		{
 			Low = DAQmx_Val_Low,						// 10214  Low
 			High = DAQmx_Val_High						// 10192  High
 		};
 
-
-
-		public enum class ActiveEdge
+		public enum class ActiveEdge : int32
 		{
 			Rising = DAQmx_Val_Rising,		// 10280  Rising	
 			Falling = DAQmx_Val_Falling		// 10171  Falling
 		};
 	
-		public enum class DIOLineGrouping
+		public enum class DIOLineGrouping : int32
 		{
 			ChanPerLine = DAQmx_Val_ChanPerLine, 		// 10204  One Channel For Each Line
 			ChanForAllLines = DAQmx_Val_ChanForAllLines	// 10205  One Channel For All Lines
 		};
 
-		public enum class ReadWriteFillMode
+		public enum class ReadWriteFillMode : int32
 		{
 			ByChannel = DAQmx_Val_GroupByChannel, 	// 0  Group by Channel
 			ByScan = DAQmx_Val_GroupByScanNumber	// 1  Group by Scan Number
 		};
 
-
-
-		public enum class TaskAction
+		public enum class TaskAction : int32
 		{
 			Start = DAQmx_Val_Task_Start,			//	0  Start
 			Stop = DAQmx_Val_Task_Stop,				//	1  Stop
@@ -106,14 +130,14 @@ namespace Grumpy{
 			Abort = DAQmx_Val_Task_Abort            //	6  Abort                     
 		};
 
-		public enum class SamplingMode
+		public enum class SamplingMode : int32
 		{
 			FiniteSamples = DAQmx_Val_FiniteSamps,				// 10178  Finite Samples						
 			ContineousSamples = DAQmx_Val_ContSamps,			// 10123  Continuous Samples
 			HWTimedSinglePoint = DAQmx_Val_HWTimedSinglePoint   // 12522  Hardware Timed Single Point
 		};
 
-		public enum class ExportableSignal
+		public enum class ExportableSignal : int32
 		{
 			AIConvertClock = DAQmx_Val_AIConvertClock,				// 12484 Clock that causes an analog - to - digital 
 																	// conversion on an E Series or M Series device. 
@@ -153,45 +177,61 @@ namespace Grumpy{
 
 		public ref class DAQmxCLIWrapper
 		{
+		public:
+
+			static const double INFINIT_WAIT = DAQmx_Val_WaitInfinitely;	// -1.0
+
 
 		public:
 
 			/**
-			* @brief Creates a DAQmx task with the specified task name and returns the task handle.
+			* @brief Creates a DAQmx task with the specified task name 
+			* and returns the task handle.
 			*
-			* This function wraps the NI-DAQmx `DAQmxCreateTask` function. It creates a new task
-			* with the provided name and returns a handle to the task, which can be used for further
-			* operations. The task name is passed as a .NET `String^`, converted to a C-style string,
-			* and passed to the DAQmx function.
+			* This function wraps the NI-DAQmx `DAQmxCreateTask` function. 
+			* creates a new task with the provided name and returns a handle 
+			* to the task, which can be used for further
+			* operations. The task name is passed as a .NET `String^`, 
+			* converted to a C-style string, and passed to the DAQmx function.
 			*
-			* @param[in] taskName The name of the task to create, passed as a .NET `String^`.
-			* @param[out] taskHandle A reference to an `IntPtr` where the handle of the created task will be stored.
-			*                        This handle can be used to interact with the task in subsequent DAQmx API calls.
+			* @param[in] taskName The name of the task to create, passed as 
+			* a .NET `String^`.
+			* @param[out] taskHandle A reference to an `IntPtr` where the 
+			* handle of the created task will be stored. This handle can be 
+			* used to interact with the task in subsequent DAQmx API calls.
 			*
 			* @return
 			* - `0` on success.
-			* - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			* - Non-zero error code on failure. The error code corresponds 
+			* to DAQmx status codes.
 			*
-			* @note The task name is converted to a C-style string before being passed to the DAQmx API, and
-			*       the memory is freed after the task is created.
+			* @note The task name is converted to a C-style string before 
+			* being passed to the DAQmx API, and the memory is freed after 
+			* the task is created.
 			*
 			* @see DAQmxCreateTask
 			*/
-			static int CreateTask(String^ taskName,
-				[Out] IntPtr% taskHandle);
+			static int CreateTask(String^ taskName, [Out] IntPtr% taskHandle);
 
 			/**
 			* @brief Checks if an error code indicates a failure.
 			*
-			* This function checks if the given error code is less than zero, which typically indicates a failure in the context
-			* of error handling. The function is used to determine if an operation or function call resulted in an error.
+			* This function checks if the given error code is less 
+			* than zero, which typically indicates a failure in the 
+			* context of error handling. The function is used to 
+			* determine if an operation or function call resulted 
+			* in an error.
 			*
-			* @param[in] errorCode The error code to be checked. This is usually a return value from a function indicating success
-			*                      or failure.
+			* @param[in] errorCode The error code to be checked. This 
+			* is usually a return value from a function indicating 
+			* success or failure.
 			*
-			* @return `true` if the error code is less than zero, indicating a failure; `false` otherwise.
+			* @return `true` if the error code is less than zero, 
+			* indicating a failure; `false` otherwise.
 			*
-			* @note This function is a simple inline utility for error handling, commonly used in error checking routines.
+			* @note This function is a simple inline utility for 
+			* error handling, 
+			* @ commonly used in error checking routines.
 			*/
 			static inline bool Failed(int errorCode)
 			{ return errorCode < 0; };
@@ -199,16 +239,21 @@ namespace Grumpy{
 			/**
 			 * @brief Checks if an error code indicates success.
 			 *
-			 * This function checks if the given error code is greater than or equal to zero, which typically indicates a successful
-			 * operation in the context of error handling. The function is used to determine if an operation or function call
-			 * completed without errors.
+			 * This function checks if the given error code is greater than 
+			 * or equal to zero, which typically indicates a successful 
+			 * operation in the context of error handling. The function is 
+			 * used to determine if an operation or function call completed 
+			 * without errors.
 			 *
-			 * @param[in] errorCode The error code to be checked. This is usually a return value from a function indicating success
-			 *                      or failure.
+			 * @param[in] errorCode The error code to be checked. This is 
+			 * usually a return value from a function indicating success or 
+			 * failure.
 			 *
-			 * @return `true` if the error code is greater than or equal to zero, indicating success; `false` otherwise.
+			 * @return `true` if the error code is greater than or equal to 
+			 * zero, indicating success; `false` otherwise.
 			 *
-			 * @note This function is a simple inline utility for error handling, commonly used in error checking routines.
+			 * @note This function is a simple inline utility for error 
+			 * handling, commonly used in error checking routines.
 			 */
 			static inline bool Success(int errorCode)
 			{ return errorCode >= 0; };
@@ -216,32 +261,37 @@ namespace Grumpy{
 			/**
 			* @brief Checks if an error code indicates a warning condition.
 			*
-			* This function checks if the given error code is greater than zero, which typically indicates a warning condition
-			* rather than a critical failure. The function is used to identify non-critical issues or warnings that may need
-			* attention but do not necessarily prevent the operation from continuing.
+			* This function checks if the given error code is greater than 
+			* zero, which typically indicates a warning condition rather 
+			* than a critical failure. The function is used to identify 
+			* non-critical issues or warnings that may need attention but 
+			* do not necessarily prevent the operation from continuing.
 			*
-			* @param[in] errorCode The error code to be checked. This is usually a return value from a function where positive
-			*                      values indicate warnings.
+			* @param[in] errorCode The error code to be checked. This is 
+			* usually a return value from a function where positive
+			* values indicate warnings.
 			*
-			* @return `true` if the error code is greater than zero, indicating a warning; `false` otherwise.
+			* @return `true` if the error code is greater than zero, 
+			*                indicating a warning; `false` otherwise.
 			*
-			* @note This function is a simple inline utility for distinguishing between errors and warnings.
+			* @note This function is a simple inline utility for 
+			* distinguishing between errors and warnings.
 			*/
 			static inline bool Warning(int errorCode)
 			{ return errorCode > 0; };
 
 			/**
-			 * @brief Retrieves the error description string corresponding to a DAQmx error code.
+			 * @brief Retrieves the error description string corresponding 
+			 * to a DAQmx error code.
 			 *
-			 * This function calls the NI-DAQmx `DAQmxGetErrorString` function to obtain a human-readable
-			 * description of the specified error code. The error description is returned as a .NET `String^`.
+			 * This function calls the NI-DAQmx `DAQmxGetErrorString` 
+			 * function to obtain a human-readable description of the specified 
+			 * error code. The error description is returned as a .NET `String^`.
 			 *
-			 * @param[in] errorCode The error code for which the description is required. This should be
-			 *                      a valid DAQmx error code.
-			 *
-			 * @return A .NET `String^` containing the error description associated with the provided error code.
-			 *         If the error code is valid, a descriptive string is returned. If the error code is not valid,
-			 *         an appropriate error message is returned.
+			 * @param[in] errorCode The error code for which the description is 
+			 * associated with the provided error code. If the error code is valid, 
+			 * a descriptive string is returned. If the error code is not valid,
+			 * an appropriate error message is returned.
 			 *
 			 * @see DAQmxGetErrorString
 			 */
@@ -250,19 +300,23 @@ namespace Grumpy{
 			/**
 			* @brief Starts the execution of a DAQmx task.
 			*
-			* This function initiates the execution of the specified DAQmx task by calling the
-			* `DAQmxStartTask` function. The task must be properly configured before calling this
+			* This function initiates the execution of the specified DAQmx 
+			* task by calling the `DAQmxStartTask` function. The task must 
+			* be properly configured before calling this
 			* function to ensure correct operation.
 			*
-			* @param[in] taskHandle A handle to the DAQmx task to be started. This is passed as an `IntPtr` and cast
-			*                       to the NI-DAQmx `TaskHandle`.
+			* @param[in] taskHandle A handle to the DAQmx task to be started. 
+			* This is passed as an `IntPtr` and cast to the NI-DAQmx 
+			* `TaskHandle`.
 			*
 			* @return
 			* - `0` on success.
-			* - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			* - Non-zero error code on failure. The error code corresponds 
+			* to DAQmx status codes.
 			*
-			* @note This function assumes that the task handle provided is valid and the task has been correctly
-			*       configured. It does not perform any checks on the task's state before starting it.
+			* @note This function assumes that the task handle provided is 
+			* valid and the task has been correctly configured. It does not 
+			* perform any checks on the task's state before starting it.
 			*/
 			static inline int StartTask(IntPtr taskHandle) {
 				return DAQmxStartTask((TaskHandle)taskHandle);
@@ -271,19 +325,23 @@ namespace Grumpy{
 			/**
 			* @brief Stops the execution of a DAQmx task.
 			*
-			* This function halts the execution of the specified DAQmx task by calling the
-			* `DAQmxStopTask` function. It is used to stop a running task and should be called
-			* when the task is no longer needed or before reconfiguring the task.
+			* This function halts the execution of the specified DAQmx 
+			* task by calling the `DAQmxStopTask` function. It is used to 
+			* stop a running task and should be called when the task is no 
+			* longer needed or before reconfiguring the task.
 			*
-			* @param[in] taskHandle A handle to the DAQmx task to be stopped. This is passed as an `IntPtr` and cast
-			*                       to the NI-DAQmx `TaskHandle`.
+			* @param[in] taskHandle A handle to the DAQmx task to be stopped. 
+			* This is passed as an `IntPtr` and cast to the NI-DAQmx 
+			* `TaskHandle`.
 			*
 			* @return
 			* - `0` on success.
-			* - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			* - Non-zero error code on failure. The error code corresponds 
+			* to DAQmx status codes.
 			*
-			* @note This function assumes that the task handle provided is valid and that the task is currently
-			*       running. It does not perform any checks on the task's state before stopping it.
+			* @note This function assumes that the task handle provided is 
+			* valid and that the task is currently running. It does not perform 
+			* any checks on the task's state before stopping it.
 			*/
 			static int StopTask(IntPtr taskHandle) {
 				return DAQmxStopTask((TaskHandle)taskHandle);
@@ -292,19 +350,22 @@ namespace Grumpy{
 			/**
 			* @brief Clears and releases a DAQmx task.
 			*
-			* This function wraps the NI-DAQmx `DAQmxClearTask` function to clear and release a specified task.
-			* If the task is successfully cleared, the task handle is set to `NULL`. The function returns
+			* This function wraps the NI-DAQmx `DAQmxClearTask` function to 
+			* clear and release a specified task. If the task is successfully 
+			* cleared, the task handle is set to `NULL`. The function returns
 			* an error code indicating the success or failure of the operation.
 			*
-			* @param[in, out] taskHandle A reference to the task handle. On successful execution, this
-			*                            handle is set to `NULL`.
+			* @param[in, out] taskHandle A reference to the task handle. 
+			* On successful execution, this handle is set to `NULL`.
 			*
 			* @return
 			* - `0` on success.
-			* - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			* - Non-zero error code on failure. The error code corresponds 
+			* to DAQmx status codes.
 			*
-			* @note The task handle should be valid before calling this function. After successful execution,
-			*       the `taskHandle` reference will be set to `NULL`.
+			* @note The task handle should be valid before calling this 
+			* function. After successful execution, the `taskHandle` 
+			* reference will be set to `NULL`.
 			*
 			* @see DAQmxClearTask
 			*/
@@ -320,19 +381,22 @@ namespace Grumpy{
 			/**
 			* @brief Disposes of a DAQmx task.
 			*
-			* This function wraps the `ClearTask` function to dispose of a specified task. It clears the
-			* task and sets the task handle to `NULL` if successful. This is useful for releasing resources
-			* and ensuring that the task is properly cleaned up.
+			* This function wraps the `ClearTask` function to dispose 
+			* of a specified task. It clears the task and sets the task 
+			* handle to `NULL` if successful. This is useful for releasing 
+			* resources and ensuring that the task is properly cleaned up.
 			*
-			* @param[in, out] taskHandle A reference to the handle of the task to be disposed of.
-			*                            After successful completion, the handle is set to `NULL`.
+			* @param[in, out] taskHandle A reference to the handle of 
+			* the task to be disposed of. After successful completion, 
+			* the handle is set to `NULL`.
 			*
 			* @return
 			* - `0` on success.
-			* - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			* - Non-zero error code on failure. The error code corresponds 
+			* to DAQmx status codes.
 			*
-			* @note This function is a convenience wrapper around the `ClearTask` function, designed
-			*       to simplify task disposal.
+			* @note This function is a convenience wrapper around the 
+			* `ClearTask` function, designed to simplify task disposal.
 			*
 			* @see ClearTask
 			*/
@@ -343,76 +407,92 @@ namespace Grumpy{
 			/**
 			* @brief Controls a DAQmx task.
 			*
-			* This function wraps the NI-DAQmx `DAQmxTaskControl` function to perform various actions on
-			* a specified task. The `TaskAction` parameter determines the action to be performed, such as
+			* This function wraps the NI-DAQmx `DAQmxTaskControl` function to 
+			* perform various actions on a specified task. The `TaskAction` 
+			* parameter determines the action to be performed, such as 
 			* starting, stopping, or clearing the task.
 			*
 			* @param[in] taskHandle A handle to the task to be controlled.
-			* @param[in] action Specifies the action to perform on the task, using the `TaskAction` enum.
+			* @param[in] action Specifies the action to perform on the task, 
+			*			        using the `TaskAction` enum.
 			*
 			* @return
 			* - `0` on success.
-			* - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			* - Non-zero error code on failure. The error code corresponds 
+			* to DAQmx status codes.
 			*
-			* @note The `TaskAction` enum should be used to specify the desired action. Common actions include
-			*       starting, stopping, and clearing the task.
+			* @note The `TaskAction` enum should be used to specify the desired 
+			* action. Common actions include starting, stopping, and 
+			* clearing the task.
 			*
 			* @see DAQmxTaskControl
 			* @see TaskAction
 			*/
-			static inline int TaskControl(IntPtr taskHandle,
-				TaskAction action) {
+			static inline int TaskControl(IntPtr taskHandle, TaskAction action) {
 				return DAQmxTaskControl((TaskHandle)taskHandle, (int)action);
 			}
 
 			/**
 			* @brief Waits until the specified task is complete.
 			*
-			* This function wraps the `DAQmxWaitUntilTaskDone` function to wait for a specified amount of time
-			* until the given task is completed. It is useful for ensuring that a task has finished its operation
+			* This function wraps the `DAQmxWaitUntilTaskDone` function to wait 
+			* for a specified amount of time until the given task is completed. 
+			* It is useful for ensuring that a task has finished its operation
 			* before proceeding with other actions.
 			*
-			* @param[in] taskHandle A handle to the task to monitor. This is passed as an `IntPtr` and cast to
-			*                       the NI-DAQmx `TaskHandle`.
-			* @param[in] timeToWait The amount of time, in seconds, to wait for the task to complete. A value
-			*                       of `DAQmx_Val_WaitInfinitely` can be used to wait indefinitely.
+			* @param[in] taskHandle A handle to the task to monitor. 
+			* This is passed as an `IntPtr` and cast to the NI-DAQmx 
+			* `TaskHandle`.
+			* @param[in] timeToWait The amount of time, in seconds, 
+			* to wait for the task to complete. A value of 
+			* `DAQmx_Val_WaitInfinitely` can be used to  wait indefinitely.
 			*
 			* @return
-			* - `0` on success, indicating the task has completed within the specified time.
-			* - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			* - `0` on success, indicating the task has completed within 
+			* the specified time.
+			* - Non-zero error code on failure. The error code corresponds 
+			* to DAQmx status codes.
 			*
-			* @note If the task does not complete within the specified time, the function will return an error code.
+			* @note If the task does not complete within the specified time, 
+			* the function will return an error code.
 			*
 			* @see DAQmxWaitUntilTaskDone
 			*/
 			static inline int WaitUntilTaskDone(IntPtr taskHandle,
-				double timeToWait){
-					return DAQmxWaitUntilTaskDone((TaskHandle)taskHandle, 
-						timeToWait);
-			}
+				double timeToWait);
 		
 			/**
 			 * @brief Configures the timing for a task's sample clock.
 			 *
-			 * This function wraps the NI-DAQmx `DAQmxCfgSampClkTiming` function to configure the sample clock timing for a
-			 * specified task. It allows setting the clock source, sampling rate, active edge, sampling mode, and the number
+			 * This function wraps the NI-DAQmx `DAQmxCfgSampClkTiming` 
+			 * function to configure the sample clock timing for a
+			 * specified task. It allows setting the clock source, sampling 
+			 * rate, active edge, sampling mode, and the number
 			 * of samples per channel.
 			 *
-			 * @param[in] taskHandle A handle to the task whose sample clock timing is to be configured. This is passed as a `long long`
-			 *                       and cast to the NI-DAQmx `TaskHandle`.
-			 * @param[in] source The source of the sample clock signal, specified as a string. This is converted to a C-style string
-			 *                   for use with the NI-DAQmx API.
-			 * @param[in] rate The sampling rate, in samples per second, to be used for the task.
-			 * @param[in] activeEdge Specifies the active edge of the sample clock signal, using the `ActiveEdge` enum.
-			 * @param[in] sampleMode Specifies the sampling mode, using the `SamplingMode` enum. This determines how samples are
-			 *                        collected (e.g., finite or continuous).
-			 * @param[in] sampsPerChan The number of samples per channel to acquire or generate.
+			 * @param[in] taskHandle A handle to the task whose sample clock 
+			 * timing is to be configured. This is passed as a `long long`
+			 * and cast to the NI-DAQmx `TaskHandle`.
+			 * @param[in] source The source of the sample clock signal, 
+			 * specified as a string. This is converted to a C-style string
+			 * for use with the NI-DAQmx API.
+			 * @param[in] rate The sampling rate, in samples per second, 
+			 * to be used for the task.
+			 * @param[in] activeEdge Specifies the active edge of the sample 
+			 * clock signal, using the `ActiveEdge` enum.
+			 * @param[in] sampleMode Specifies the sampling mode, using the 
+			 * `SamplingMode` enum. This determines how samples are
+			 * collected (e.g., finite or continuous).
+			 * @param[in] sampsPerChan The number of samples per channel 
+			 * to acquire or generate.
 			 *
 			 * @return
 			 * - `0` on success.
-			 * - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			 * - Non-zero error code on failure. The error code corresponds 
+			 * to DAQmx status codes.
 			 *
-			 * @note The `source` string is converted to a C-style string and then used with the NI-DAQmx API.
+			 * @note The `source` string is converted to a C-style string 
+			 * and then used with the NI-DAQmx API.
 			 *
 			 * @see DAQmxCfgSampClkTiming
 			 */
@@ -421,155 +501,206 @@ namespace Grumpy{
 				SamplingMode sampleMode, long long  sampsPerChan);
 
 			/**
-			* @brief Reads multiple analog samples as 64-bit floating-point numbers from a task.
+			* @brief Reads multiple analog samples as 64-bit floating-point 
+			* numbers from a task.
 			*
-			* This function wraps the NI-DAQmx `DAQmxReadAnalogF64` function to read multiple analog samples from the
-			* specified task. The samples are stored in a .NET managed array of 64-bit floating-point numbers (`array<double>^`).
-			* It supports specifying the number of samples per channel, the timeout for the read operation, and the grouping mode.
-			* The number of samples actually read per channel is returned through an output parameter.
+			* This function wraps the NI-DAQmx `DAQmxReadAnalogF64` function 
+			* to read multiple analog samples from the specified task. 
+			* The samples are stored in a .NET managed array of 64-bit 
+			* floating-point numbers (`array<double>^`). It supports specifying 
+			* the number of samples per channel, the timeout for the read 
+			* operation, and the grouping mode. The number of samples actually 
+			* read per channel is returned through an output parameter.
 			*
-			* @param[in] taskHandle A handle to the task from which to read analog samples. This is passed as an `IntPtr`
-			*                       and cast to the NI-DAQmx `TaskHandle`.
+			* @param[in] taskHandle A handle to the task from which to read 
+			* analog samples. This is passed as an `IntPtr` and cast to the 
+			* NI-DAQmx `TaskHandle`.
 			* @param[in] sampsPerChan The number of samples to read per channel.
-			* @param[in] timeout The amount of time, in seconds, to wait for the function to read the requested samples.
-			*                    A value of `DAQmx_Val_WaitInfinitely` can be used to wait indefinitely.
-			* @param[in] groupMode Specifies whether the data is grouped by channel or interleaved, using the `ReadbacklFillMode` enum.
-			* @param[out] data A managed array where the read analog data will be stored, represented as 64-bit floating-point numbers (`double`).
-			* @param[out] samplsPerChanRead A reference to an integer that will store the number of samples read per channel.
+			* @param[in] timeout The amount of time, in seconds, to wait for 
+			* the function to read the requested samples. A value of 
+			* `DAQmx_Val_WaitInfinitely` can be used to wait indefinitely.
+			* @param[in] groupMode Specifies whether the data is grouped by 
+			* channel or interleaved, using the `ReadbacklFillMode` enum.
+			* @param[out] data A managed array where the read analog data will 
+			* be stored, represented as 64-bit floating-point numbers (`double`).
+			* @param[out] samplsPerChanRead A reference to an integer that will 
+			* store the number of samples read per channel.
 			*
 			* @return
 			* - `0` on success.
-			* - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			* - Non-zero error code on failure. The error code corresponds to 
+			* DAQmx status codes.
 			*
-			* @note The `data` array is pinned to allow the DAQmx API to access the managed memory directly.
+			* @note The `data` array is pinned to allow the DAQmx API to access 
+			* the managed memory directly.
 			*
 			* @see DAQmxReadAnalogF64
 			*/
-			static int ReadAnalogF64(IntPtr taskHandle,
+			static int ReadAnalogLines(IntPtr taskHandle,
 				int32 sampsPerChan, double timeout, 
 				ReadWriteFillMode groupMode,
 				array<double>^ data,
 				[Out] int% samplsPerChanRead);
 
 			/**
-			* @brief Reads a single analog sample as a 64-bit floating-point number from a task.
-			*
-			* This function wraps the NI-DAQmx `DAQmxReadAnalogScalarF64` function to read a single analog sample from the
-			* specified task. The sample is stored as a 64-bit floating-point number (`double`). It supports specifying the
-			* timeout for the read operation. The value read is returned through an output parameter.
-			*
-			* @param[in] taskHandle A handle to the task from which to read the analog sample. This is passed as an `IntPtr`
-			*                       and cast to the NI-DAQmx `TaskHandle`.
-			* @param[in] timeout The amount of time, in seconds, to wait for the function to read the sample.
-			*                    A value of `DAQmx_Val_WaitInfinitely` can be used to wait indefinitely.
-			* @param[out] data A reference to a double where the read analog sample will be stored.
-			*
-			* @return
-			* - `0` on success.
-			* - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
-			*
-			* @note The `data` parameter is updated with the value read from the task.
-			*
-			* @see DAQmxReadAnalogScalarF64
-			*/
+			 * @brief Reads a single analog sample as a 64-bit floating-point number
+			 * from a task.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxReadAnalogScalarF64` function to
+			 * read a single analog sample from the specified task. The sample is
+			 * stored as a 64-bit floating-point number (`double`). It supports
+			 * specifying the timeout for the read operation. The value read is
+			 * returned through an output parameter.
+			 *
+			 * @param[in] taskHandle A handle to the task from which to read the
+			 * analog sample. This is passed as an `IntPtr` and cast to the NI-DAQmx
+			 * `TaskHandle`.
+			 * @param[in] timeout The amount of time, in seconds, to wait for the
+			 * function to read the sample. A value of `DAQmx_Val_WaitInfinitely` can
+			 * be used to wait indefinitely.
+			 * @param[out] data A reference to a double where the read analog sample
+			 * will be stored.
+			 *
+			 * @return
+			 * - `0` on success.
+			 * - Non-zero error code on failure. The error code corresponds to DAQmx
+			 * status codes.
+			 *
+			 * @note The `data` parameter is updated with the value read from the
+			 * task.
+			 *
+			 * @see DAQmxReadAnalogScalarF64
+			 */
 			static int ReadAnalogScalarF64(IntPtr taskHandle,
-								double timeout, [Out] double% data);
+				double timeout, [Out] double% data);
 
 			/**
-			* @brief Reads multiple binary samples as 16-bit signed integers from a task.
-			*
-			* This function wraps the NI-DAQmx `DAQmxReadBinaryI16` function to read multiple binary samples from the
-			* specified task. The samples are stored in a .NET managed array of 16-bit signed integers (`array<int16>^`).
-			* The function allows specifying the number of samples per channel, the timeout for the read operation, and the
-			* grouping mode. The number of samples actually read per channel is returned through an output parameter.
-			*
-			* @param[in] taskHandle A handle to the task from which to read binary samples. This is passed as an `IntPtr`
-			*                       and cast to the NI-DAQmx `TaskHandle`.
-			* @param[in] sampsPerChan The number of samples to read per channel.
-			* @param[in] timeout The amount of time, in seconds, to wait for the function to read the requested samples.
-			*                    A value of `DAQmx_Val_WaitInfinitely` can be used to wait indefinitely.
-			* @param[in] groupMode Specifies whether the data is grouped by channel or interleaved, using the `ReadbacklFillMode` enum.
-			* @param[out] data A managed array where the read binary data will be stored, represented as 16-bit signed integers (`int16`).
-			* @param[in] bufferSizeInSamples The size of the `data` array, in samples.
-			* @param[out] sampsPerChanRead A reference to an integer that will store the number of samples read per channel.
-			*
-			* @return
-			* - `0` on success.
-			* - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
-			*
-			* @note The `data` array is pinned to allow the DAQmx API to access the managed memory directly.
-			*
-			* @see DAQmxReadBinaryI16
-			*/
-
-
+			 * @brief Reads multiple binary samples as 16-bit signed integers from a
+			 * task.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxReadBinaryI16` function to read
+			 * multiple binary samples from the specified task. The samples are stored
+			 * in a .NET managed array of 16-bit signed integers (`array<int16>^`).
+			 * The function allows specifying the number of samples per channel, the
+			 * timeout for the read operation, and the grouping mode. The number of
+			 * samples actually read per channel is returned through an output
+			 * parameter.
+			 *
+			 * @param[in] taskHandle A handle to the task from which to read binary
+			 * samples. This is passed as an `IntPtr` and cast to the NI-DAQmx
+			 * `TaskHandle`.
+			 * @param[in] sampsPerChan The number of samples to read per channel.
+			 * @param[in] timeout The amount of time, in seconds, to wait for the
+			 * function to read the requested samples. A value of
+			 * `DAQmx_Val_WaitInfinitely` can be used to wait indefinitely.
+			 * @param[in] groupMode Specifies whether the data is grouped by channel
+			 * or interleaved, using the `ReadbackFillMode` enum.
+			 * @param[out] data A managed array where the read binary data will be
+			 * stored, represented as 16-bit signed integers (`int16`).
+			 * @param[in] bufferSizeInSamples The size of the `data` array, in samples.
+			 * @param[out] sampsPerChanRead A reference to an integer that will store
+			 * the number of samples read per channel.
+			 *
+			 * @return
+			 * - `0` on success.
+			 * - Non-zero error code on failure. The error code corresponds to DAQmx
+			 * status codes.
+			 *
+			 * @note The `data` array is pinned to allow the DAQmx API to access the
+			 * managed memory directly.
+			 *
+			 * @see DAQmxReadBinaryI16
+			 */
 			static int ReadBinaryI16(IntPtr taskHandle,
 				int32 sampsPerChan, double timeout,
 				ReadWriteFillMode groupMode, array<int16>^ data,
 				uInt32 bufferSizeInSamples, [Out] int% sampsPerChanRead);
 
-
 			/**
-			* @brief Writes multiple floating-point samples to an analog output channel in a DAQmx task.
-			*
-			* This function wraps the NI-DAQmx `DAQmxWriteAnalogF64` function. It writes multiple floating-point
-			* samples to the specified analog output channel(s) in the task.
-			*
-			* @param[in] taskHandle The handle to the task that contains the analog output channel(s) to which you want to write samples.
-			* @param[in] sampsPerChan The number of samples per channel to write.
-			* @param[in] autoStart Specifies whether or not to automatically start the task if it is not already running.
-			* @param[in] timeout The amount of time, in seconds, to wait for the function to write the samples.
-			*                    If the time elapses before the function writes the samples, the function returns an error.
-			* @param[in] groupMode Specifies whether the samples are interleaved or non-interleaved.
-			*                      Use `ReadWriteFillMode::ByChannel` to write samples for each channel consecutively.
-			*                      Use `ReadWriteFillMode::ByScan` to write one sample for each channel in each scan.
-			* @param[in] data The array of data to write to the analog output channel(s). The array must contain the number of samples specified by `sampsPerChan` for each channel in the task.
-			* @param[out] sampsPerChanWritten The actual number of samples per channel successfully written. This parameter is passed by reference and will be set by the function.
-			* @return Returns 0 on success, or a non-zero error code on failure. The error code corresponds to DAQmx status codes.
-			*/
+			 * @brief Writes multiple floating-point samples to an analog output
+			 * channel in a DAQmx task.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxWriteAnalogF64` function. It
+			 * writes multiple floating-point samples to the specified analog output
+			 * channel(s) in the task.
+			 *
+			 * @param[in] taskHandle The handle to the task that contains the analog
+			 * output channel(s) to which you want to write samples.
+			 * @param[in] sampsPerChan The number of samples per channel to write.
+			 * @param[in] autoStart Specifies whether or not to automatically start
+			 * the task if it is not already running.
+			 * @param[in] timeout The amount of time, in seconds, to wait for the
+			 * function to write the samples. If the time elapses before the function
+			 * writes the samples, the function returns an error.
+			 * @param[in] groupMode Specifies whether the samples are interleaved or
+			 * non-interleaved. Use `ReadWriteFillMode::ByChannel` to write samples
+			 * for each channel consecutively. Use `ReadWriteFillMode::ByScan` to
+			 * write one sample for each channel in each scan.
+			 * @param[in] data The array of data to write to the analog output
+			 * channel(s). The array must contain the number of samples specified by
+			 * `sampsPerChan` for each channel in the task.
+			 * @param[out] sampsPerChanWritten The actual number of samples per
+			 * channel successfully written. This parameter is passed by reference
+			 * and will be set by the function.
+			 * @return Returns 0 on success, or a non-zero error code on failure. The
+			 * error code corresponds to DAQmx status codes.
+			 */
 			static int WriteAnalogF64(IntPtr taskHandle,
 				int32 sampsPerChan, bool autoStart, double timeout,
 				ReadWriteFillMode groupMode, array<double>^ data,
 				[Out] int% sampsPerChanWritten);
 
-
-
 			/**
-			* @brief Writes a single floating-point sample to an analog output channel in a DAQmx task.
-			*
-			* This function wraps the NI-DAQmx `DAQmxWriteAnalogScalarF64` function. It writes a single floating-point
-			* sample to the specified analog output channel in the task.
-			*
-			* @param[in] taskHandle The handle to the task that contains the analog output channel to which you want to write the sample.
-			* @param[in] autoStart Specifies whether or not to automatically start the task if it is not already running.
-			* @param[in] timeout The amount of time, in seconds, to wait for the function to write the sample.
-			*                    If the time elapses before the function writes the sample, the function returns an error.
-			* @param[in] data The data value to write to the analog output channel.
-			* @return Returns 0 on success, or a non-zero error code on failure. The error code corresponds to DAQmx status codes.
-			*/
+			 * @brief Writes a single floating-point sample to an analog output
+			 * channel in a DAQmx task.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxWriteAnalogScalarF64` function.
+			 * It writes a single floating-point sample to the specified analog
+			 * output channel in the task.
+			 *
+			 * @param[in] taskHandle The handle to the task that contains the analog
+			 * output channel to which you want to write the sample.
+			 * @param[in] autoStart Specifies whether or not to automatically start
+			 * the task if it is not already running.
+			 * @param[in] timeout The amount of time, in seconds, to wait for the
+			 * function to write the sample. If the time elapses before the function
+			 * writes the sample, the function returns an error.
+			 * @param[in] data The data value to write to the analog output channel.
+			 * @return Returns 0 on success, or a non-zero error code on failure. The
+			 * error code corresponds to DAQmx status codes.
+			 */
 			static int WriteAnalogScalarF64(IntPtr taskHandle,
 				bool autoStart, double timeout, double data);
 
-
-
 			/**
-			* @brief Writes multiple 16-bit integer samples to an analog output channel in a DAQmx task.
-			*
-			* This function wraps the NI-DAQmx `DAQmxWriteBinaryI16` function. It writes multiple 16-bit integer
-			* samples to the specified analog output channel(s) in the task.
-			*
-			* @param[in] taskHandle The handle to the task that contains the analog output channel(s) to which you want to write samples.
-			* @param[in] sampsPerChan The number of samples per channel to write.
-			* @param[in] autoStart Specifies whether or not to automatically start the task if it is not already running.
-			* @param[in] timeout The amount of time, in seconds, to wait for the function to write the samples.
-			*                    If the time elapses before the function writes the samples, the function returns an error.
-			* @param[in] groupMode Specifies whether the samples are interleaved or non-interleaved.
-			*                      Use `ReadWriteFillMode::ByChannel` to write samples for each channel consecutively.
-			*                      Use `ReadWriteFillMode::ByScan` to write one sample for each channel in each scan.
-			* @param[in] data The array of data to write to the analog output channel(s). The array must contain the number of samples specified by `sampsPerChan` for each channel in the task.
-			* @param[out] sampsPerChanWritten The actual number of samples per channel successfully written. This parameter is passed by reference and will be set by the function.
-			* @return Returns 0 on success, or a non-zero error code on failure. The error code corresponds to DAQmx status codes.
-			*/
+			 * @brief Writes multiple 16-bit integer samples to an analog output
+			 * channel in a DAQmx task.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxWriteBinaryI16` function. It
+			 * writes multiple 16-bit integer samples to the specified analog output
+			 * channel(s) in the task.
+			 *
+			 * @param[in] taskHandle The handle to the task that contains the analog
+			 * output channel(s) to which you want to write samples.
+			 * @param[in] sampsPerChan The number of samples per channel to write.
+			 * @param[in] autoStart Specifies whether or not to automatically start
+			 * the task if it is not already running.
+			 * @param[in] timeout The amount of time, in seconds, to wait for the
+			 * function to write the samples. If the time elapses before the function
+			 * writes the samples, the function returns an error.
+			 * @param[in] groupMode Specifies whether the samples are interleaved or
+			 * non-interleaved. Use `ReadWriteFillMode::ByChannel` to write samples
+			 * for each channel consecutively. Use `ReadWriteFillMode::ByScan` to
+			 * write one sample for each channel in each scan.
+			 * @param[in] data The array of data to write to the analog output
+			 * channel(s). The array must contain the number of samples specified by
+			 * `sampsPerChan` for each channel in the task.
+			 * @param[out] sampsPerChanWritten The actual number of samples per
+			 * channel successfully written. This parameter is passed by reference
+			 * and will be set by the function.
+			 * @return Returns 0 on success, or a non-zero error code on failure. The
+			 * error code corresponds to DAQmx status codes.
+			 */
 			static int WriteBinaryI16(IntPtr taskHandle,
 				int32 sampsPerChan, bool autoStart, double timeout,
 				ReadWriteFillMode groupMode, array<int16>^ data,
@@ -577,23 +708,34 @@ namespace Grumpy{
 
 
 			/**
-			* @brief Writes multiple 32-bit integer samples to an analog output channel in a DAQmx task.
-			*
-			* This function wraps the NI-DAQmx `DAQmxWriteBinaryI32` function. It writes multiple 32-bit integer
-			* samples to the specified analog output channel(s) in the task.
-			*
-			* @param[in] taskHandle The handle to the task that contains the analog output channel(s) to which you want to write samples.
-			* @param[in] sampsPerChan The number of samples per channel to write.
-			* @param[in] autoStart Specifies whether or not to automatically start the task if it is not already running.
-			* @param[in] timeout The amount of time, in seconds, to wait for the function to write the samples.
-			*                    If the time elapses before the function writes the samples, the function returns an error.
-			* @param[in] groupMode Specifies whether the samples are interleaved or non-interleaved.
-			*                      Use `ReadWriteFillMode::ByChannel` to write samples for each channel consecutively.
-			*                      Use `ReadWriteFillMode::ByScan` to write one sample for each channel in each scan.
-			* @param[in] dat The array of data to write to the analog output channel(s). The array must contain the number of samples specified by `sampsPerChan` for each channel in the task.
-			* @param[out] sampsPerChanWritten The actual number of samples per channel successfully written. This parameter is passed by reference and will be set by the function.
-			* @return Returns 0 on success, or a non-zero error code on failure. The error code corresponds to DAQmx status codes.
-			*/
+			 * @brief Writes multiple 32-bit integer samples to an analog output
+			 * channel in a DAQmx task.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxWriteBinaryI32` function. It
+			 * writes multiple 32-bit integer samples to the specified analog output
+			 * channel(s) in the task.
+			 *
+			 * @param[in] taskHandle The handle to the task that contains the analog
+			 * output channel(s) to which you want to write samples.
+			 * @param[in] sampsPerChan The number of samples per channel to write.
+			 * @param[in] autoStart Specifies whether or not to automatically start
+			 * the task if it is not already running.
+			 * @param[in] timeout The amount of time, in seconds, to wait for the
+			 * function to write the samples. If the time elapses before the function
+			 * writes the samples, the function returns an error.
+			 * @param[in] groupMode Specifies whether the samples are interleaved or
+			 * non-interleaved. Use `ReadWriteFillMode::ByChannel` to write samples
+			 * for each channel consecutively. Use `ReadWriteFillMode::ByScan` to
+			 * write one sample for each channel in each scan.
+			 * @param[in] dat The array of data to write to the analog output
+			 * channel(s). The array must contain the number of samples specified by
+			 * `sampsPerChan` for each channel in the task.
+			 * @param[out] sampsPerChanWritten The actual number of samples per
+			 * channel successfully written. This parameter is passed by reference
+			 * and will be set by the function.
+			 * @return Returns 0 on success, or a non-zero error code on failure. The
+			 * error code corresponds to DAQmx status codes.
+			 */
 			static int WriteBinaryI32(IntPtr taskHandle,
 				int32 sampsPerChan, bool autoStart, double timeout,
 				ReadWriteFillMode groupMode, array<int32>^ dat,
@@ -601,22 +743,33 @@ namespace Grumpy{
 
 
 			/**
-			 * @brief Writes multiple 16-bit unsigned integer samples to an analog output channel in a DAQmx task.
+			 * @brief Writes multiple 16-bit unsigned integer samples to an analog
+			 * output channel in a DAQmx task.
 			 *
-			 * This function wraps the NI-DAQmx `DAQmxWriteBinaryU16` function. It writes multiple 16-bit unsigned integer
-			 * samples to the specified analog output channel(s) in the task.
+			 * This function wraps the NI-DAQmx `DAQmxWriteBinaryU16` function. It
+			 * writes multiple 16-bit unsigned integer samples to the specified
+			 * analog output channel(s) in the task.
 			 *
-			 * @param[in] taskHandle The handle to the task that contains the analog output channel(s) to which you want to write samples.
+			 * @param[in] taskHandle The handle to the task that contains the analog
+			 * output channel(s) to which you want to write samples.
 			 * @param[in] sampsPerChan The number of samples per channel to write.
-			 * @param[in] autoStart Specifies whether or not to automatically start the task if it is not already running.
-			 * @param[in] timeout The amount of time, in seconds, to wait for the function to write the samples.
-			 *                    If the time elapses before the function writes the samples, the function returns an error.
-			 * @param[in] groupMode Specifies whether the samples are interleaved or non-interleaved.
-			 *                      Use `ReadWriteFillMode::ByChannel` to write samples for each channel consecutively.
-			 *                      Use `ReadWriteFillMode::ByScan` to write one sample for each channel in each scan.
-			 * @param[in] dat The array of data to write to the analog output channel(s). The array must contain the number of samples specified by `sampsPerChan` for each channel in the task.
-			 * @param[out] sampsPerChanWritten The actual number of samples per channel successfully written. This parameter is passed by reference and will be set by the function.
-			 * @return Returns 0 on success, or a non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			 * @param[in] autoStart Specifies whether or not to automatically start
+			 * the task if it is not already running.
+			 * @param[in] timeout The amount of time, in seconds, to wait for the
+			 * function to write the samples. If the time elapses before the function
+			 * writes the samples, the function returns an error.
+			 * @param[in] groupMode Specifies whether the samples are interleaved or
+			 * non-interleaved. Use `ReadWriteFillMode::ByChannel` to write samples
+			 * for each channel consecutively. Use `ReadWriteFillMode::ByScan` to
+			 * write one sample for each channel in each scan.
+			 * @param[in] dat The array of data to write to the analog output
+			 * channel(s). The array must contain the number of samples specified by
+			 * `sampsPerChan` for each channel in the task.
+			 * @param[out] sampsPerChanWritten The actual number of samples per
+			 * channel successfully written. This parameter is passed by reference
+			 * and will be set by the function.
+			 * @return Returns 0 on success, or a non-zero error code on failure. The
+			 * error code corresponds to DAQmx status codes.
 			 */
 			static int WriteBinaryUI16(IntPtr taskHandle,
 				int32 sampsPerChan, bool autoStart, double timeout,
@@ -625,23 +778,34 @@ namespace Grumpy{
 
 
 			/**
-			* @brief Writes multiple 32-bit unsigned integer samples to an analog output channel in a DAQmx task.
-			*
-			* This function wraps the NI-DAQmx `DAQmxWriteBinaryU32` function. It writes multiple 32-bit unsigned integer
-			* samples to the specified analog output channel(s) in the task.
-			*
-			* @param[in] taskHandle The handle to the task that contains the analog output channel(s) to which you want to write samples.
-			* @param[in] sampsPerChan The number of samples per channel to write.
-			* @param[in] autoStart Specifies whether or not to automatically start the task if it is not already running.
-			* @param[in] timeout The amount of time, in seconds, to wait for the function to write the samples.
-			*                    If the time elapses before the function writes the samples, the function returns an error.
-			* @param[in] groupMode Specifies whether the samples are interleaved or non-interleaved.
-			*                      Use `ReadWriteFillMode::ByChannel` to write samples for each channel consecutively.
-			*                      Use `ReadWriteFillMode::ByScan` to write one sample for each channel in each scan.
-			* @param[in] dat The array of data to write to the analog output channel(s). The array must contain the number of samples specified by `sampsPerChan` for each channel in the task.
-			* @param[out] sampsPerChanWritten The actual number of samples per channel successfully written. This parameter is passed by reference and will be set by the function.
-			* @return Returns 0 on success, or a non-zero error code on failure. The error code corresponds to DAQmx status codes.
-			*/
+			 * @brief Writes multiple 32-bit unsigned integer samples to an analog
+			 * output channel in a DAQmx task.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxWriteBinaryU32` function. It
+			 * writes multiple 32-bit unsigned integer samples to the specified
+			 * analog output channel(s) in the task.
+			 *
+			 * @param[in] taskHandle The handle to the task that contains the analog
+			 * output channel(s) to which you want to write samples.
+			 * @param[in] sampsPerChan The number of samples per channel to write.
+			 * @param[in] autoStart Specifies whether or not to automatically start
+			 * the task if it is not already running.
+			 * @param[in] timeout The amount of time, in seconds, to wait for the
+			 * function to write the samples. If the time elapses before the function
+			 * writes the samples, the function returns an error.
+			 * @param[in] groupMode Specifies whether the samples are interleaved or
+			 * non-interleaved. Use `ReadWriteFillMode::ByChannel` to write samples
+			 * for each channel consecutively. Use `ReadWriteFillMode::ByScan` to
+			 * write one sample for each channel in each scan.
+			 * @param[in] dat The array of data to write to the analog output
+			 * channel(s). The array must contain the number of samples specified by
+			 * `sampsPerChan` for each channel in the task.
+			 * @param[out] sampsPerChanWritten The actual number of samples per
+			 * channel successfully written. This parameter is passed by reference
+			 * and will be set by the function.
+			 * @return Returns 0 on success, or a non-zero error code on failure. The
+			 * error code corresponds to DAQmx status codes.
+			 */
 			static int WriteBinaryUI32(IntPtr taskHandle,
 				int32 sampsPerChan, bool autoStart, double timeout,
 				ReadWriteFillMode groupMode, array<uInt32>^ dat,
@@ -811,6 +975,7 @@ namespace Grumpy{
 				double minVal, double maxVal, VoltageUnits units,
 				String^ customScaleName);
 
+
 			/**
 			* @brief Creates a digital input channel in the specified task.
 			*
@@ -838,6 +1003,7 @@ namespace Grumpy{
 			static int CreateDIChannel(IntPtr taskHandle, String^ lines,
 				String^ nameToAssignToLines, DIOLineGrouping lineGrouping);
 
+
 			/**
 			* @brief Creates a digital output channel in the specified task.
 			*
@@ -864,6 +1030,7 @@ namespace Grumpy{
 			*/
 			static int CreateDOChannel(IntPtr taskHandle, String^ lines,
 				String^ nameToAssignToLines, DIOLineGrouping lineGrouping);
+
 
 			/**
 			* @brief Creates a counter output pulse frequency channel.
@@ -896,6 +1063,7 @@ namespace Grumpy{
 				int units, int idleState, double initialDelay, double freq, 
 				double dutyCycle);
 
+
 			/**
 			* @brief Creates a counter output pulse channel with time-based parameters.
 			*
@@ -927,6 +1095,7 @@ namespace Grumpy{
 				TimeUnits units, DioState idleState, 
 				double initialDelay, double lowTime, double highTime);
 			
+
 			/**
 			* @brief Creates a counter input channel for counting edges.
 			*
@@ -1033,6 +1202,7 @@ namespace Grumpy{
 				int measMethod, double measTime, UInt32 divisor, 
 				String^ customScaleName);
 
+
 			/**
 			* @brief Creates a counter input channel for measuring semi-period.
 			*
@@ -1065,6 +1235,7 @@ namespace Grumpy{
 				double minVal, double maxVal, int units, 
 				String^ customScaleName);
 
+
 			/**
 			* @brief Loads a task from the specified task name.
 			*
@@ -1085,7 +1256,8 @@ namespace Grumpy{
 			* @see DAQmxLoadTask
 			*/
 			static int LoadTask(IntPtr taskHandle, String^ taskName);
-			
+		
+
 			/**
 			* @brief Adds global channels to a task.
 			*
@@ -1128,7 +1300,8 @@ namespace Grumpy{
 			* @see DAQmxIsTaskDone
 			*/
 			static int IsTaskDone(IntPtr taskHandle, [Out] bool% isTaskDone);
-			
+		
+
 			/**
 			* @brief Retrieves the name of the nth channel in a task.
 			*
@@ -1151,7 +1324,8 @@ namespace Grumpy{
 			*/
 			static int GetNthTaskChannel(IntPtr taskHandle, uInt32 index, 
 				[Out] String^% buffer);
-			
+		
+
 			/**
 			* @brief Retrieves the name of the nth device associated with a task.
 			*
@@ -1174,6 +1348,7 @@ namespace Grumpy{
 			*/
 			static int GetNthTaskDevice(IntPtr taskHandle, uInt32 index, 
 				[Out] String^% buffer);
+
 
 			/**
 			* @brief Reads digital lines from a task into the specified buffer.
@@ -1209,6 +1384,7 @@ namespace Grumpy{
 									[Out] int% sampsPerChanRead,
 									[Out] int% bytesPerSample);
 
+
 			/**
 			* @brief Reads a single sample from a digital input channel as an unsigned 32-bit integer.
 			*
@@ -1231,6 +1407,7 @@ namespace Grumpy{
 			*/
 			static int ReadDigitalScalarU32(IntPtr taskHandle,
 								double timeout, [Out] UInt32% data);
+
 
 			/**
 			* @brief Reads multiple digital samples as unsigned 32-bit integers from a task.
@@ -1549,22 +1726,684 @@ namespace Grumpy{
 			static int TotalSamplesRead(IntPtr taskHandle,
 				[Out] UInt64 data);
 
+
+			/**
+			* @brief Retrieves the terminal name of the counter output pulse for the specified task and channel.
+			*
+			* This function wraps the NI-DAQmx `DAQmxGetCOPulseTerm` function. It retrieves the terminal name
+			* where the counter output pulse is routed for the specified task and channel. The terminal name
+			* is returned as a .NET `String^`.
+			*
+			* @param[in] taskHandle The handle to the task, passed as an `IntPtr`. This handle is used to identify
+			*                       the task in subsequent DAQmx API calls.
+			* @param[in] channel The name of the channel, passed as a .NET `String^`. This specifies the counter
+			*                    channel for which to retrieve the terminal name.
+			* @param[out] data A reference to a `String^` where the terminal name will be stored. This is an output
+			*                  parameter that will contain the terminal name after the function call.
+			* @param[in] bufferSize The size of the buffer allocated for the terminal name, passed as a `uInt32`.
+			*                       This specifies the maximum number of characters to retrieve.
+			*
+			* @return
+			* - `0` on success.
+			* - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			*
+			* @note The channel name is converted to a C-style string before being passed to the DAQmx API, and
+			*       the memory is freed after the terminal name is retrieved.
+			*
+			* @see DAQmxGetCOPulseTerm
+			*/
+			int GetCOPulseTerm(IntPtr taskHandle, String^ channel, 
+				[Out] String^% data, uInt32 bufferSize);			
+
+			/**
+			* @brief Sets the terminal name of the counter output pulse for the specified task and channel.
+			*
+			* This function wraps the NI-DAQmx `DAQmxSetCOPulseTerm` function. It sets the terminal name
+			* where the counter output pulse is routed for the specified task and channel. The terminal name
+			* is passed as a .NET `String^`.
+			*
+			* @param[in] taskHandle The handle to the task, passed as an `IntPtr`. This handle is used to identify
+			*                       the task in subsequent DAQmx API calls.
+			* @param[in] channel The name of the channel, passed as a .NET `String^`. This specifies the counter
+			*                    channel for which to set the terminal name.
+			* @param[in] data The terminal name to set, passed as a .NET `String^`. This specifies the terminal
+			*                 where the counter output pulse will be routed.
+			*
+			* @return
+			* - `0` on success.
+			* - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			*
+			* @note The channel name and terminal name are converted to C-style strings before being passed to the DAQmx API,
+			*       and the memory is freed after the terminal name is set.
+			*
+			* @see DAQmxSetCOPulseTerm
+			*/
+			int SetCOPulseTerm(IntPtr taskHandle, String^ channel, 
+				String^ data);
+
+			/**
+			 * @brief Resets the terminal name of the counter output pulse for the specified task and channel to its default value.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxResetCOPulseTerm` function. It resets the terminal name
+			 * where the counter output pulse is routed for the specified task and channel to its default value.
+			 *
+			 * @param[in] taskHandle The handle to the task, passed as an `IntPtr`. This handle is used to identify
+			 *                       the task in subsequent DAQmx API calls.
+			 * @param[in] channel The name of the channel, passed as a .NET `String^`. This specifies the counter
+			 *                    channel for which to reset the terminal name.
+			 *
+			 * @return
+			 * - `0` on success.
+			 * - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			 *
+			 * @note The channel name is converted to a C-style string before being passed to the DAQmx API,
+			 *       and the memory is freed after the terminal name is reset.
+			 *
+			 * @see DAQmxResetCOPulseTerm
+			 */
+			int ResetCOPulseTerm(IntPtr taskHandle, String^ channel);
+
+			/**
+			 * @brief Gets the prescaler value for a counter input channel in a DAQmx task.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxGetCIPrescaler` function. It retrieves the prescaler value
+			 * for a specified counter input channel in the given task.
+			 *
+			 * @param[in] taskHandle The handle to the DAQmx task, passed as an `IntPtr`. This handle is used to identify
+			 *                       the task in subsequent DAQmx API calls.
+			 * @param[in] channel The name of the counter input channel, passed as a .NET `String^`. This specifies the counter
+			 *                    channel for which to get the prescaler value.
+			 * @param[out] data The prescaler value, passed as a reference to a `uInt32` variable. This variable will be updated
+			 *                  with the prescaler value retrieved from the DAQmx task.
+			 *
+			 * @return
+			 * - `0` on success.
+			 * - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			 *
+			 * @note The channel name is converted to a C-style string before being passed to the DAQmx API,
+			 *       and the memory is freed after the prescaler value is retrieved.
+			 *
+			 * @see DAQmxGetCIPrescaler
+			 */
+			static int GetCIPrescaler(IntPtr taskHandle, 
+				String^ channel, [Out] uInt32% data);
+
+
+			/**
+			 * @brief Sets the prescaler value for a counter input channel in a DAQmx task.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxSetCIPrescaler` function. It sets the prescaler value
+			 * for a specified counter input channel in the given task.
+			 *
+			 * @param[in] taskHandle The handle to the DAQmx task, passed as an `IntPtr`. This handle is used to identify
+			 *                       the task in subsequent DAQmx API calls.
+			 * @param[in] channel The name of the counter input channel, passed as a .NET `String^`. This specifies the counter
+			 *                    channel for which to set the prescaler value.
+			 * @param[in] data The prescaler value to set, passed as a `uInt32`.
+			 *
+			 * @return
+			 * - `0` on success.
+			 * - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			 *
+			 * @note The channel name is converted to a C-style string before being passed to the DAQmx API,
+			 *       and the memory is freed after the prescaler value is set.
+			 *
+			 * @see DAQmxSetCIPrescaler
+			 */
+			static int SetCIPrescaler(IntPtr taskHandle, 
+				String^ channel, uInt32 data);
+
+			/**
+			 * @brief Resets the prescaler value for a counter input channel in a DAQmx task.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxResetCIPrescaler` function. It resets the prescaler value
+			 * for a specified counter input channel in the given task to its default value.
+			 *
+			 * @param[in] taskHandle The handle to the DAQmx task, passed as an `IntPtr`. This handle is used to identify
+			 *                       the task in subsequent DAQmx API calls.
+			 * @param[in] channel The name of the counter input channel, passed as a .NET `String^`. This specifies the counter
+			 *                    channel for which to reset the prescaler value.
+			 *
+			 * @return
+			 * - `0` on success.
+			 * - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			 *
+			 * @note The channel name is converted to a C-style string before being passed to the DAQmx API,
+			 *       and the memory is freed after the prescaler value is reset.
+			 *
+			 * @see DAQmxResetCIPrescaler
+			 */
+			static int ResetCIPrescaler(IntPtr taskHandle, 
+				String^ channel);
+
+			/**
+			 * @brief Gets the count value for a counter input channel in a DAQmx task.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxGetCICount` function. It retrieves the count value
+			 * for a specified counter input channel in the given task.
+			 *
+			 * @param[in] taskHandle The handle to the DAQmx task, passed as an `IntPtr`. This handle is used to identify
+			 *                       the task in subsequent DAQmx API calls.
+			 * @param[in] channel The name of the counter input channel, passed as a .NET `String^`. This specifies the counter
+			 *                    channel for which to get the count value.
+			 * @param[out] data The count value, passed as a reference to a `uInt32` variable. This variable will be updated
+			 *                  with the count value retrieved from the DAQmx task.
+			 *
+			 * @return
+			 * - `0` on success.
+			 * - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			 *
+			 * @note The channel name is converted to a C-style string before being passed to the DAQmx API,
+			 *       and the memory is freed after the count value is retrieved.
+			 *
+			 * @see DAQmxGetCICount
+			 */
+			static int GetCICount(IntPtr taskHandle, 
+				String^ channel, [Out] uInt32% data);
+
+			/**
+			 * @brief Gets the output state for a counter input channel in a DAQmx task.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxGetCIOutputState` function. It retrieves the output state
+			 * for a specified counter input channel in the given task.
+			 *
+			 * @param[in] taskHandle The handle to the DAQmx task, passed as an `IntPtr`. This handle is used to identify
+			 *                       the task in subsequent DAQmx API calls.
+			 * @param[in] channel The name of the counter input channel, passed as a .NET `String^`. This specifies the counter
+			 *                    channel for which to get the output state.
+			 * @param[out] data The output state, passed as a reference to an `int32` variable. This variable will be updated
+			 *                  with the output state retrieved from the DAQmx task.
+			 *
+			 * @return
+			 * - `0` on success.
+			 * - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			 *
+			 * @note The channel name is converted to a C-style string before being passed to the DAQmx API,
+			 *       and the memory is freed after the output state is retrieved.
+			 *
+			 * @see DAQmxGetCIOutputState
+			 */
+			static int GetCIOutputState(IntPtr taskHandle, 
+				String^ channel, [Out] int32% data);
+
+			/**
+			 * @brief Gets the terminal count reached state for a counter input channel in a DAQmx task.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxGetCITCReached` function. It retrieves the terminal count reached state
+			 * for a specified counter input channel in the given task.
+			 *
+			 * @param[in] taskHandle The handle to the DAQmx task, passed as an `IntPtr`. This handle is used to identify
+			 *                       the task in subsequent DAQmx API calls.
+			 * @param[in] channel The name of the counter input channel, passed as a .NET `String^`. This specifies the counter
+			 *                    channel for which to get the terminal count reached state.
+			 * @param[out] data The terminal count reached state, passed as a reference to a `bool` variable. This variable will be updated
+			 *                  with the terminal count reached state retrieved from the DAQmx task.
+			 *
+			 * @return
+			 * - `0` on success.
+			 * - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			 *
+			 * @note The channel name is converted to a C-style string before being passed to the DAQmx API,
+			 *       and the memory is freed after the terminal count reached state is retrieved.
+			 *
+			 * @see DAQmxGetCITCReached
+			 */
+			static int GetCITCReached(IntPtr taskHandle, 
+				String^ channel, [Out] bool% data);
+
+			/**
+			 * @brief Gets the master timebase division value for a counter input channel in a DAQmx task.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxGetCICtrTimebaseMasterTimebaseDiv` function. It retrieves the master timebase division value
+			 * for a specified counter input channel in the given task.
+			 *
+			 * @param[in] taskHandle The handle to the DAQmx task, passed as an `IntPtr`. This handle is used to identify
+			 *                       the task in subsequent DAQmx API calls.
+			 * @param[in] channel The name of the counter input channel, passed as a .NET `String^`. This specifies the counter
+			 *                    channel for which to get the master timebase division value.
+			 * @param[out] data The master timebase division value, passed as a reference to a `uInt32` variable. This variable will be updated
+			 *                  with the master timebase division value retrieved from the DAQmx task.
+			 *
+			 * @return
+			 * - `0` on success.
+			 * - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			 *
+			 * @note The channel name is converted to a C-style string before being passed to the DAQmx API,
+			 *       and the memory is freed after the master timebase division value is retrieved.
+			 *
+			 * @see DAQmxGetCICtrTimebaseMasterTimebaseDiv
+			 */
+			static int GetCICtrTimebaseMasterTimebaseDiv(IntPtr taskHandle, 
+				String^ channel, [Out] uInt32% data);
+
+			/**
+			 * @brief Sets the master timebase division value for a counter input channel in a DAQmx task.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxSetCICtrTimebaseMasterTimebaseDiv` function. It sets the master timebase division value
+			 * for a specified counter input channel in the given task.
+			 *
+			 * @param[in] taskHandle The handle to the DAQmx task, passed as an `IntPtr`. This handle is used to identify
+			 *                       the task in subsequent DAQmx API calls.
+			 * @param[in] channel The name of the counter input channel, passed as a .NET `String^`. This specifies the counter
+			 *                    channel for which to set the master timebase division value.
+			 * @param[in] data The master timebase division value to set, passed as a `uInt32`.
+			 *
+			 * @return
+			 * - `0` on success.
+			 * - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			 *
+			 * @note The channel name is converted to a C-style string before being passed to the DAQmx API,
+			 *       and the memory is freed after the master timebase division value is set.
+			 *
+			 * @see DAQmxSetCICtrTimebaseMasterTimebaseDiv
+			 */
+			static int SetCICtrTimebaseMasterTimebaseDiv(IntPtr taskHandle, 
+				String^ channel, uInt32 data);
+
+			/**
+			 * @brief Resets the master timebase division value for a counter input channel in a DAQmx task.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxResetCICtrTimebaseMasterTimebaseDiv` function. It resets the master timebase division value
+			 * for a specified counter input channel in the given task to its default value.
+			 *
+			 * @param[in] taskHandle The handle to the DAQmx task, passed as an `IntPtr`. This handle is used to identify
+			 *                       the task in subsequent DAQmx API calls.
+			 * @param[in] channel The name of the counter input channel, passed as a .NET `String^`. This specifies the counter
+			 *                    channel for which to reset the master timebase division value.
+			 *
+			 * @return
+			 * - `0` on success.
+			 * - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			 *
+			 * @note The channel name is converted to a C-style string before being passed to the DAQmx API,
+			 *       and the memory is freed after the master timebase division value is reset.
+			 *
+			 * @see DAQmxResetCICtrTimebaseMasterTimebaseDiv
+			 */
+			static int ResetCICtrTimebaseMasterTimebaseDiv(IntPtr taskHandle, 
+				String^ channel);
+
+			/**
+			 * @brief Gets the terminal name for the pulse time of a counter input channel in a DAQmx task.
+			 *
+			 * This function wraps the NI-DAQmx `DAQmxGetCIPulseTimeTerm` function. It retrieves the terminal name
+			 * for the pulse time of a specified counter input channel in the given task.
+			 *
+			 * @param[in] taskHandle The handle to the DAQmx task, passed as an `IntPtr`. This handle is used to identify
+			 *                       the task in subsequent DAQmx API calls.
+			 * @param[in] channel The name of the counter input channel, passed as a .NET `String^`. This specifies the counter
+			 *                    channel for which to get the terminal name.
+			 * @param[out] data The terminal name, passed as a reference to a `String^` variable. This variable will be updated
+			 *                  with the terminal name retrieved from the DAQmx task.
+			 * @param[in] bufferSize The size of the buffer for the terminal name, passed as a `uInt32`.
+			 *
+			 * @return
+			 * - `0` on success.
+			 * - Non-zero error code on failure. The error code corresponds to DAQmx status codes.
+			 *
+			 * @note The channel name is converted to a C-style string before being passed to the DAQmx API,
+			 *       and the memory is freed after the terminal name is retrieved.
+			 *
+			 * @see DAQmxGetCIPulseTimeTerm
+			 */
+			static int GetCIPulseTimeTerm(IntPtr taskHandle, 
+				String^ channel, [Out] String^% data, uInt32 bufferSize);
+
+			/**
+			* @brief Sets the terminal name for the pulse time of a counter 
+			* input channel in a DAQmx task.
+			*
+			* This function wraps the NI-DAQmx `DAQmxSetCIPulseTimeTerm` 
+			* function. It sets the terminal name for the pulse time of a 
+			* specified counter input channel in the given task.
+			*
+			* @param[in] taskHandle The handle to the DAQmx task, passed as 
+			* an `IntPtr`. This handle is used to identify
+			* the task in subsequent DAQmx API calls.
+			* @param[in] channel The name of the counter input channel, 
+			* passed as a .NET `String^`. This specifies the counter
+			* channel for which to set the terminal name.
+			* @param[in] data The terminal name to set, passed 
+			* as a .NET `String^`.
+			*
+			* @return
+			* - `0` on success.
+			* - Non-zero error code on failure. The error code corresponds 
+			* to DAQmx status codes.
+			*
+			* @note The channel name and terminal name are converted to 
+			* C-style strings before being passed to the DAQmx API,
+			* and the memory is freed after the terminal name is set.
+			*
+			* @see DAQmxSetCIPulseTimeTerm
+			*/
+			static int SetCIPulseTimeTerm(IntPtr taskHandle, 
+				String^ channel, String^ data);
+
+			/**
+			* Resets the pulse time terminal for the specified channel.
+			*
+			* @param taskHandle Handle to the task.
+			* @param channel The name of the channel.
+			* @return Status code indicating success or failure.
+			*/
+			static int ResetCIPulseTimeTerm(IntPtr taskHandle, 
+				String ^ channel);
+
+			/**
+			 * Gets the pulse time terminal configuration for the 
+			 * specified channel.
+			 *
+			 * @param taskHandle Handle to the task.
+			 * @param channel The name of the channel.
+			 * @param data Output parameter to receive the configuration data.
+			 * @return Status code indicating success or failure.
+			 */
+			static int GetCIPulseTimeTermCfg(IntPtr taskHandle, 
+				String ^ channel, [Out] int32 % data);
+
+			/**
+			 * Sets the pulse time terminal configuration for the 
+			 * specified channel.
+			 *
+			 * @param taskHandle Handle to the task.
+			 * @param channel The name of the channel.
+			 * @param data The configuration data to set.
+			 * @return Status code indicating success or failure.
+			 */
+			static int SetCIPulseTimeTermCfg(IntPtr taskHandle, 
+				String ^ channel, int32 data);
+
+			/**
+			 * Resets the pulse time terminal configuration for the 
+			 * specified channel.
+			 *
+			 * @param taskHandle Handle to the task.
+			 * @param channel The name of the channel.
+			 * @return Status code indicating success or failure.
+			 */
+			static int ResetCIPulseTimeTermCfg(IntPtr taskHandle,
+				String ^ channel);
+
+			/**
+			 * Gets the pulse frequency terminal for the specified channel.
+			 *
+			 * @param taskHandle Handle to the task.
+			 * @param channel The name of the channel.
+			 * @param data Output parameter to receive the terminal data.
+			 * @param bufferSize The size of the buffer for the terminal data.
+			 * @return Status code indicating success or failure.
+			 */
+			static int GetCIPulseFreqTerm(IntPtr taskHandle, 
+				String ^ channel, [Out] String ^ %data, uInt32 bufferSize);
+
+			/**
+			 * Sets the pulse frequency terminal for the specified channel.
+			 *
+			 * @param taskHandle Handle to the task.
+			 * @param channel The name of the channel.
+			 * @param data The terminal data to set.
+			 * @return Status code indicating success or failure.
+			 */
+			static int SetCIPulseFreqTerm(IntPtr taskHandle, 
+				String ^ channel, String ^ data);
+
+			/**
+			 * Resets the pulse frequency terminal for the specified channel.
+			 *
+			 * @param taskHandle Handle to the task.
+			 * @param channel The name of the channel.
+			 * @return Status code indicating success or failure.
+			 */
+			static int ResetCIPulseFreqTerm(IntPtr taskHandle, 
+				String ^ channel);
+
+
+			/**
+			 * Gets the pulse frequency terminal configuration for the 
+			 * specified channel.
+			 *
+			 * @param taskHandle Handle to the task.
+			 * @param channel The name of the channel.
+			 * @param data Output parameter to receive the configuration data.
+			 * @return Status code indicating success or failure.
+			 */
+			static int GetSystemInfoAttribute(int attribute, 
+				[Out] IntPtr% value);
+			
+			/**
+			* Sets the digital power-up states for the specified device 
+			* and channels.
+			*
+			* @param deviceName The name of the device.
+			* @param channelNames The names of the channels.
+			* @param state The power-up state to set.
+			* @return Status code indicating success or failure.
+			*/
+			static int SetDigitalPowerUpStates(String^ deviceName, 
+				String^ channelNames, int state);
+
+			/**
+			 * Gets the digital power-up states for the specified device 
+			 * and channel.
+			 *
+			 * @param deviceName The name of the device.
+			 * @param channelName The name of the channel.
+			 * @param state Output parameter to receive the power-up state.
+			 * @return Status code indicating success or failure.
+			 */
+			static int GetDigitalPowerUpStates(String^ deviceName, 
+				String^ channelName, [Out] int% state);
+
+			/**
+			 * Sets the digital pull-up/pull-down states for the specified 
+			 * device and channel.
+			 *
+			 * @param deviceName The name of the device.
+			 * @param channelName The name of the channel.
+			 * @param state The pull-up/pull-down state to set.
+			 * @return Status code indicating success or failure.
+			 */
+			static int SetDigitalPullUpPullDownStates(String^ deviceName, 
+				String^ channelName, int state);
+
+			/**
+			 * Gets the digital pull-up/pull-down states for the 
+			 * specified device and channel.
+			 *
+			 * @param deviceName The name of the device.
+			 * @param channelName The name of the channel.
+			 * @param state Output parameter to receive the 
+			 * pull-up/pull-down state.
+			 * @return Status code indicating success or failure.
+			 */
+			static int GetDigitalPullUpPullDownStates(String^ deviceName, 
+				String^ channelName, [Out] int% state);
+
+			/**
+			 * Sets the analog power-up states for the specified 
+			 * device and channels.
+			 *
+			 * @param deviceName The name of the device.
+			 * @param channelNames The names of the channels.
+			 * @param state The power-up state to set.
+			 * @param channelType The type of the analog channel.
+			 * @return Status code indicating success or failure.
+			 */
+			static int SetAnalogPowerUpStates(String^ deviceName, 
+				String^ channelNames, double state, int channelType);
+
+			/**
+			* Sets the analog power-up states with output type for 
+			* the specified channels.
+			*
+			* @param channelNames The names of the channels.
+			* @param stateArray Array of power-up states to set.
+			* @param channelTypeArray Array of channel types.
+			* @param arraySize The size of the arrays.
+			* @return Status code indicating success or failure.
+			*/
+			static int SetAnalogPowerUpStatesWithOutputType(
+				String^ channelNames,
+				array<double>^ stateArray,
+				array<AnalogChannelType>^ channelTypeArray);
+
+			/**
+			 * Gets the analog power-up state for the specified device 
+			 * and channel.
+			 *
+			 * @param deviceName The name of the device.
+			 * @param channelName The name of the channel.
+			 * @param state Output parameter to receive the power-up state.
+			 * @param channelType The type of the analog channel.
+			 * @return Status code indicating success or failure.
+			 */
+			static int GetAnalogPowerUpStates(String^ deviceName, 
+				String^ channelName, [Out] double% state, int channelType);
+
+			/**
+			 * Gets the analog power-up states with output type for the 
+			 * specified channels.
+			 *
+			 * @param channelNames The names of the channels.
+			 * @param stateArray Array to receive the power-up states.
+			 * @param channelTypeArray Array to receive the channel types.
+			 * @param arraySize Output parameter to receive the size of 
+			 * the arrays.
+			 * @return Status code indicating success or failure.
+			 */
+			static int GetAnalogPowerUpStatesWithOutputType(
+				String^ channelNames,
+				array<double>^ stateArray,
+				array<AnalogChannelType>^ channelTypeArray,
+				[Out] uInt32% arraySize);
+
+			/**
+			 * Sets the digital logic family power-up state for the 
+			 * specified device.
+			 *
+			 * @param deviceName The name of the device.
+			 * @param logicFamily The logic family to set.
+			 * @return Status code indicating success or failure.
+			 */
+			static int SetDigitalLogicFamilyPowerUpState(String^ deviceName, 
+				int logicFamily);
+
+			/**
+			 * Gets the digital logic family power-up state for the 
+			 * specified device.
+			 *
+			 * @param deviceName The name of the device.
+			 * @param logicFamily Output parameter to receive the logic family.
+			 * @return Status code indicating success or failure.
+			 */
+			static int GetDigitalLogicFamilyPowerUpState(String^ deviceName, 
+				[Out] int% logicFamily);
+
+			/**
+			 * Adds a network device with the specified parameters.
+			 *
+			 * @param IPAddress The IP address of the device.
+			 * @param deviceName The name of the device.
+			 * @param attemptReservation Whether to attempt reservation 
+			 * of the device.
+			 * @param timeout The timeout period for the operation.
+			 * @param deviceNameOut Output parameter to receive the 
+			 * name of the device.
+			 * @param deviceNameOutBufferSize The size of the buffer 
+			 * for the device name.
+			 * @return Status code indicating success or failure.
+			 */
+			static int AddNetworkDevice(String^ IPAddress, 
+				String^ deviceName, bool attemptReservation, 
+				double timeout, [Out] String^% deviceNameOut, 
+				uInt32 deviceNameOutBufferSize);
+						
+			/**
+			 * Deletes the specified network device.
+			 *
+			 * @param deviceName The name of the device to delete.
+			 * @return Status code indicating success or failure.
+			 */
+			static int DeleteNetworkDevice(String^ deviceName);
+
+			/**
+			 * Reserves the specified network device.
+			 *
+			 * @param deviceName The name of the device to reserve.
+			 * @param overrideReservation Whether to override the 
+			 * current reservation if the device is already reserved.
+			 * @return Status code indicating success or failure.
+			 */
+			static int ReserveNetworkDevice(String^ deviceName, 
+				bool overrideReservation);
+
+			/**
+			 * Unreserves the specified network device.
+			 *
+			 * @param deviceName The name of the device to unreserve.
+			 * @return Status code indicating success or failure.
+			 */
+			static int UnreserveNetworkDevice(String^ deviceName);
+
+			/**
+			 * <summary>
+			 * Retrieves the status of the counter output pulse for the specified
+			 * task and channel.
+			 * </summary>
+			 * <param name="taskHandle">
+			 * The handle to the task, passed as an IntPtr. This handle is used to
+			 * identify the task in subsequent DAQmx API calls.
+			 * </param>
+			 * <param name="channel">
+			 * The name of the channel, passed as a .NET String^. This specifies
+			 * the counter channel for which to retrieve the pulse status.
+			 * </param>
+			 * <param name="data">
+			 * A reference to a bool where the pulse status will be stored. This
+			 * is an output parameter that will contain the pulse status after
+			 * the function call.
+			 * </param>
+			 * <returns>
+			 * 0 on success, non-zero error code on failure. The error code
+			 * corresponds to DAQmx status codes.
+			 * </returns>
+			 */
+			static int GetCOPulseDone(IntPtr taskHandle, String^ channel, 
+				[Out] bool% data);
+
+			/**
+			 * Configures the start trigger for the specified task.
+			 *
+			 * @param taskHandle Handle to the task.
+			 * @param triggerSource The source of the start trigger 
+			 * (e.g., a terminal or signal name). 
+			 * @param activeEdge Specifies whether the trigger 
+			 * occurs on the rising or falling edge of the signal.
+			 * @return Status code indicating success or failure.
+			 */
+			static int ConfigureStartTrigger(IntPtr taskHandle, 
+				String^ triggerSource, ActiveEdge activeEdge);
+
+
 		protected:
 			/**
 			* @brief Converts a .NET `String^` to a C-style string.
 			*
-			* This function converts a managed .NET `String^` to a C-style string (null-terminated ASCII string)
-			* for use with native code. If the input string is `nullptr`, the function returns `NULL`.
+			* This function converts a managed .NET `String^` to a C-style 
+			* string (null-terminated ASCII string) for use with native code. 
+			* If the input string is `nullptr`, the function returns `NULL`.
 			*
 			* @param[in] inputString A managed .NET `String^` to be converted.
 			*
-			* @return A pointer to a null-terminated ASCII string in unmanaged memory.
-			*         Returns `NULL` if `inputString` is `nullptr`.
+			* @return A pointer to a null-terminated ASCII string in unmanaged 
+			*		memory. Returns `NULL` if `inputString` is `nullptr`.
 			*
-			* @note The returned C-style string must be freed by the caller using `Marshal::FreeHGlobal`
-			*		or FreeCString to avoid memory leaks.
+			* @note The returned C-style string must be freed by the caller 
+			*		using `FreeCharz` or `Marshal::FreeHGlobal` to avoid 
+			*		memory leaks.
 			*/
-			static inline char* ConvertToCString(String^ inputString) {
+			static inline char* StringToCharz(String^ inputString) {
 			
 				return (inputString != nullptr) ?
 					(char*)(void*)Marshal::StringToHGlobalAnsi(inputString) :
@@ -1574,21 +2413,27 @@ namespace Grumpy{
 			/**
 			* @brief Frees memory allocated for a C-style string.
 			*
-			* This function releases the unmanaged memory allocated for a C-style string that was previously
-			* obtained using `Marshal::StringToHGlobalAnsi`. If the provided pointer is `NULL`, no action is taken.
+			* This function releases the unmanaged memory allocated for a 
+			*   C-style string that was previously obtained using 
+			*   `StringToCharz` or `Marshal::StringToHGlobalAnsi`. 
+			*	If the provided pointer is `NULL`, no action is taken.
 			*
-			* @param[in] cString A pointer to the C-style string that needs to be freed. This pointer should be
-			*                    obtained from `ConvertToCString` or similar functions.
+			* @param[in] cString A pointer to the C-style string that needs 
+			*		to be freed. This pointer should be obtained from 
+			*		`StringToCharz` or `Marshal::StringToHGlobalAnsi` method.
 			*
-			* @note The function does not perform any operation if `cString` is `NULL`.
-			*       The caller is responsible for ensuring that `cString` was allocated using `Marshal::StringToHGlobalAnsi`
-			*       before calling this function to avoid undefined behavior.
+			* @note The function does not perform any operation if `cString` 
+			*		is `NULL`. The caller is responsible for ensuring that 
+			*		`cString` was allocated using `Marshal::StringToHGlobalAnsi` 
+			*		or StringToCharz before calling this function to avoid 
+			*		undefined behavior.
 			*/
-			static inline void FreeCString(char* cString) {
+			static inline void FreeCharz(char* cString) {
 				if (cString != NULL) {
 					Marshal::FreeHGlobal((IntPtr)cString);
 				}
 			}
+
 		};	
 	};
 }

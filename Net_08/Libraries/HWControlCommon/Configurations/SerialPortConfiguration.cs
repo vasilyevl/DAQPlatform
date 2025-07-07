@@ -20,8 +20,11 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
 
-using DAQFramework.Common.Configuration;
-using Grumpy.DAQFramework.Common;
+
+using Grumpy.Common;
+using Grumpy.Common.BaseObjects;
+
+using Grumpy.SDAQFramework.Common;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -30,7 +33,7 @@ using System.IO.Ports;
 using System.Runtime.CompilerServices;
 
 
-namespace Grumpy.DAQFramework.Configuration
+namespace Grumpy.SDAQFramework.Configuration
 {
     /*
         public enum Handshake
@@ -110,7 +113,7 @@ namespace Grumpy.DAQFramework.Configuration
             }
         }
 
-        public bool CopyFrom( object? src )
+        public override bool CopyFrom( object? src )
         {
 
             var s = src as  SerialPortConfiguration;
@@ -142,7 +145,7 @@ namespace Grumpy.DAQFramework.Configuration
             }
         }
 
-        public void Reset()
+        public override void Reset()
         {
             _portName = _DefaultPortName;
             _baudRate = DefaultBaudRate;
@@ -157,6 +160,8 @@ namespace Grumpy.DAQFramework.Configuration
             _minTimeBetweenTransactionsMs = DefaultDelayBetweenTransactions;
             _connectTimeoutMs = DeafultConnectTimeoutMs;
         }
+
+
 
         [JsonProperty]
         public string Name {

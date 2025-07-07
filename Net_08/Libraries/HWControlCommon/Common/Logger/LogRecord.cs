@@ -1,4 +1,5 @@
 ﻿/*
+ 
 Copyright (c) 2024 vasilyevl (Grumpy). Permission is hereby granted, 
 free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"),to deal in the Software 
@@ -18,9 +19,10 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+
 using System.Text;
 
-namespace Grumpy.DAQFramework.Common
+namespace Grumpy.SDAQFramework.Common
 {
     public enum LogLevel {
         Debug, 

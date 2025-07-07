@@ -18,7 +18,8 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 using Grumpy.Common;
-using Grumpy.DAQFramework.Common;
+using Grumpy.Common.BaseObjects;
+using Grumpy.SDAQFramework.Common;
 using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
 
@@ -280,7 +281,7 @@ namespace Grumpy.StatePatternFramework
         /// </summary>
         public bool CanAddCommand =>
             (_pendingCommands?.Count ?? 0) < 
-                    (_pendingCommands?.Depth ?? -1);
+                    (_pendingCommands?.MaxDepth ?? -1);
 
         /// <summary>
         /// Gets the state library which contains all states.

@@ -18,18 +18,45 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using Grumpy.DAQFramework.Common;
 using Grumpy.Common;
+using Grumpy.Common.BaseObjects;
 namespace Grumpy.StatePatternFramework
 {
+    /// <summary>
+    /// Represents a command type in the state pattern framework.
+    /// </summary>
     public class CommandTypeBase : EnumBase
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CommandTypeBase"/> class.
+        /// </summary>
+        /// <param name="name">The name of the command type.</param>
+        /// <param name="id">The ID of the command type.</param>
         public CommandTypeBase(string name, int id) : base(name, id) { }
 
+        /// <summary>
+        /// Represents a generic command type.
+        /// </summary>
         public static readonly CommandTypeBase Generic = new CommandTypeBase("Generic", 0);
+
+        /// <summary>
+        /// Represents an open command type.
+        /// </summary>
         public static readonly CommandTypeBase Open = new CommandTypeBase("Open", 1);
+
+        /// <summary>
+        /// Represents a close command type.
+        /// </summary>
         public static readonly CommandTypeBase Close = new CommandTypeBase("Close", 2);
+
+        /// <summary>
+        /// Represents a reset command type.
+        /// </summary>
         public static readonly CommandTypeBase Reset = new CommandTypeBase("Reset", 3);
+
+        /// <summary>
+        /// Represents an apply settings command type.
+        /// </summary>
         public static readonly CommandTypeBase ApplySettings = new CommandTypeBase("ApplySettings", 4);
     }
 }

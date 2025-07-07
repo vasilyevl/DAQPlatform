@@ -22,7 +22,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 using Grumpy.ClickPLCDriver.ModBus;
-using Grumpy.DAQFramework.Configuration;
+using Grumpy.SDAQFramework.Configuration;
 using Newtonsoft.Json;
 
 using System.Runtime.CompilerServices;

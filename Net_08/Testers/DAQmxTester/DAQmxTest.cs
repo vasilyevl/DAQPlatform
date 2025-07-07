@@ -1,21 +1,25 @@
 ﻿using System;
 using System.Text;
+using DAQmxTester;
 using Grumpy.DAQmxNetApi;
 using DAQmx = Grumpy.DAQmxNetApi.DAQmxCLIWrapper;
 
 namespace Grumpy.DAQmxTester
 {
-    public class DAQmxDITestClass
+    public class DAQmxDITestClass: DAQmxTestBase
     {
 
-        public void Test1DILines() {
+        public DAQmxDITestClass(DAQmxTestHelperConfig? config = null)
+            : base(config ?? new DAQmxTestHelperConfig()) { }
+
+        public void DiTestsLines() {
 
             Console.WriteLine("TestDILines Started.");
             IntPtr handle = IntPtr.Zero;
 
             Console.WriteLine("Creating a task...");
 
-            Int32 result = DAQmx.CreateTask(DAQmxTestHelper.DiTaskName, out handle);
+            Int32 result = DAQmx.CreateTask(_helper.Config.DiTaskName, out handle);
 
             DAQmxTestHelper.Assert(DAQmx.Success(result),
                 DAQmx.GetErrorDescription(result));
@@ -24,21 +28,21 @@ namespace Grumpy.DAQmxTester
                 $"{string.Format("{0:X}", handle)}.");
 
             result = DAQmx.CreateDIChannel(handle,
-                $"{DAQmxTestHelper.DeviceName}/{DAQmxTestHelper.DiChannels}", "myDIChannel",
+                $"{_helper.Config.DeviceName}/{_helper.Config.DiChannels}", "myDIChannel",
                 DIOLineGrouping.ChanForAllLines);
 
             DAQmxTestHelper.Assert(DAQmx.Success(result),
                 DAQmx.GetErrorDescription(result));
 
             Console.WriteLine($"DI Channel created " +
-                $"for {DAQmxTestHelper.DiChannels}.");
+                $"for {_helper.Config.DiChannels}.");
 
             result = DAQmx.StartTask(handle);
 
             DAQmxTestHelper.Assert(DAQmx.Success(result),
                 DAQmx.GetErrorDescription(result));
 
-            Console.WriteLine($"DI task {DAQmxTestHelper.DiChannels} started.");
+            Console.WriteLine($"DI task {_helper.Config.DiChannels} started.");
 
 
             byte[] data = new byte[10];
@@ -47,7 +51,7 @@ namespace Grumpy.DAQmxTester
             for (int i = 0; i < 10; i++) {
 
                 result = DAQmx.ReadDigitalLines(handle, 2, 1.0,
-                    DAQmxTestHelper.ReadbackFillMode,
+                    _helper.Config.ReadbackFillMode,
                     data, (uint)data.Length, out int samplesRead,
                     out int bytesPerSample);
 
@@ -87,14 +91,14 @@ namespace Grumpy.DAQmxTester
         }
 
 
-        public void Test2DIReadU32() {
+        public void DiTestReadU32() {
 
             Console.WriteLine("TestDIRead32 Started.");
             IntPtr handle = IntPtr.Zero;
 
             Console.WriteLine("Creating a task...");
 
-            Int32 result = DAQmx.CreateTask(DAQmxTestHelper.DiTaskName,
+            Int32 result = DAQmx.CreateTask(_helper.Config.DiTaskName,
                 out handle);
 
             DAQmxTestHelper.Assert(DAQmx.Success(result),
@@ -104,15 +108,15 @@ namespace Grumpy.DAQmxTester
                 $"{string.Format("{0:X}", handle)}.");
 
             result = DAQmx.CreateDIChannel(handle,
-                $"{DAQmxTestHelper.DeviceName}/{DAQmxTestHelper.DiChannels}",
-                DAQmxTestHelper.DiChannelNameToAssign,
+                $"{_helper.Config.DeviceName}/{_helper.Config.DiChannels}",
+                _helper.Config.DiChannelNameToAssign,
                 DIOLineGrouping.ChanForAllLines);
 
             DAQmxTestHelper.Assert(DAQmx.Success(result),
                 DAQmx.GetErrorDescription(result));
 
             Console.WriteLine($"DI Channel created " +
-                $"for {DAQmxTestHelper.DiChannels}.");
+                $"for {_helper.Config.DiChannels}.");
 
             result = DAQmx.StartTask(handle);
 
@@ -120,7 +124,7 @@ namespace Grumpy.DAQmxTester
                 DAQmx.GetErrorDescription(result));
 
             Console.WriteLine($"DI task " +
-                $"{DAQmxTestHelper.DiChannels} started.");
+                $"{_helper.Config.DiChannels} started.");
 
             uint[] data32 = new uint[10];
             Console.WriteLine("Reading " +
@@ -129,7 +133,7 @@ namespace Grumpy.DAQmxTester
             for (int i = 0; i < 10; i++) {
 
                 result = DAQmx.ReadDigitU32(handle, 2, 1.0,
-                    DAQmxTestHelper.ReadbackFillMode,
+                    _helper.Config.ReadbackFillMode,
                     data32, (uint)data32.Length, out int samplesRead);
 
                 DAQmxTestHelper.Assert(DAQmx.Success(result),
@@ -168,13 +172,13 @@ namespace Grumpy.DAQmxTester
         }
 
 
-        public void Test3DIReadU16() {
+        public void DiTestReadU16() {
 
             Console.WriteLine("TestDIRead16 Started.");
             IntPtr handle = IntPtr.Zero;
 
             Console.WriteLine("Creating a task...");
-            Int32 result = DAQmx.CreateTask(DAQmxTestHelper.DiTaskName,
+            Int32 result = DAQmx.CreateTask(_helper.Config.DiTaskName,
                 out handle);
 
             DAQmxTestHelper.Assert(DAQmx.Success(result),
@@ -184,22 +188,22 @@ namespace Grumpy.DAQmxTester
                 $"{string.Format("{0:X}", handle)}.");
 
             result = DAQmx.CreateDIChannel(handle,
-                $"{DAQmxTestHelper.DeviceName}/{DAQmxTestHelper.DiChannels}",
-                DAQmxTestHelper.DiChannelNameToAssign,
+                $"{_helper.Config.DeviceName}/{_helper.Config.DiChannels}",
+                _helper.Config.DiChannelNameToAssign,
                 DIOLineGrouping.ChanForAllLines);
 
             DAQmxTestHelper.Assert(DAQmx.Success(result),
                 DAQmx.GetErrorDescription(result));
 
             Console.WriteLine($"DI Channel created for " +
-                $"{DAQmxTestHelper.DiChannels}.");
+                $"{_helper.Config.DiChannels}.");
 
             result = DAQmx.StartTask(handle);
 
             DAQmxTestHelper.Assert(DAQmx.Success(result),
                 DAQmx.GetErrorDescription(result));
 
-            Console.WriteLine($"DI task {DAQmxTestHelper.DiChannels} started.");
+            Console.WriteLine($"DI task {_helper.Config.DiChannels} started.");
 
             Console.WriteLine(" ReadDigitalLines complete");
 
@@ -210,7 +214,7 @@ namespace Grumpy.DAQmxTester
             for (int i = 0; i < 10; i++) {
 
                 result = DAQmx.ReadDigitU32(handle, 2, 1.0,
-                    DAQmxTestHelper.ReadbackFillMode,
+                    _helper.Config.ReadbackFillMode,
                     data, (uint)data.Length, out int samplesRead);
 
                 DAQmxTestHelper.Assert(DAQmx.Success(result),

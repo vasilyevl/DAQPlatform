@@ -1,4 +1,5 @@
 ﻿/*
+ 
 Copyright (c) 2024 vasilyevl (Grumpy). Permission is hereby granted, 
 free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"),to deal in the Software 
@@ -16,230 +17,103 @@ PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE AUTHORS OR COPYRIGH
 HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE 
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 */
 
-using System.ComponentModel;
+using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
+using System.ComponentModel;
 using System.Windows.Input;
 
-namespace Grumpy.DAQFramework.Common
-{    
-    /// <summary>
-     /// Represents an observable object that provides notifications when properties change.
-     /// Implements <see cref="INotifyPropertyChanged"/> to support data binding.
-     /// </summary>
+namespace Grumpy.SDAQFramework.Common
+{
     public class ObservableObject : INotifyPropertyChanged
     {
-        private bool _useExceptions;
-        private string _lastError;
-        private object _lock;
+        bool _doNotUseExceptions;
 
-        /// <summary>
-        /// Occurs when a property value changes.
-        /// </summary>
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ObservableObject"/> class.
-        /// </summary>
-        /// <param name="useExceptions">If set to <c>false</c>, exceptions will not be thrown when property names are invalid. Default is <c>true</c>/</param>
-        public ObservableObject(bool useExceptions = true)
+        public ObservableObject(bool noExceptions = false)
         {
-            _useExceptions = useExceptions;
-            _lastError = string.Empty;
-            _lock = new object();
+            _doNotUseExceptions = noExceptions;
         }
 
-        /// <summary>
-        /// Gets the last error message recorded by the class.
-        /// </summary>
-        /// <remarks>
-        /// This property is thread-safe, ensuring consistent behavior in multi-threaded environments.
-        /// The getter returns a cloned copy of the error message to avoid unintended modifications.
-        /// The setter updates the error message, replacing <c>null</c> values with an empty string.
-        /// Any method which can trigger the error message, sets LastError to string.Empty before execution.
-        /// </remarks>
-        /// <value>
-        /// A <see cref="string"/> representing the last error message. 
-        /// Returns an empty string if no error is recorded.
-        /// </value>
-        public string LastError {
-            
-            get {
-
-                lock (_lock) {
-
-                    return (string)_lastError.Clone();
-                }
-            }
-
-            private set {
-
-                lock (_lock) {
-    
-                    _lastError = value is null ? string.Empty : value;
-                }
-            }
-        }
-    
-        /// <summary>
-        /// Raises the <see cref="PropertyChanged"/> event for a specified property.
-        /// </summary>
-        /// <param name="name">The name of the property that changed.</param>
         public void RaisePropertyChanged(string name)
         {
             OnPropertyChanged(name);
         }
 
-        /// <summary>
-        /// Raises the <see cref="PropertyChanged"/> event for all properties.
-        /// </summary>
         public void RaisePropertyChanged()
         {
             PropertyChangedEventHandler pc = PropertyChanged!;
 
             if (pc != null) {
-
                 pc(this, new PropertyChangedEventArgs(string.Empty));
             }
-
             return;
         }
 
-        /// <summary>
-        /// Raises the <see cref="PropertyChanged"/> event for a specified property and checks its existence.
-        /// Throws an exception if the property does not exist and exceptions are enabled.
-        /// </summary>
-        /// <param name="propertyName">The name of the property that changed.</param>
-        /// <exception cref="ArgumentException">Thrown when the property is not found, and exceptions are enabled.</exception>
         protected virtual void OnPropertyChanged(string propertyName)
         {
-            LastError = string.Empty;
-
             Type tmpType = GetType();
-            System.Reflection.PropertyInfo tmpProperty = 
-                                    tmpType.GetProperty(propertyName)!;
+            System.Reflection.PropertyInfo tmpProperty = tmpType.GetProperty(propertyName)!;
 
-            if (tmpProperty != null) {
-                
+            if (tmpProperty != null)
+            {
                 PropertyChangedEventHandler pc = PropertyChanged!;
 
-                if (pc != null) {
-                
+                if (pc != null) { 
                     pc(this, new PropertyChangedEventArgs(propertyName));
                 }
-                
                 return;
             }
-            else {
-             
-                LastError = $"Property {propertyName} not found.";
-
-                if (_useExceptions) {
-
-                    throw new ArgumentException(LastError);
+            else
+            {
+                if (!_doNotUseExceptions) {
+                    throw new ArgumentException($"Property {propertyName} not found.");
                 }
-            }
+            }     
         }
 
-        /// <summary>
-        /// Sets the specified field to the given value, raises the <see cref="PropertyChanged"/> event,
-        /// and executes a command if the value changes and the command can be executed.
-        /// </summary>
-        /// <typeparam name="T">The type of the field.</typeparam>
-        /// <param name="field">The field to be set.</param>
-        /// <param name="value">The new value to assign to the field.</param>
-        /// <param name="command">The command to execute if the field value changes.</param>
-        /// <param name="propertyName">The name of the property. Defaults to the caller member name.</param>
-        /// <returns><c>true</c> if the field value changed; otherwise, <c>false</c>.</returns>
-        protected bool SetProperty<T>( ref T field, T value, ICommand command,  
-                              [CallerMemberName] string propertyName = null!)
+        protected bool SetProperty<T>(ref T field, T value, ICommand command,  [CallerMemberName] string propertyName = null!)
         {
-            if ( SetProperty<T>(ref field, value, propertyName )) {
+            if( SetProperty<T>(ref field, value, propertyName )) {
 
                 if (command.CanExecute(field)) {
 
                     command.Execute(field);
                 }
-                
                 return true;
             }
 
             return false;
         }
 
-        /// <summary>
-        /// Sets the specified field to the given value and raises the <see cref="PropertyChanged"/> event 
-        /// if the value has changed. Optionally suppresses exceptions based on the class configuration.
-        /// </summary>
-        /// <typeparam name="T">The type of the field.</typeparam>
-        /// <param name="field">The field to be set.</param>
-        /// <param name="value">The new value to assign to the field.</param>
-        /// <param name="propertyName">
-        /// The name of the property associated with the field. Defaults to the caller member name.
-        /// </param>
-        /// <returns>
-        /// <c>true</c> if the field value changed; <c>false</c> if an exception was suppressed or if the 
-        /// value did not change.
-        /// </returns>
-        /// <exception cref="Exception">
-        /// Re-throws any exception raised by <see cref="OnPropertyChanged"/> unless exceptions are suppressed 
-        /// by the <c>_doNotUseExceptions</c> field.
-        /// </exception>
-        protected bool SetProperty<T>( ref T field, T value, 
-                             [CallerMemberName] string propertyName = null!)
+        protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null!)
         {
-            LastError = string.Empty;
-
             if (!EqualityComparer<T>.Default.Equals(field, value))
             {
                 field = value;
-                
                 try {
-            
                     OnPropertyChanged(propertyName);
                     return true;
                 }
-                catch (Exception ex){
-
-                    LastError = ex.Message;
+                catch {
                     
-                    if (_useExceptions) {
-                    
-                        throw;
+                    if (_doNotUseExceptions) { 
+                        return false;
                     }
-
-                    return false;
-                    
+                    throw;
                 }
             }
-
             return false;
         }
 
-
-        /// Sets the specified <see cref="double"/> field to the given value, considering a tolerance level,
-        /// raises the <see cref="PropertyChanged"/> event if the value has changed, and executes a command if specified.
-        /// </summary>
-        /// <param name="field">The field to be set.</param>
-        /// <param name="value">The new value to assign to the field.</param>
-        /// <param name="command">The command to execute if the field value changes.</param>
-        /// <param name="propertyName">
-        /// The name of the property associated with the field. Defaults to the caller member name.
-        /// </param>
-        /// <param name="tolernacePPM">
-        /// The tolerance in parts per million (PPM) for determining if the field value has changed.
-        /// </param>
-        /// <returns>
-        /// <c>true</c> if the field value changed and the command was executed; otherwise, <c>false</c>.
-        /// </returns>
-        protected bool SetProperty(ref double field, 
-            double value, ICommand command,
-            [CallerMemberName] string propertyName = null!,
-            double tolernacePPM = 100)
+        protected bool SetProperty(ref double field, double value, ICommand command,
+            [CallerMemberName] string propertyName = null!, double tolernacePPM = 100)
         {
-
             if (SetProperty(ref field,value, propertyName, tolernacePPM)) {
 
                 if (command.CanExecute(field)) {
@@ -252,84 +126,34 @@ namespace Grumpy.DAQFramework.Common
             return false;
         }
 
-        /// <summary>
-        /// Sets the specified <see cref="double"/> field to the given value if the difference exceeds a specified error tolerance,
-        /// and raises the <see cref="PropertyChanged"/> event if the value has changed.
-        /// </summary>
-        /// <param name="field">The field to be set.</param>
-        /// <param name="value">The new value to assign to the field.</param>
-        /// <param name="propertyName">
-        /// The name of the property associated with the field. Defaults to the caller member name.
-        /// </param>
-        /// <param name="error">
-        /// The allowable difference (error tolerance) between the current and new value for the change to be considered significant.
-        /// </param>
-        /// <returns>
-        /// <c>true</c> if the field value changed; <c>false</c> if the change was within the tolerance or if an exception was suppressed.
-        /// </returns>
-        /// <exception cref="Exception">
-        /// Re-throws any exception raised by <see cref="OnPropertyChanged"/> unless exceptions are suppressed 
-        /// by the <c>_doNotUseExceptions</c> field.
-        /// </exception>
         protected bool SetProperty(ref double field, double value, 
-            [CallerMemberName] string propertyName = null!, 
-            double error = 1.0e-6 )
+            [CallerMemberName] string propertyName = null!, double error = 1.0e-6 )
         {
-            LastError = string.Empty;
-            
             if (Math.Abs(field - value)> Math.Abs(error)) {
-                
                 field = value;
-                
                 try {
-            
                     OnPropertyChanged(propertyName);
                     return true;
                 }
-                catch (Exception ex) {
-                    
-                    LastError = ex.Message;
+                catch {
 
-                    if (_useExceptions) {
-                    
-                        throw;        
+                    if (_doNotUseExceptions) {
+                        
+                        return false;
                     }
-
-                    return false;
+                    throw;
                 }
             }
-
             return false;
         }
 
-        /// <summary>
-        /// Sets the specified field to the given value and raises the <see cref="PropertyChanged"/> event 
-        /// for the property identified by an expression, if the value has changed.
-        /// </summary>
-        /// <typeparam name="T">The type of the field.</typeparam>
-        /// <param name="field">The field to be set.</param>
-        /// <param name="value">The new value to assign to the field.</param>
-        /// <param name="expr">
-        /// An expression identifying the property to be updated, typically provided in the form of a lambda 
-        /// expression (e.g., <c>() => PropertyName</c>).
-        /// </param>
-        /// <returns>
-        /// <c>true</c> if the field value changed; <c>false</c> if the value did not change or if an exception was suppressed.
-        /// </returns>
-        /// <exception cref="Exception">
-        /// Re-throws any exception raised by <see cref="OnPropertyChanged"/> unless exceptions are suppressed 
-        /// by the <c>_doNotUseExceptions</c> field.
-        /// </exception>
-        protected bool SetProperty<T>(ref T field, T value, 
-            Expression<Func<T>> expr)
+        protected bool SetProperty<T>(ref T field, T value, Expression<Func<T>> expr)
         {
             if (!EqualityComparer<T>.Default.Equals(field, value))
             {
-                LastError = string.Empty;
                 field = value;
                 var lambda = expr as LambdaExpression;
                 MemberExpression memberExpression;
-                
 
                 if (lambda.Body is UnaryExpression) {
 
@@ -337,65 +161,33 @@ namespace Grumpy.DAQFramework.Common
                     memberExpression = (MemberExpression)unaryExpr.Operand;
                 }
                 else {
-                    
                     memberExpression = (MemberExpression)lambda.Body;
                 }
 
                 try {
-            
                     OnPropertyChanged(memberExpression.Member.Name);
                     return true;
                 }
-                catch (Exception ex) { 
-
-                    LastError = ex.Message; 
+                catch {
                     
-                    if (_useExceptions) { 
-            
-                        throw; 
-                    } 
-                    
-                    return false;
+                    if (_doNotUseExceptions) {
+                        return false;
+                    }
+                    throw;
                 }
             }
-
             return false;
         }
 
-        /// <summary>
-        /// Sets the specified <see cref="double"/> field to the given value if it differs by more than a specified error tolerance,
-        /// or if the current field value is <c>NaN</c>. Raises the <see cref="PropertyChanged"/> event for the property 
-        /// identified by an expression if the value has changed.
-        /// </summary>
-        /// <param name="field">The field to be set.</param>
-        /// <param name="value">The new value to assign to the field.</param>
-        /// <param name="expr">
-        /// An expression identifying the property to be updated, typically provided in the form of a lambda 
-        /// expression (e.g., <c>() => PropertyName</c>).
-        /// </param>
-        /// <param name="error">
-        /// The allowable difference (error tolerance) between the current and new value for the change to be considered significant.
-        /// Defaults to <c>1.0e-9</c>.
-        /// </param>
-        /// <returns>
-        /// <c>true</c> if the field value changed; <c>false</c> if the change was within the tolerance or if an exception was suppressed.
-        /// </returns>
-        /// <exception cref="Exception">
-        /// Re-throws any exception raised by <see cref="OnPropertyChanged"/> unless exceptions are suppressed 
-        /// by the <c>_doNotUseExceptions</c> field.
-        /// </exception>
         protected bool SetProperty(ref double field, double value, 
             Expression<Func<double>> expr, double error = 1.0e-9)
         {
-            LastError = string.Empty;
-
             if ( double.IsNaN(field) ||  
                 (Math.Abs(field - value) > Math.Abs(error)) ) {
 
                 field = value;
                 var lambda = expr as LambdaExpression;
                 MemberExpression memberExpression;
-                
 
                 if (lambda.Body is UnaryExpression) {
 
@@ -403,42 +195,24 @@ namespace Grumpy.DAQFramework.Common
                     memberExpression = (MemberExpression)unaryExpr.Operand;
                 }
                 else {
-
                     memberExpression = (MemberExpression)lambda.Body;
                 }
 
                 try {
-
                     OnPropertyChanged(memberExpression.Member.Name);
                     return true;
                 }
-                catch (Exception ex) {
+                catch  {
 
-                    LastError = ex.Message;
-                    
-                    if (_useExceptions) {
-                       
-                        throw;
+                    if (_doNotUseExceptions) {
+                        return false;
                     }
-                    
-                    return false;
+                    throw ;
                 }
             }
-
             return false;
         }
-
-        /// <summary>
-        /// Raises the <see cref="PropertyChanged"/> event for the property identified by an expression.
-        /// </summary>
-        /// <typeparam name="T">The type of the property.</typeparam>
-        /// <param name="expr">
-        /// An expression identifying the property for which to raise the <see cref="PropertyChanged"/> event,
-        /// typically provided in the form of a lambda expression (e.g., <c>() => PropertyName</c>).
-        /// </param>
-        /// <exception cref="InvalidOperationException">
-        /// Thrown if the expression does not correctly reference a property name.
-        /// </exception>
+ 
         protected void RaisePropertyChanged<T>(Expression<Func<T>> expr)
         {
             var lambda = expr as LambdaExpression;
@@ -450,11 +224,11 @@ namespace Grumpy.DAQFramework.Common
                 memberExpression = (MemberExpression)unaryExpr.Operand;
             }
             else {
-
                 memberExpression = (MemberExpression)lambda.Body;
             }
 
              OnPropertyChanged(memberExpression.Member.Name);
+
         }
     }
 }

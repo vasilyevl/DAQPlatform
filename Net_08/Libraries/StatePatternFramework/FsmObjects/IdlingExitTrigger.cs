@@ -18,7 +18,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using Grumpy.DAQFramework.Common;
+using Grumpy.SDAQFramework.Common;
 
 using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
