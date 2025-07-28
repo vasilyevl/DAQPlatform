@@ -62,8 +62,8 @@ namespace Grumpy.Common.BaseObjects.Collections
 
         public event EventHandler? HasBecomeEmpty;
         public event EventHandler? HasReachedCapacity;
-        public event EventHandler? DroppedBelowLowerThreshold;
-        public event EventHandler? WentOverUpperThreshold;
+        public event EventHandler? AtLowerThreshold;
+        public event EventHandler? AtUpperThreshold;
         public event EventHandler<int>? ItemAdded;
         public event EventHandler<int>? ItemsDiscarded;
 
@@ -212,7 +212,7 @@ namespace Grumpy.Common.BaseObjects.Collections
 
             if ((itemAdded && ItemAdded != null)
                 || (capacityWillBeReached && HasReachedCapacity != null)
-                || (upperThresholdWillBeReached && WentOverUpperThreshold != null)) {
+                || (upperThresholdWillBeReached && AtUpperThreshold != null)) {
 
                 Task.Factory.StartNew(() => {
                     if (itemAdded)
@@ -222,7 +222,7 @@ namespace Grumpy.Common.BaseObjects.Collections
                         HasReachedCapacity?.Invoke(this, EventArgs.Empty);
 
                     if (upperThresholdWillBeReached)
-                        WentOverUpperThreshold?.Invoke(this, EventArgs.Empty);
+                        AtUpperThreshold?.Invoke(this, EventArgs.Empty);
                 });
             }
         }
@@ -238,11 +238,19 @@ namespace Grumpy.Common.BaseObjects.Collections
         /// <param name="atLowerThreshold">True if the buffer is at the lower threshold.</param>
         protected void RaisePopItemEvents(bool popped, bool aboutToBecomeEmpty, bool atLowerThreshold) {
             if (popped) {
-                if (aboutToBecomeEmpty)
-                    HasBecomeEmpty?.BeginInvoke(this, EventArgs.Empty, null, null);
 
-                if (atLowerThreshold)
-                    DroppedBelowLowerThreshold?.BeginInvoke(this, EventArgs.Empty, null, null);
+                Task.Factory.StartNew(() => {
+                    if (aboutToBecomeEmpty) {
+
+                        HasBecomeEmpty?.Invoke(this, EventArgs.Empty);
+                    }
+
+                    if (atLowerThreshold) {
+
+                        AtLowerThreshold?.Invoke(this, EventArgs.Empty);
+                    }
+                });
+
             }
         }
 
@@ -426,6 +434,7 @@ namespace Grumpy.Common.BaseObjects.Collections
         /// <param name="error">Output error message if the operation fails.</param>
         /// <returns>True if the item was added; otherwise, false.</returns>
         public bool TryAdd(Titem value, out string error) {
+
             _collectionLock.EnterWriteLock();
 
             bool capacityWillBeReached = false;
@@ -440,8 +449,8 @@ namespace Grumpy.Common.BaseObjects.Collections
 
                 capacityWillBeReached = _collection.Count == _maxCapacity - 1;
                 upperThresholdWillBeReached =
-                    (_collection.Count == UpperThreshold - 1)
-                    && (UpperThreshold >= 1);
+                    (_collection.Count == _upperThreshold - 1)
+                    && (_upperThreshold >= 1) && (_upperThreshold != _NoTheshold);
                 _collection.AddLast(value);
                 error = string.Empty;
                 count = _collection.Count;
@@ -466,9 +475,10 @@ namespace Grumpy.Common.BaseObjects.Collections
         /// <param name="items">The items to add.</param>
         /// <param name="error">Output error message if the operation fails.</param>
         /// <returns>True if the items were added; otherwise, false.</returns>
-        public bool TryAddItems(Titem[] items, out string error) {
+        public bool TryAddItems(Titem[] items, out int itemsAdded, out string error) {
             _collectionLock.EnterWriteLock();
 
+            itemsAdded = 0;
             bool capacityWillBeReached = false;
             bool upperThresholdWillBeReached = false;
             bool itemAdded = false;
@@ -479,28 +489,24 @@ namespace Grumpy.Common.BaseObjects.Collections
                 if (_AtCapacity(out error))
                     return false;
 
-                if ((_collection.Count + items.Length) >= _maxCapacity) {
-                    error = $"Not enough room to add {items.Length} items.";
-                    return false;
+                if (items == null || items.Length == 0) {
+                    return true; // Nothing to add, return true
                 }
 
-                foreach (var item in items) {
-                    capacityWillBeReached = capacityWillBeReached
-                        || (_collection.Count == _maxCapacity - 1);
+                for (int i = 0; i < items.Length; i++) {
 
-                    upperThresholdWillBeReached = upperThresholdWillBeReached
-                        || (_collection.Count == UpperThreshold - 1
-                        && UpperThreshold >= 1);
-
-                    _collection.AddLast(item);
-
-                    error = string.Empty;
-                    count = _collection.Count;
+                    if (_collection.Count >= _maxCapacity) {
+                        error = $"Collection is at capacity. " +
+                            $"{itemsAdded} items out of " +
+                            $"{items.Count()} added.";
+                        return false;
+                    }
+                    capacityWillBeReached = (_maxCapacity - _collection.Count) == 1 || capacityWillBeReached;
+                    upperThresholdWillBeReached = ((_collection.Count == _upperThreshold - 1) && (_upperThreshold >= 1) && (_upperThreshold != _NoTheshold)) || upperThresholdWillBeReached;
+                    _collection.AddLast(items[i]);
+                    itemsAdded = i + 1;
                 }
-
-                error = string.Empty;
                 itemAdded = true;
-                
                 return true;
             }
             catch (Exception ex) {
@@ -510,7 +516,7 @@ namespace Grumpy.Common.BaseObjects.Collections
             finally {
                 
                 _collectionLock.ExitWriteLock();
-                RaiseAddItemEvents(itemAdded, capacityWillBeReached, upperThresholdWillBeReached, items.Length);
+                RaiseAddItemEvents(itemAdded, capacityWillBeReached, upperThresholdWillBeReached, itemsAdded);
             }
         }
 
@@ -534,7 +540,7 @@ namespace Grumpy.Common.BaseObjects.Collections
 
                 capacityWillBeReached = _collection.Count == _maxCapacity - 1;
                 upperThresholdWillBeReached =
-                    (_collection.Count == UpperThreshold - 1) && (UpperThreshold >= 1);
+                    (_collection.Count == _upperThreshold - 1) && (_upperThreshold >= 1) && (_upperThreshold != _NoTheshold);
 
                 _collection.AddFirst(value);
 
@@ -564,6 +570,9 @@ namespace Grumpy.Common.BaseObjects.Collections
         public bool TryInsertAt(int index, Titem value, out string error) {
 
 
+            bool capacityReached = false;
+            bool upperThresholReached = false;
+            bool itemAdded = false; 
             _collectionLock.EnterWriteLock();
 
             if (_AtCapacity(out error)) {
@@ -582,17 +591,21 @@ namespace Grumpy.Common.BaseObjects.Collections
                 if (index <= 0) {
                     _collection.AddFirst(value);
                     error = string.Empty;
-                    ItemAdded?.BeginInvoke(this, 1, null, null);
-                    return true;
                 }
 
                 if (TryGetNodeAt(index - 1, out LinkedListNode<Titem>? node, out error)) {
                     _collection.AddAfter(node, value);
-                    return true;
                 }
                 else {
+                    error = $"Index {index} is out of range for the collection.";
                     return false;
                 }
+
+                itemAdded = true;
+                capacityReached = _collection.Count == _maxCapacity;
+                upperThresholReached =
+                    (_collection.Count == _upperThreshold) && (_upperThreshold >= 1) && (_upperThreshold != _NoTheshold);
+                return true;
             }
             catch (Exception ex) {
                 error = $"Error inserting element at index {index}: {ex.Message}";
@@ -600,6 +613,7 @@ namespace Grumpy.Common.BaseObjects.Collections
             }
             finally {
                 _collectionLock.ExitWriteLock();
+                RaiseAddItemEvents(itemAdded, capacityReached, upperThresholReached);
             }
         }
 
@@ -728,11 +742,11 @@ namespace Grumpy.Common.BaseObjects.Collections
                 }
 
                 if (requiredCapacity > _maxCapacity) {
-                    error = "Requested capacity exceeds maximum capacity.";
+                    error = "Requested room exceeds maximum capacity.";
                     return false;
                 }
 
-                while (_collection.Count < _maxCapacity - requiredCapacity) {
+                while (_collection.Count > (_maxCapacity - requiredCapacity)) {
 
                     if (_collection.Count == 0)
                         break;
@@ -748,7 +762,7 @@ namespace Grumpy.Common.BaseObjects.Collections
                 return true;
             }
             catch (Exception ex) {
-                error = $"Error ensuring capacity: {ex.Message}";
+                error = $"Error while making room: {ex.Message}";
                 return false;
             }
             finally {
@@ -809,7 +823,7 @@ namespace Grumpy.Common.BaseObjects.Collections
         /// <param name="value">The removed item, if available.</param>
         /// <param name="error">Output error message if the operation fails.</param>
         /// <returns>True if an item was removed; otherwise, false.</returns>
-        protected bool TryPopFirst(out Titem? value, out string error) {
+        public bool TryPopFirst(out Titem? value, out string error) {
 
             bool aboutToBecomeEmpty = false;
             bool atLowerThreshold = false;
@@ -821,7 +835,7 @@ namespace Grumpy.Common.BaseObjects.Collections
                 }
 
                 aboutToBecomeEmpty = (_collection?.Count ?? 0) == 1;
-                atLowerThreshold = (_collection?.Count ?? 0) == LowerThreshold && LowerThreshold >= 0;
+                atLowerThreshold = (_collection?.Count ?? 0) == (_lowerThreshold +1)  && _lowerThreshold >= 0;
 
                 value = _collection.First.Value;
 
@@ -888,7 +902,7 @@ namespace Grumpy.Common.BaseObjects.Collections
                 }
 
                 aboutToBecomeEmpty = (_collection?.Count ?? 0) == 1;
-                atLowerThreshold = (_collection?.Count ?? 0) == LowerThreshold && LowerThreshold >= 0;
+                atLowerThreshold =(((_collection?.Count ?? 0) - _lowerThreshold) == 1) && (_lowerThreshold >= 0);
 
                 value = _collection.Last.Value;
                 _collection.RemoveLast();
@@ -980,7 +994,7 @@ namespace Grumpy.Common.BaseObjects.Collections
                     node = node.Next;
                 }
                 aboutToBecomeEmpty = (_collection?.Count ?? 0) == 1;
-                atLowerThreshold = (_collection?.Count ?? 0) == LowerThreshold && LowerThreshold >= 0;
+                atLowerThreshold = (_collection?.Count ?? 0) == _lowerThreshold && LowerThreshold >= 0;
                 value = node.Value;
                 _collection.Remove(node);
                 error = string.Empty;

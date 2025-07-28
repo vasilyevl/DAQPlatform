@@ -29,8 +29,8 @@ namespace Grumpy.Common.BaseObjects.Collections
 
         public event EventHandler? HasBecomeEmpty;
         public event EventHandler? HasReachedCapacity;
-        public event EventHandler? DroppedBelowLowerThreshold;
-        public event EventHandler? WentOverUpperThreshold;
+        public event EventHandler? AtLowerThreshold;
+        public event EventHandler? AtUpperThreshold;
         public event EventHandler<int>? ItemAdded;
         public event EventHandler<int>? ItemsDiscarded;
         public int AvailableCapacity { get; }
