@@ -20,7 +20,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 using System.Runtime.CompilerServices;
 
-namespace Grumpy.Common.BaseObjects.Collections
+namespace Grumpy.SDAQFramework.Common
 {
     /// <summary>
     /// Provides a thread-safe, capacity-limited buffer collection with threshold notifications and flexible item management.
@@ -130,7 +130,7 @@ namespace Grumpy.Common.BaseObjects.Collections
         /// </summary>
         /// <returns>True if the buffer is empty; otherwise, false.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool _BufferIsEmpty()=> _collection.Count == 0;
+        private bool _BufferIsEmpty()=> (_collection?.Count ?? 0) == 0 ;
 
         /// <summary>
         /// Checks if the buffer is at capacity.
@@ -482,7 +482,6 @@ namespace Grumpy.Common.BaseObjects.Collections
             bool capacityWillBeReached = false;
             bool upperThresholdWillBeReached = false;
             bool itemAdded = false;
-            int count = -1;
 
             try {
                 // Use the private _AtCapacity() method for capacity check
@@ -797,13 +796,15 @@ namespace Grumpy.Common.BaseObjects.Collections
         /// <returns>True if an item was available; otherwise, false.</returns>
         protected bool TryPeekFirst(out Titem? value, out string error) {
             _collectionLock.EnterReadLock();
+            value = default;
+
             try {
 
                 if (_CheckIfBufferIsEmpty(out error, out value)) {
                     return false;
                 }
 
-                value = _collection.First.Value!;
+                value = _collection!.First!.Value!;
                 error = string.Empty;
                 return true;
             }
@@ -837,7 +838,7 @@ namespace Grumpy.Common.BaseObjects.Collections
                 aboutToBecomeEmpty = (_collection?.Count ?? 0) == 1;
                 atLowerThreshold = (_collection?.Count ?? 0) == (_lowerThreshold +1)  && _lowerThreshold >= 0;
 
-                value = _collection.First.Value;
+                value = _collection!.First!.Value!;
 
                 _collection.RemoveFirst();
                 error = string.Empty;
@@ -870,7 +871,7 @@ namespace Grumpy.Common.BaseObjects.Collections
                     return false;
                 }
 
-                value = _collection.Last.Value;
+                value = _collection!.Last!.Value;
                 error = string.Empty;
                 return true;
             }
@@ -904,7 +905,7 @@ namespace Grumpy.Common.BaseObjects.Collections
                 aboutToBecomeEmpty = (_collection?.Count ?? 0) == 1;
                 atLowerThreshold =(((_collection?.Count ?? 0) - _lowerThreshold) == 1) && (_lowerThreshold >= 0);
 
-                value = _collection.Last.Value;
+                value = _collection!.Last!.Value!;
                 _collection.RemoveLast();
                 error = string.Empty;
 
@@ -947,7 +948,18 @@ namespace Grumpy.Common.BaseObjects.Collections
 
                 var node = _collection.First;
                 for (int i = 0; i < index; i++) {
+                    if (node == null) {
+                        error = "Node is null. Index out of range.";
+                        value = default!;
+                        return false;
+                    }
                     node = node.Next;
+                }
+
+                if (node == null) {
+                    error = "Node is null. Index out of range.";
+                    value = default!;
+                    return false;
                 }
 
                 value = node.Value;
@@ -991,12 +1003,25 @@ namespace Grumpy.Common.BaseObjects.Collections
 
                 LinkedListNode<Titem>? node = _collection.First;
                 for (int i = 0; i < index; i++) {
+                    if (node == null) {
+                        error = "Node is null. Index out of range.";
+                        value = default!;
+                        return false;
+                    }
                     node = node.Next;
                 }
                 aboutToBecomeEmpty = (_collection?.Count ?? 0) == 1;
                 atLowerThreshold = (_collection?.Count ?? 0) == _lowerThreshold && LowerThreshold >= 0;
+                if (node == null) {
+                    error = "Node is null. Index out of range.";
+                    value = default!;
+                    return false;
+                }
+
                 value = node.Value;
-                _collection.Remove(node);
+
+                _collection!.Remove(node);
+
                 error = string.Empty;
 
                 return true;

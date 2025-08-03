@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 
 namespace Grumpy.SDAQFramework.Common
 {
-    public delegate void DataReceiver<TObject>(TObject obj);
 
     public class QueueWReceiver<TObject> : BasicQueue<TObject>
     {

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Platforms>x64</Platforms>
@@ -33,8 +33,14 @@
     <PackageReference Include="System.IO.Ports" Version="8.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="ClickPLCDriver">
+      <HintPath>DLL\ClickPLCDriver.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="echo Configuration: $(Configuration)&#xD;&#xA;echo Ouput Diractory: $(OutDir)" />
+    <Exec Command="echo Configuration: $(Configuration)&#xD;&#xA;echo Ouput Diractory: $(OutDir)&#xD;&#xA;copy &quot;$(TargetDir)ClickPLCDriver.dll&quot; &quot;$(ProjectDir)DLL\ClickPLCDriver.dll&quot; /Y" />
   </Target>
 
 </Project>

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Grumpy.Common.BaseObjects.Collections;
+using Grumpy.SDAQFramework.Common;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace BufferMSTest
@@ -70,16 +70,16 @@ namespace BufferMSTest
         [TestMethod]
         public void TryAddItems_RespectsCapacity() {
             var buffer = new BufferBase<int>(4);
-            Assert.IsTrue(buffer.TryAddItems(new[] { 1, 2 }, out var error1), error1);
-            Assert.IsTrue(buffer.TryAddItems(new[] { 3 }, out var error2), error2);
-            Assert.IsFalse(buffer.TryAddItems(new[] { 4, 5 }, out var error3));
+            Assert.IsTrue(buffer.TryAddItems(new[] { 1, 2 }, out int itemsAdded, out var error1), error1);
+            Assert.IsTrue(buffer.TryAddItems(new[] { 3 }, out  itemsAdded, out var error2), error2);
+            Assert.IsFalse(buffer.TryAddItems(new[] { 4, 5 }, out itemsAdded, out var error3));
             Assert.IsTrue(error3.Contains("Not enough room"));
         }
 
         [TestMethod]
         public void TryMakeRoom_RemovesItemsCorrectly() {
             var buffer = new BufferBase<int>(4);
-            buffer.TryAddItems(new[] { 1, 2, 3, 4 }, out _);
+            buffer.TryAddItems(new[] { 1, 2, 3, 4 }, out _, out _);
 
             Assert.IsTrue(buffer.TryMakeRoom(2, out var removed, out var error), error);
             Assert.AreEqual(2, removed);
@@ -117,7 +117,7 @@ namespace BufferMSTest
         [TestMethod]
         public void PeekAllAsArrayAndList_ReturnsCorrectOrder() {
             var buffer = new BufferBase<int>(10);
-            buffer.TryAddItems(new[] { 1, 2, 3 }, out _);
+            buffer.TryAddItems(new[] { 1, 2, 3 }, out _, out _);
 
             var arr = buffer.PeekAllAsArray(out var error1);
             CollectionAssert.AreEqual(new[] { 1, 2, 3 }, arr);

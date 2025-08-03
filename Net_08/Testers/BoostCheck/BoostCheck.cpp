@@ -10,7 +10,7 @@
 
 int main()
 {
-	int milliseconds = 100;    
+	int milliseconds = 250;    
     std::cout << "Hello World!\n";
 
     std::cout << "Boost version: " << BOOST_LIB_VERSION << std::endl;
@@ -27,11 +27,12 @@ int main()
     _timer = new boost::asio::steady_timer(*_ioContext);
 
     std::cout << "High resolution timer created... " << std::endl;
-	for (int i = 0; i < 10; i++)
+	for (int i = 0; i < 25; i++)
 	{
 		std::cout << "Timer set to expire in " << milliseconds << " milliseconds... " << std::endl;
 		t1 = std::chrono::steady_clock::now();
-		_timer->expires_from_now(std::chrono::microseconds(milliseconds*1000));
+		// _timer->expires_from_now(std::chrono::microseconds(milliseconds*1000)); for 1.84
+		_timer->expires_after(std::chrono::milliseconds(milliseconds));  // Use expires_after for modern Boost
 		_timer->wait();
 		t2 = std::chrono::steady_clock::now();
 

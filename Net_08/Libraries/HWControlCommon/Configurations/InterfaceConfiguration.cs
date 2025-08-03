@@ -19,7 +19,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 
-using Grumpy.Common.BaseObjects;
+using Grumpy.SDAQFramework.Common;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 

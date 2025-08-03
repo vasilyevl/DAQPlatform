@@ -4,7 +4,6 @@ using Serilog.Sinks.File;
 
 using System.Reflection;
 
-using Grumpy.Common.Utilites;
 
 namespace Grumpy.SDAQFramework.Utilities
 {

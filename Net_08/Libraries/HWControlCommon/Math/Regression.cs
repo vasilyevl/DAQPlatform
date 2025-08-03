@@ -25,7 +25,7 @@ See the original code and licence here:
 
 using System.Runtime.ConstrainedExecution;
 
-namespace Utilities.Math
+namespace Grumpy.SDAQFramework.MathUtilities
 {
     public static class Regression
     {
@@ -101,7 +101,7 @@ namespace Utilities.Math
         
         public static double StDev(double[] data) 
         {
-            if ((data?.Length ?? 0) == 0) {
+            if (data == null || data.Length == 0) {
              
                 throw new ArgumentException("Array can't be empty.");
             }
@@ -124,7 +124,7 @@ namespace Utilities.Math
 
         public static double StDev(List<double> values) {
 
-            if ((values?.Count ?? 0) == 0) {
+            if ( values == null ||values.Count == 0) {
 
                 throw new ArgumentException("List cannot be empty.");
             }

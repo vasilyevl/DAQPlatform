@@ -27,7 +27,7 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
-namespace Grumpy.Common.BaseObjects
+namespace Grumpy.SDAQFramework.Common
 {
     /// <summary>
     /// A base class for observable objects that implements the <see cref="INotifyPropertyChanged"/> interface.

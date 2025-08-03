@@ -8,10 +8,11 @@
     <BaseOutputPath>..\..\bin</BaseOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Libraries\Common\Common.csproj" />
+    <ProjectReference Include="..\..\Libraries\HWControlCommon\SDAQFramework.csproj" />
   </ItemGroup>
 
 </Project>

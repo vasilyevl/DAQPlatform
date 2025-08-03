@@ -30,7 +30,7 @@ using System.Runtime.CompilerServices;
 
 namespace Grumpy.ClickPLCDriver
 {
-    public class ClickPlcDriver :  IClickPLCHandler
+    public class Driver :  IClickPLCHandler
     {
         internal const string TimerPrefix = "T";
         internal const string CounterPrefix = "CT";
@@ -61,7 +61,7 @@ namespace Grumpy.ClickPLCDriver
         private ModbusClient? _mbClient;
         private ClickHandlerConfiguration? _configuration;
 
-        internal ClickPlcDriver() {
+        internal Driver() {
 
             _mbClient = new ModbusClient();
             _configuration = null;
@@ -70,22 +70,22 @@ namespace Grumpy.ClickPLCDriver
             Controls = new Dictionary<string, object>();
         }
 
-        public static ClickPlcDriver CreateHandler() => new ClickPlcDriver();
+        public static Driver Create() => new Driver();
 
-        public static bool CreateHandler(ClickHandlerConfiguration configuration,
-            out ClickPlcDriver? handler) {
+        public static bool Create(ClickHandlerConfiguration configuration,
+            out Driver? handler) {
 
-            handler = new ClickPlcDriver();
+            handler = new Driver();
             if (!handler.Init(configuration)) {
                 handler = null;
             }
             return handler is not null;
         }
 
-        public static bool CreateHandler(string configuration,
-            out ClickPlcDriver? handler) {
+        public static bool Create(string configuration,
+            out Driver? handler) {
 
-            handler = new ClickPlcDriver();
+            handler = new Driver();
             if (!handler.Init(configuration)) {
                 handler = null;
             }

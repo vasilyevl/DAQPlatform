@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading;
-using Grumpy.Common.BaseObjects;
+using Grumpy.SDAQFramework.Common;
 
 namespace DormantWorkerConsoleTest
 {

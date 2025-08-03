@@ -19,7 +19,8 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 
-using Grumpy.Common.BaseObjects;
+using Grumpy.SDAQFramework.Common;
+using Grumpy.SDAQFramework.Configuration;
 using Grumpy.DAQmxDeviceServer.Configuration;
 using Grumpy.DAQmxNetApi;
 

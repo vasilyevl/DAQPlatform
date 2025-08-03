@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Grumpy.Common.BaseObjects.Collections;
-using Grumpy.Common.Utilities.Testing;
+using Grumpy.SDAQFramework.Common;
+using Grumpy.SDAQFramework.Utilities.Testing;
 
 namespace BufferBaseConsoleTest
 {
@@ -176,9 +176,7 @@ namespace BufferBaseConsoleTest
 
             var addTasks = Enumerable.Range(0, threadCount).Select(_ => Task.Run(() => {
                 for (int i = 0; i < itemsPerThread; i++) {
-                    int v;
                     string err;
-
                     if (buffer.TryAdd(i, out err))
                         Interlocked.Increment(ref addSuccess);
                 }

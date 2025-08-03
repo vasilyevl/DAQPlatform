@@ -18,7 +18,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using Grumpy.Common.BaseObjects;
+using Grumpy.SDAQFramework.Configuration;
 using Newtonsoft.Json;
 
 namespace Grumpy.DAQmxDeviceServer.Configuration

@@ -23,7 +23,7 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
-namespace Grumpy.Common.BaseObjects
+namespace Grumpy.SDAQFramework.Common
 {
     public class ObservableDisposableBase : DisposableBase, INotifyPropertyChanged
     {

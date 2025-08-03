@@ -29,11 +29,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <Compile Remove="BacgroundWorker\**" />
+    <EmbeddedResource Remove="BacgroundWorker\**" />
+    <None Remove="BacgroundWorker\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="BacgroundWorker\" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
 </Project>

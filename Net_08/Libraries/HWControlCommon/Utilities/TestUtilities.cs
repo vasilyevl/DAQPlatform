@@ -1,13 +1,9 @@
-﻿using Grumpy.Common.Math;
-using Grumpy.Common.Utilites;
+﻿using Grumpy.SDAQFramework.MathUtilities;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
-namespace Grumpy.Common.Utilities.Testing
+
+namespace Grumpy.SDAQFramework.Utilities.Testing
 {
     public static class TestUtilities
     {
@@ -152,14 +148,14 @@ namespace Grumpy.Common.Utilities.Testing
 
     public static class ReportGenerator
     {
-        public static void TimingReport(List<double>? data,
+        public static void TimingReport(List<double> data,
             bool outputData = false, string? filePathName = null)
         {
 
-            TimingReport(data?.ToArray(), outputData);
+            TimingReport(data.ToArray(), outputData);
         }
 
-        private static void TimingReport(double[]? data,
+        private static void TimingReport(double[] data,
             bool outputData = false, string? filePathName = null)
         {
 
@@ -169,7 +165,7 @@ namespace Grumpy.Common.Utilities.Testing
             int tmMax = 0;
             int tmMin = 0;
 
-            if ((data?.Count() ?? 0) == 0) {
+            if ( data.Count() == 0) {
                 if (filePathName == null) {
                     Console.WriteLine("No data to report.");
                     return;
@@ -180,9 +176,9 @@ namespace Grumpy.Common.Utilities.Testing
             }
 
 
-            double[] recalculatedData = new double[data?.Count() ?? 0];
+            double[] recalculatedData = new double[data.Count()];
 
-            for (int i = 0; i < (data?.Count() ?? 0); i++) {
+            for (int i = 0; i < data.Count(); i++) {
 
                 recalculatedData[i] = i == 0 ? data[i] : data[i] - data[i - 1];
                 mx = System.Math.Max(mx, recalculatedData[i]);

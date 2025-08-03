@@ -1,4 +1,4 @@
-﻿using Grumpy.Common.BaseObjects.Collections;
+﻿using Grumpy.SDAQFramework.Common;
 
 namespace TestFIFOBase
 {
