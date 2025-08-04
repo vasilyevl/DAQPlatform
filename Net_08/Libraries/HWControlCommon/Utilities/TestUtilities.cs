@@ -1,7 +1,7 @@
 ﻿using Grumpy.SDAQFramework.MathUtilities;
 
 using System.Text;
-
+using System.Runtime.CompilerServices;
 
 namespace Grumpy.SDAQFramework.Utilities.Testing
 {
@@ -143,6 +143,34 @@ namespace Grumpy.SDAQFramework.Utilities.Testing
                 return false;
             }
         }
+
+        public static void Print(string message,
+    int offset = 0,
+    ConsoleColor color = ConsoleColor.White)
+        {
+            Console.WriteLine(new string(' ', offset) + message);
+            Console.ResetColor(); ;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void PrintInfo(string message, int offset = 0) =>
+            Print(message, offset, ConsoleColor.Yellow);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void PrintError<T>(string message, int offset = 0) =>
+            Print(message, offset, ConsoleColor.Red);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void PrintSuccess<T>(string message, int offset = 0) =>
+            Print(message, offset, ConsoleColor.Green);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void PrintComment(string message, int offset = 0) =>
+            Print(message, offset, ConsoleColor.White);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void PrintDebug(string message, int offset = 0) =>
+            Print(message, offset, ConsoleColor.Cyan);
     }
 
 

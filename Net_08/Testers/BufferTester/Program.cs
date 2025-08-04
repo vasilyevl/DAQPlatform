@@ -29,14 +29,14 @@ namespace BufferBaseConsoleTest
             int bufferDepth = 5;
             Console.WriteLine("TestBasicOperations...");
             var buffer = new BufferBase<int>(bufferDepth);
-            Console.WriteLine($"  Basic buffer with depth #{bufferDepth}: current count: {buffer.Count}.");
+            Console.WriteLine($"\tBasic buffer with depth #{bufferDepth}: current count: {buffer.Count}.");
             string error;
 
             for (int i = 0; i < bufferDepth; i++) {
                 TestUtilities.AssertOrNotify(buffer.TryAdd(i, out error), $"Add {i}", message: error);
             }
 
-            Console.WriteLine($"  Count after adds: {buffer.Count}");
+            Console.WriteLine($"\t\tCount after adds: {buffer.Count}");
             
 
 
@@ -46,10 +46,10 @@ namespace BufferBaseConsoleTest
 
             int val;
             TestUtilities.AssertOrNotify(buffer.TryPopAt(0, out val, out error), "PopAt(0)", message: error);
-            Console.WriteLine($"Popped value is: {val}.");           
+            Console.WriteLine($"\t\tPopped value is: {val}.");           
 
             TestUtilities.AssertOrNotify(buffer.TryPeekAt(0, out val, out error), "PeekAt(0)", message: error);
-            Console.WriteLine($"Peeked value {val}.");
+            Console.WriteLine($"\t\tPeeked value {val}.");
 
             for (int i = 5; i < 7 - 1; i++) {
                 TestUtilities.AssertOrNotify(buffer.TryAdd(i, out error), $"Add {i}", message: error);
@@ -59,19 +59,19 @@ namespace BufferBaseConsoleTest
             int val2;
 
             if (TestUtilities.AssertOrNotify(buffer.TryPeekLast(out val1, out error), "PeekLast", message: error)) {
-                Console.WriteLine($"Peeked last value: {val1}.");
+                Console.WriteLine($"\t\tPeeked last value: {val1}.");
             }
 
 
 
             if (TestUtilities.AssertOrNotify(buffer.TryPopLast(out val2, out error), "PopLast", message: error)) {
-                Console.WriteLine($"Popped last value: {val2}.");
+                Console.WriteLine($"\t\tPopped last value: {val2}.");
             }
  
             TestUtilities.AssertOrNotify(buffer.IsEmpty, "IsEmpty" , "Buffer is empty", "Buffer is not empty", true);
             TestUtilities.AssertOrNotify(buffer.HasRoom, "Has room", "Buffer Has room", "Buffer does not have room", true);
 
-            Console.WriteLine("  TestBasicOperations Passed.\n");
+            Console.WriteLine("\t\tTestBasicOperations Passed.\n");
         }
 
         static void TestEvents() {
@@ -125,12 +125,12 @@ namespace BufferBaseConsoleTest
                 TestUtilities.AssertOrNotify(events.Contains("Empty"), "Events", "Event: HasBecomeEmpty", accepableFalse: true);
             }
 
-            Console.WriteLine("  Events fired: " + string.Join(", ", events));
-            Console.WriteLine("  TestEvents Passed.\n");
+            TestUtilities.PrintInfo("Events fired: " + string.Join(", ", events), 4);
+            TestUtilities.PrintComment("TestEvents Passed.\n");
         }
 
         static void TestTryAddItemsAndCapacity() {
-            Console.WriteLine("TestTryAddItemsAndCapacity...");
+            TestUtilities.PrintComment("TestTryAddItemsAndCapacity...");
             var buffer = new BufferBase<int>(4);
             string error;
             int itemsAdded = 0;
@@ -138,12 +138,12 @@ namespace BufferBaseConsoleTest
             TestUtilities.AssertOrNotify(buffer.TryAddItems(new[] { 3 }, out itemsAdded, out error), "TryAddItems", "AddItems [3]", error, true);
             TestUtilities.AssertOrNotify(!buffer.TryAddItems(new[] { 4, 5 }, out itemsAdded, out error), "TryAddItems", "AddItems [4,5] fails");
             TestUtilities.AssertOrNotify(error.Contains("Not enough room"), "Error contains 'Not enough room'", true);
-            Console.WriteLine("  TestTryAddItemsAndCapacity Passed.\n");
+            TestUtilities.PrintComment("TestTryAddItemsAndCapacity Passed.\n");
         }
 
         static void TestMakeRoom() {
             int bufferCapacity = 10;
-            Console.WriteLine("TestMakeRoom...");
+            TestUtilities.PrintComment("TestMakeRoom...");
             var buffer = new BufferBase<int>(bufferCapacity);
             string error;
             int itemsAdded = 0;
@@ -162,13 +162,13 @@ namespace BufferBaseConsoleTest
             TestUtilities.AssertOrNotify(buffer.Count != (bufferCapacity - remove - remove2), "Checking buffer count.", $"Count == {bufferCapacity - remove - remove2}", $"Count = {buffer.Count}", accepableFalse: true);
 
 
-            Console.WriteLine("  TestMakeRoom Passed.\n");
+            TestUtilities.PrintComment("TestMakeRoom Passed.\n");
 
 
         }
 
         static void TestMultithreaded() {
-            Console.WriteLine("TestMultithreaded...");
+            TestUtilities.PrintComment("TestMultithreaded...");
             var buffer = new BufferBase<int>(100);
             int addSuccess = 0, popSuccess = 0;
             int threadCount = 8;
@@ -197,12 +197,12 @@ namespace BufferBaseConsoleTest
             TestUtilities.AssertOrNotify(addSuccess > 0, "Checking number of successfull adds", $"addSuccess = {addSuccess}");
             TestUtilities.AssertOrNotify(popSuccess >= 0, "Checking number of successfull pops", $"popSuccess {popSuccess}");
 
-            Console.WriteLine($"  AddSuccess: {addSuccess}, PopSuccess: {popSuccess}, FinalCount: {buffer.Count}");
-            Console.WriteLine("  TestMultithreaded Passed.\n");
+            TestUtilities.PrintComment($"AddSuccess: {addSuccess}, PopSuccess: {popSuccess}, FinalCount: {buffer.Count}", 8);
+            TestUtilities.PrintComment("TestMultithreaded Passed.\n", 8);
         }
 
         static void TestPeekAll() {
-            Console.WriteLine("TestPeekAll...");
+            TestUtilities.PrintComment("TestPeekAll...");
             var buffer = new BufferBase<int>(10);
             int itemsAdded = 0;
             string error = string.Empty;
@@ -221,7 +221,7 @@ namespace BufferBaseConsoleTest
             var listRev = buffer.PeekAllAsList(out error, recentFirst: true);
             TestUtilities.AssertOrNotify(listRev.SequenceEqual(new List<int> { 3, 2, 1 }), "PeekAllAsList (recentFirst)", "Peek matches.", "Peek does not match");
 
-            Console.WriteLine("  TestPeekAll Passed.\n");
+            TestUtilities.PrintComment("TestPeekAll Passed.\n");
         }
     }
 }

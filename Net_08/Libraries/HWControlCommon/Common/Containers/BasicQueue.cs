@@ -20,7 +20,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace Grumpy.SDAQFramework.Common
 { 
-    public class BasicQueue<TObject> : QueueBase<TObject>, IDisposable
+    public class BasicQueue<TObject> : ThreadSafeQueueBase<TObject>, IDisposable
     {
         public enum Events
         {

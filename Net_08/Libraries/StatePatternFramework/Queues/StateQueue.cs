@@ -24,7 +24,7 @@ using Grumpy.SDAQFramework.Common;
 
 namespace Grumpy.StatePatternFramework
 {
-    public class StateQueue : QueueBase<StateBase>    {
+    public class StateQueue : ThreadSafeQueueBase<StateBase>    {
         public const int DefaultMaxDepth = 128;
 
 
