@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using SDAQFramework.Math; 
+using SDAQFramework.MathUtilities; 
 
 // See https://aka.ms/new-console-template for more information
 Console.WriteLine("Stat adder!");

@@ -22,7 +22,7 @@ using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Grumpy.SDAQFramework.Drivers.MMTimer;
 using Grumpy.SDAQFramework.Utilities.Testing;
-using SDAQFramework.Math;
+using SDAQFramework.MathUtilities;
 
 
 
