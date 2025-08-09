@@ -184,7 +184,8 @@ namespace Grumpy.SDAQFramework.Utilities.Testing
         }
 
         private static void TimingReport(double[] data,
-            bool outputData = false, string? filePathName = null)
+            bool outputData = false, 
+            string? filePathName = null)
         {
 
             double ave = 0;
@@ -204,16 +205,16 @@ namespace Grumpy.SDAQFramework.Utilities.Testing
             }
 
 
-            double[] recalculatedData = new double[data.Count()];
+            double[] recalculatedData = new double[data.Count()-1];
 
-            for (int i = 0; i < data.Count(); i++) {
+            for (int i = 1; i < data.Count(); i++) {
 
-                recalculatedData[i] = i == 0 ? data[i] : data[i] - data[i - 1];
-                mx = System.Math.Max(mx, recalculatedData[i]);
-                mn = System.Math.Min(mn, recalculatedData[i]);
-                ave += recalculatedData[i];
-                tmMax = (mx == recalculatedData[i]) ? i : tmMax;
-                tmMin = (mn == recalculatedData[i]) ? i : tmMin;
+                recalculatedData[i-1] =  data[i] - data[i - 1];
+                mx = System.Math.Max(mx, recalculatedData[i - 1]);
+                mn = System.Math.Min(mn, recalculatedData[i - 1]);
+                ave += recalculatedData[i-1];
+                tmMax = (mx == recalculatedData[i - 1]) ? i : tmMax;
+                tmMin = (mn == recalculatedData[i - 1]) ? i : tmMin;
             }
 
             StringBuilder output = new StringBuilder();

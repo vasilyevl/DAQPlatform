@@ -72,11 +72,32 @@ namespace Grumpy.SDAQFramework.Common
         }
     }
 
+    public interface IThreadSafeQueueBase<TItem>
+    {
+        bool AtCapacity { get; }
+        int Count { get; }
+        List<string>? ErrorHistory { get; }
+        ulong Id { get; }
+        bool IsEmpty { get; }
+        bool ItemPending { get; }
+        string LastError { get; }
+        int MaxDepth { get; set; }
+        string Name { get; }
+        int RoomLeft { get; }
+        void Dispose();
+        bool InsertAt(TItem item, int index);
+        bool InsertInfront(TItem[] items);
+        bool MakeRoom(int roomRequested, out int itemsRemoved);
+        TItem[]? PeekAllAsArray();
+        List<TItem>? PeekAllAsList();
+        bool Purge();
+    }
+
     /// <summary>
     /// Provides a thread-safe, bounded queue implementation with error tracking and utility methods.
     /// </summary>
     /// <typeparam name="TItem">The type of elements stored in the queue.</typeparam>
-    public class ThreadSafeQueueBase<TItem>
+    public class ThreadSafeQueueBase<TItem> : IThreadSafeQueueBase<TItem>
     {
         /// <summary>
         /// Global counter for all queue instances.
@@ -106,6 +127,7 @@ namespace Grumpy.SDAQFramework.Common
         private ErrorHistory _errorHistory;
         private int _maxDepth;
         private readonly string? _name;
+        private ulong _id;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ThreadSafeQueueBase{TItem}"/> class.
@@ -115,7 +137,7 @@ namespace Grumpy.SDAQFramework.Common
         public ThreadSafeQueueBase(int maxDepth = DefaultQueueDepth, string? name = null)
         {
             QueueCounter++;
-
+            _id = QueueCounter;
             _maxDepth = maxDepth;
             _queueLock = new object();
 
@@ -128,6 +150,12 @@ namespace Grumpy.SDAQFramework.Common
         /// Gets the name of the queue.
         /// </summary>
         public string Name => (string) (_name?.Clone() ?? string.Empty);
+
+
+        /// <summary>
+        /// Unique Queue ID
+        /// </summary>
+        public ulong Id => _id;
 
         /// <summary>
         /// Gets or sets the maximum number of items the queue can hold.
@@ -227,7 +255,7 @@ namespace Grumpy.SDAQFramework.Common
         /// </summary>
         /// <param name="item">The item at the front of the queue, if available.</param>
         /// <returns>True if an item was successfully peeked; otherwise, false.</returns>
-        public bool TryPeek(out TItem? item)
+       protected bool TryPeek(out TItem? item)
         {
             item = default(TItem);
 
@@ -247,7 +275,7 @@ namespace Grumpy.SDAQFramework.Common
         /// </summary>
         /// <param name="item">The dequeued item, if available.</param>
         /// <returns>True if an item was successfully dequeued; otherwise, false.</returns>
-        public bool TryDequeue(out TItem? item)
+        protected bool TryDequeue(out TItem? item)
         {
             try {
                 item = default(TItem);
@@ -266,7 +294,7 @@ namespace Grumpy.SDAQFramework.Common
         /// </summary>
         /// <param name="item">The item to enqueue.</param>
         /// <returns>True if the item was successfully enqueued; otherwise, false.</returns>
-        public virtual bool TryEnqueue(TItem item)
+        protected virtual bool TryEnqueue(TItem item)
         {
             lock (_queueLock) {
                 return _Enqueue(item);
@@ -357,7 +385,7 @@ namespace Grumpy.SDAQFramework.Common
         /// </summary>
         /// <param name="item">The item to insert.</param>
         /// <returns>True if the item was successfully inserted; otherwise, false.</returns>
-        public virtual bool InsertFirst(TItem item)
+        protected virtual bool InsertFirst(TItem item)
         {
             lock (_queueLock) {
                 return _InsertAt(item, 0);
@@ -381,7 +409,7 @@ namespace Grumpy.SDAQFramework.Common
         /// </summary>
         /// <param name="items">The items to insert.</param>
         /// <returns>True if the items were successfully inserted; otherwise, false.</returns>
-        protected bool _InsertInfront(TItem[] items)
+        private bool _InsertInfront(TItem[] items)
         {
             if (_queue == null) {
                 LastError = $"Queue {Name} is null. " +
@@ -441,7 +469,7 @@ namespace Grumpy.SDAQFramework.Common
         /// Removes all items from the queue (internal implementation).
         /// </summary>
         /// <returns>True if the queue was successfully purged; otherwise, false.</returns>
-        protected virtual bool _Purge()
+        private bool _Purge()
         {
             try {
                 if (_queue == null) {

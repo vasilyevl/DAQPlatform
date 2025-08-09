@@ -1,5 +1,5 @@
 ﻿/*
-Copyright (c) 2024 vasilyevl (Grumpy). Permission is hereby granted,
+Copyright (c) 2024, 2025 vasilyevl (Grumpy). Permission is hereby granted,
 free of charge, to any person obtaining a copy of this software
 and associated documentation files (the "Software"),to deal in the Software
 without restriction, including without limitation the rights to use, copy,
@@ -18,27 +18,63 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using Grumpy.SDAQFramework.Drivers.MMTimer;
 using Grumpy.SDAQFramework.Utilities.Testing;
-using System.Diagnostics;
-using Grumpy.SDAQFramework.Utilities;
+using SDAQFramework.Math;
 
-namespace ConsoleApp1
+
+
+namespace MMTimerTest
 {
     internal class Program {
 
-        static List<double>? data;
-        static uint highResolution = 1;
-        static void Main(string[] args) {
-          
-               TestThreadingTimer(timerInterval: 33);
-               TestMultimediaTimer(timerInterval: 1);
+        internal static double previousTime = 0;
+        internal static int skip = 10;
+        internal static int skipCount = 0;  
+        internal static double accum = 0;
+        internal static double accum2 = 0;
+        internal static int count = 0;
+        internal static double min = double.MaxValue;
+        internal static double max = double.MinValue;
+        internal static string format = "F2";
 
+        static List<double>? data = new List<double>();
+        static uint highResolution = 1;
+
+        static StatAccumulator statAccum = null!;
+
+        static void Main(string[] args) {
+            int timerIncterval = 3; // ms
+            int testDuration = 10000; // ms
+            statAccum = new StatAccumulator(samplesToSkip: skip);
+
+            Console.WriteLine($"Timer Tests. " +
+                $"Timer interval: {timerIncterval}ms. " +
+                $"Test duration: {testDuration/1000.0}s.");
+
+            Console.WriteLine("\n#############################################################");
+            count = -1;
+            statAccum.Start();
+            TestThreadingTimer(timerInterval: timerIncterval, testDuration);
+            Report();
+            ReportGenerator.TimingReport(data!, false);
+
+
+            Console.WriteLine("\n#############################################################");
+            count = -1;
+            statAccum.Start();
+            TestMultimediaTimer(timerInterval: (uint) timerIncterval, testDuration);
+            Report();
+            ReportGenerator.TimingReport(data!, false);
             return;
         }
 
-        private static void TestMultimediaTimer( uint timerInterval = 10) {
 
+
+        private static void TestMultimediaTimer(uint timerInterval = 10, int timeMs = -1)
+        {
             data = new List<double>();
 
             var timer = new HighResTimer(
@@ -48,23 +84,33 @@ namespace ConsoleApp1
                 operatingMode: TimerMode.Periodic,
                 autoStart: false );
 
+            Console.WriteLine("Console MM Timer");
+            Console.WriteLine($"Timer interval: {timerInterval}ms. " +
+                $"Resolution: {highResolution}ms.");
             timer.TimerEvent += EventHandler!;
-            
             timer.Start();
+
+            if (timeMs < 1) {
 
                 Console.WriteLine("Click any key to stop.");
                 Console.ReadKey();
+            }
+            else {
+                
+                Console.WriteLine($"Running timer test for {timeMs/1000.0}s.");
+                Thread.Sleep(timeMs+(int)timerInterval);
+            }
+            timer.Stop();
+            data.RemoveRange(0, skip);
 
-                timer.Stop();
-
-            ReportGenerator.TimingReport(data, true);          
         }
-
-        private static void TestThreadingTimer(int timerInterval = 100) 
+        
+        private static void TestThreadingTimer(int timerInterval = 100, int timeMs = -1) 
         {
             data = new List<double>();
 
             Console.WriteLine("Console Startig Threading Timer");
+            Console.WriteLine($"Timer interval: {timerInterval}ms.");
             Stopwatch s = new Stopwatch();
             
             using (var timer = new System.Timers.Timer()) {
@@ -73,7 +119,9 @@ namespace ConsoleApp1
                 
                 timer.Elapsed += ((o, e) => {
 
-                    data.Add(s.ElapsedTicks/10000.0);
+                    double time = s.ElapsedTicks/10000.0;
+                    data.Add(time);
+                    DoStats(time);
                     return;
                 });
                 
@@ -81,18 +129,70 @@ namespace ConsoleApp1
                 timer.Enabled = true;
 
                 s.Start();
+                if (timeMs < 1) {
+                    Console.WriteLine("Click any key to stop.");
+                    Console.ReadKey();
+                }
+                else {
+                    Console.WriteLine($"Running timer test for {timeMs/1000.0}s.");
+                    Thread.Sleep(timeMs + timerInterval);
+                }
 
-                Console.WriteLine("Click any key to stop.");
-                Console.ReadKey();
-
-                ReportGenerator.TimingReport(data, true);
+                data.RemoveRange(0, skip);
             }
         }
 
         private static void EventHandler(object sender,
             TimerEventArgs e) {
 
+            DoStats(e.Time);
             data.Add(e.Time);
+        }
+
+
+        private static void DoStats(double time)
+        {
+            if (count < 1) {
+                previousTime = -1;
+                skipCount= 0;
+                count = 0;
+                accum = 0;
+                accum2 = 0;
+                min = double.MaxValue;
+                max = double.MinValue;
+            }
+            else {
+                skipCount++;
+                if (skipCount < skip) {
+
+                    previousTime = time;
+                }
+                else { 
+                    var delta = time - previousTime;
+                    previousTime = time;
+                    accum += delta;
+                    accum2 += Math.Pow(delta, 2);
+                    min = Math.Min(min, delta);
+                    max = Math.Max(max, delta);
+                    count++;
+                }                   
+            }
+        }
+
+        private static void Report()
+        {
+            var average = accum / count;
+
+            var stdDev = Math.Sqrt((accum2 - Math.Pow(average, 2)*count)/(count-1));
+
+            Console.WriteLine($"Timer test report:\n" +
+                $"Count: {count}\n" +
+                $"Average: {average.ToString(format)}ms\n" +
+                $"StdDev: {stdDev.ToString(format)}ms\n" +
+                $"Min: {min.ToString(format)}ms\n" +
+                $"Max: {max.ToString(format)}ms\n" +
+                $"Variance: {(stdDev * stdDev).ToString(format)}ms^2");
+
         }
     } 
 }

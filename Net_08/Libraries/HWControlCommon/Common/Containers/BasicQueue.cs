@@ -19,8 +19,23 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 namespace Grumpy.SDAQFramework.Common
-{ 
-    public class BasicQueue<TObject> : ThreadSafeQueueBase<TObject>, IDisposable
+{
+    public interface IBasicQueue<TObject>:IDisposable
+    {
+        int LowerThreshould { get; set; }
+        int NumberOfLostItems { get; set; }
+        int UpperThreshould { get; set; }
+
+        event BasicQueue<TObject>.DataReadyEventHandler? DataReadyEvent;
+        event BasicQueue<TObject>.StateChangeEventHandler? StateChangeEvent;
+
+        bool Pop(out TObject item);
+        bool Purge();
+        bool Push(TObject obj, bool force = false);
+        void ResetStats();
+    }
+
+    public class BasicQueue<TObject> : ThreadSafeQueueBase<TObject>, IBasicQueue<TObject>
     {
         public enum Events
         {
@@ -64,23 +79,27 @@ namespace Grumpy.SDAQFramework.Common
         #region Constructors
         public BasicQueue(int maxDepth = DefaultQueueDepth, string? name = null,
 
-            bool syncEvents = true) : base(maxDepth, name) {
+            bool syncEvents = true) : base(maxDepth, name)
+        {
             LowerThreshould = DefalultLowThreshould;
             UpperThreshould = DefalultHighThreshould;
             _useAsyncEvents = !syncEvents;
             _lostItemsCount = 0;
         }
 
-        public BasicQueue(bool syncEvents) : this() {
+        public BasicQueue(bool syncEvents) : this()
+        {
             _useAsyncEvents = !syncEvents;
         }
 
         public BasicQueue(string name, bool syncEvents = false) :
-            this(DefaultQueueDepth, name, syncEvents) { }
+            this(DefaultQueueDepth, name, syncEvents)
+        { }
         #endregion Consructors
 
         #region Public properties
-        public int NumberOfLostItems {
+        public int NumberOfLostItems
+        {
             get {
                 int ret;
                 Thread.MemoryBarrier();
@@ -101,19 +120,22 @@ namespace Grumpy.SDAQFramework.Common
         #endregion Public properties
 
         #region Public methods
-        public void ResetStats() {
+        public void ResetStats()
+        {
             NumberOfLostItems = 0;
         }
 
-        public virtual bool Push(TObject obj, bool force = false) {
+        public virtual bool Push(TObject obj, bool force = false)
+        {
             lock (_queueLock) {
 
                 return _Push(obj, force);
             }
         }
 
-        protected bool _Push(TObject obj, bool force = false) {
-           
+        protected bool _Push(TObject obj, bool force = false)
+        {
+
             if (_queue == null) {
                 return false;
             }
@@ -137,9 +159,15 @@ namespace Grumpy.SDAQFramework.Common
             }
         }
 
-        public virtual bool Pop(out TObject item) => base.TryDequeue(out item!);
+        public virtual bool Pop(out TObject item)
+        {
 
-        public override bool Purge() {
+            var r = base.TryDequeue(out item!);
+
+            return r;
+        }
+        public override bool Purge()
+        {
             if (base.Purge()) {
                 _RaiseStateChangeEvent(Events.Purged);
                 return true;
@@ -149,7 +177,8 @@ namespace Grumpy.SDAQFramework.Common
         #endregion Public methods
 
         #region Protected methods.
-        protected virtual void _RaiseStateChangeEvent(Events evnt) {
+        protected virtual void _RaiseStateChangeEvent(Events evnt)
+        {
             if (StateChangeEvent != null) {
 
                 if (_useAsyncEvents) {
@@ -161,7 +190,8 @@ namespace Grumpy.SDAQFramework.Common
             }
         }
 
-        protected virtual void _RaiseDataReadyEvent(TObject data) {
+        protected virtual void _RaiseDataReadyEvent(TObject data)
+        {
             if (DataReadyEvent != null) {
 
                 if (_useAsyncEvents) {
