@@ -1,4 +1,7 @@
-﻿using Grumpy.SDAQFramework.Common;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
+using Grumpy.SDAQFramework.Common;
 using Grumpy.SDAQFramework.Utilities;
 
 namespace Grumpy.SDAQFramework.Configuration
@@ -150,7 +153,19 @@ namespace Grumpy.SDAQFramework.Configuration
         public virtual bool Init(string configuration)
         {
             try {
-                object src = JsonSerializer.Deserialize<ConfigurationBase>(configuration)!;
+
+                if (string.IsNullOrEmpty(configuration) || 
+                    string.IsNullOrWhiteSpace(configuration)) {
+                    LastErrorComment = "Configuration is empty or " +
+                        "contains only white spaces.";
+                    return false;
+                }
+
+                object? src = JsonConvert.DeserializeObject(configuration);
+                if (src == null) {
+                    LastErrorComment = "Failed to deserialize configuration.";
+                    return false;
+                }
                 return CopyFrom(src);
             }
             catch (Exception ex) {

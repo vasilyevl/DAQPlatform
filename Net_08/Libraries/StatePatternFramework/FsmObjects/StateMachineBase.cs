@@ -371,7 +371,7 @@ namespace Grumpy.StatePatternFramework
         /// <returns>The popped command if available; 
         /// otherwise, null.</returns>
         protected CommandBase? PopCommand() =>
-            (_pendingCommands?.TryDequeue(out CommandBase? cmd) ?? false)
+            (_pendingCommands?.Pop(out CommandBase? cmd) ?? false)
             ? cmd
             : null;
 
@@ -382,7 +382,7 @@ namespace Grumpy.StatePatternFramework
         /// <returns>true if the command was successfully enqueued; 
         /// otherwise, false.</returns>
         protected bool EnqueueCommand(CommandBase cmd) =>
-            (_pendingCommands?.TryEnqueue(cmd) ?? false);
+            (_pendingCommands?.Push(cmd) ?? false);
 
 
         /// <summary>
@@ -727,7 +727,7 @@ namespace Grumpy.StatePatternFramework
         {
             if ((StateQueue?.Count ?? 0) > 0) {
 
-                StateQueue.TryDequeue(out nextState);
+                StateQueue.TryPop(out nextState);
 
                 if (nextState is null) {
 

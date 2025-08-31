@@ -23,19 +23,19 @@ using System.Runtime.InteropServices;
 namespace Grumpy.SDAQFramework.Drivers.MMTimer
 {
     [Flags]
-    internal enum MMTimerMode : uint
+    public enum MMTimerMode : uint
     {
         OneShot = 0,
         Periodic = 1,
-        CallBackFunction = 0,
-        SetEvent = 16,
-        PulseEvent = 32,
-        KillSynchroneous = 0x100,
-        OneShotSynchroneous = OneShot | KillSynchroneous,
-        PeriodicCallbackFunction = Periodic | CallBackFunction,
-        PeriodicSetEvent = Periodic | SetEvent,
-        PeriodicPulseEvent = Periodic | PulseEvent,
-        PeriodicCallbackFunctionKillSynchroneous = PeriodicCallbackFunction | KillSynchroneous,
+        // CallBackFunction = 0,
+        // SetEvent = 16,
+        // PulseEvent = 32,
+        // KillSynchroneous = 0x100,
+        // OneShotSynchroneous = OneShot | KillSynchroneous,
+        // PeriodicCallbackFunction = Periodic | CallBackFunction,
+        // PeriodicSetEvent = Periodic | SetEvent,
+        // PeriodicPulseEvent = Periodic | PulseEvent,
+        // PeriodicCallbackFunctionKillSynchroneous = PeriodicCallbackFunction | KillSynchroneous,
     }
 
     /// <summary>
@@ -81,6 +81,30 @@ namespace Grumpy.SDAQFramework.Drivers.MMTimer
 
     public class NativeMMTimerWrap
     {
+        private TimeProc? _timeProc;
+        private uint _timerID;
+        private uint _delay;
+        private uint _resolution;
+        private MMTimerMode _timerMode;
+        private GCHandle _handle;
+        public NativeMMTimerWrap( uint delay, 
+            uint resolution, 
+            MMTimerMode eventType, 
+            bool autoStart = false, 
+            TimeProc? timerProc  = null, 
+            uint userID  = 0) {
+
+            _delay = delay; // Set the delay for the timer event
+            _resolution = resolution; // Set the resolution for the timer event
+            _timerMode = eventType; // Set the type of the timer event
+            _timerID = 0; // Initialize the timer ID to 0
+
+            // Initialize the TimeProc delegate to null or a default method
+            _timeProc = timerProc; // or assign a default method if needed
+            _handle = _timeProc != null ? GCHandle.Alloc(_timeProc)  : default;
+            // Constructor can be used for initialization if needed
+        }
+
         /// <summary>
         /// Retrieves the capabilities of the system's timer and returns the 
         /// information in a 

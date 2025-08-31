@@ -20,6 +20,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 
 namespace Grumpy.SDAQFramework.Drivers.MMTimer
@@ -91,18 +92,21 @@ namespace Grumpy.SDAQFramework.Drivers.MMTimer
     /// <param name="time">The precise time in ms when the event 
     /// was triggered.</param>
     /// 
-    public delegate void TimerProc( int timerID, ulong tickNumber, double timeMs);
+    public delegate void UserTimerProc( int timerID, ulong tickNumber, double timeMs);
 
     /// <summary>
     /// Represents a multimedia timer that can trigger 
     /// events at specified intervals.
     /// </summary>
-    public class HighResTimer {
+    public class HighResTimer:IDisposable {
 
+       
         private static TimerCaps _systemsCaps;
         private const int _maxWaitScaleFactor = 10;
 
-        private TimerProc? _userTimerProc;
+        private TimeProc? _internalTimerProc;
+
+        private UserTimerProc? _userTimerProc;
 
         int _timerId;
         uint _periodMs;
@@ -119,12 +123,16 @@ namespace Grumpy.SDAQFramework.Drivers.MMTimer
         static private double _stopWatchCliksInMs;
         private double _startTime;
         private double _endTime;
-
+        private GCHandle _gchInernalTimerProc;   
 
         static HighResTimer() {
             _stopWatchCliksInMs = Stopwatch.Frequency/1000.0;
             NativeMMTimerWrap.GetTimerCaps(out _systemsCaps);
-            _stopwatch = Stopwatch.StartNew();
+            _stopwatch = Stopwatch.StartNew();            
+        }
+
+        ~HighResTimer() {
+            Dispose();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]  
@@ -145,9 +153,28 @@ namespace Grumpy.SDAQFramework.Drivers.MMTimer
             _waitHandle = null;
             _startTime = double.NaN;
             _endTime = double.NaN;
+            _userTimerProc = null;
+            _internalTimerProc = new TimeProc(this.TimerCallback);
+            _gchInernalTimerProc = GCHandle.Alloc(_internalTimerProc); // Keep the delegate alive
         }
 
-
+        public void Dispose() {
+           
+            Console.WriteLine("Disposing HighResTimer...");
+            Stop();
+            if (_waitHandle != null) {
+                
+                _waitHandle.Dispose();
+                _waitHandle = null;
+            }
+            if (_timerId != 0) {
+                NativeMMTimerWrap.KillEvent(_timerId);
+                _timerId = 0;
+            }
+            _gchInernalTimerProc.Free();
+            _internalTimerProc = null;
+            _userTimerProc = null;
+        }
         /// <summary>
         /// Occurs when the timer event is triggered.
         /// </summary>
@@ -173,10 +200,17 @@ namespace Grumpy.SDAQFramework.Drivers.MMTimer
         /// fails to start.</exception>
         ///
         public HighResTimer(uint periodMs, uint resolutionMs = 0, 
-            TimerProc? userCallback = null, 
+            UserTimerProc? userCallback = null, 
             TimerMode operatingMode = TimerMode.Periodic, bool autoStart = true): 
                 this() 
         {
+            if (userCallback != null) {
+                _userTimerProc = new UserTimerProc(userCallback);
+                
+            }
+            else {
+                _userTimerProc = null;
+            }
 
             if (  periodMs > _systemsCaps.PeriodMax 
                 || periodMs < _systemsCaps.PeriodMin) {
@@ -193,7 +227,6 @@ namespace Grumpy.SDAQFramework.Drivers.MMTimer
             }
 
             TimerEvent = null;
-            _userTimerProc = userCallback;
 
             _periodMs = periodMs;
             _resolutionMs = resolutionMs;
@@ -267,11 +300,11 @@ namespace Grumpy.SDAQFramework.Drivers.MMTimer
 
                 _timerId = NativeMMTimerWrap.SetEvent(_periodMs,
                     _resolutionMs,
-                    TimerCallback,
+                    _internalTimerProc!,
                     0,
                     _mode == TimerMode.OneShot ?
                        (uint)MMTimerMode.OneShot :
-                       (uint)MMTimerMode.PeriodicCallbackFunctionKillSynchroneous);
+                       (uint)MMTimerMode.Periodic);
 
                 _startTime = GetTImeInMs();
 
@@ -332,7 +365,7 @@ namespace Grumpy.SDAQFramework.Drivers.MMTimer
 
             var time = GetTImeInMs() - (!double.IsNaN(_startTime) ? _startTime : 0.0); 
             bool lockTaken = false;
-
+            _eventCounter++;
             try {
 
                 Monitor.TryEnter(_timerProcLock, Math.Max(1, 
@@ -350,7 +383,9 @@ namespace Grumpy.SDAQFramework.Drivers.MMTimer
 
                         _userTimerProc.Invoke(id, _eventCounter, time);
                     }
-                    
+                    Console.WriteLine(
+                        $"Timer callback: Cntr: {_eventCounter}. ID={id}, " +
+                        $"Time={time:F2} ms");
                     var eventHandler = TimerEvent;
                     TimerEvent?.Invoke(this, 
                         new TimerEventArgs(id, _eventCounter, 

@@ -18,11 +18,13 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE S
 OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using System.Diagnostics;
-using System.Diagnostics.Metrics;
 using Grumpy.SDAQFramework.Drivers.MMTimer;
 using Grumpy.SDAQFramework.Utilities.Testing;
 using SDAQFramework.MathUtilities;
+using System;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
+using System.Runtime.InteropServices;
 
 
 
@@ -30,6 +32,8 @@ namespace MMTimerTest
 {
     internal class Program {
 
+
+       
         internal static double previousTime = 0;
         internal static int skip = 10;
         internal static int skipCount = 0;  
@@ -40,54 +44,66 @@ namespace MMTimerTest
         internal static double max = double.MinValue;
         internal static string format = "F2";
 
-        static List<double>? data = new List<double>();
         static uint highResolution = 1;
 
         static StatAccumulator statAccum = null!;
+        // Declare a field to hold a strong reference to the delegate
+        private static UserTimerProc? _myTyperProcInstance;
+
 
         static void Main(string[] args) {
+
             int timerIncterval = 3; // ms
-            int testDuration = 10000; // ms
-            statAccum = new StatAccumulator(samplesToSkip: skip);
+            int testDuration = 1000*60*10; // ms
+            statAccum = new StatAccumulator(samplesToSkip: skip, autoStart: false);
 
             Console.WriteLine($"Timer Tests. " +
                 $"Timer interval: {timerIncterval}ms. " +
                 $"Test duration: {testDuration/1000.0}s.");
 
-            Console.WriteLine("\n#############################################################");
-            count = -1;
-            statAccum.Start();
-            TestThreadingTimer(timerInterval: timerIncterval, testDuration);
-            Report();
-            ReportGenerator.TimingReport(data!, false);
+            try {
+                /*
+                            Console.WriteLine("\n#############################################################");
+                            statAccum.Start();
+                            TestThreadingTimer(timerInterval: timerIncterval, testDuration);
+                            statAccum.Stop();
+                            Console.WriteLine("Threading Timer test completed.");
+                            Console.WriteLine("Report:");
+                            Console.WriteLine(statAccum.Result);
+                */
+                Console.WriteLine("\n#############################################################");
 
+                statAccum.Reset(start: true);
+                TestMultimediaTimer(timerInterval: (uint) timerIncterval, testDuration);
+                statAccum.Stop();
+                Console.WriteLine("Multimedia Timer test completed.");
+                Console.WriteLine("Report:");
+                Console.WriteLine(statAccum.Result);
 
-            Console.WriteLine("\n#############################################################");
-            count = -1;
-            statAccum.Start();
-            TestMultimediaTimer(timerInterval: (uint) timerIncterval, testDuration);
-            Report();
-            ReportGenerator.TimingReport(data!, false);
-            return;
+                return;
+            }
+            catch(Exception e) {
+                Console.WriteLine($"/n/n{e}");
+            }
         }
-
-
 
         private static void TestMultimediaTimer(uint timerInterval = 10, int timeMs = -1)
         {
-            data = new List<double>();
+           // _myEventHandlerInstance = EventHandler;
+            count = 0;
 
+            _myTyperProcInstance = MyTymerProc;
             var timer = new HighResTimer(
                 periodMs: timerInterval,
                 resolutionMs: highResolution,
                 userCallback: null,
                 operatingMode: TimerMode.Periodic,
                 autoStart: false );
-
+            GCHandle handle = GCHandle.Alloc(timer);
             Console.WriteLine("Console MM Timer");
             Console.WriteLine($"Timer interval: {timerInterval}ms. " +
                 $"Resolution: {highResolution}ms.");
-            timer.TimerEvent += EventHandler!;
+            //timer.TimerEvent += _myEventHandler;
             timer.Start();
 
             if (timeMs < 1) {
@@ -101,13 +117,15 @@ namespace MMTimerTest
                 Thread.Sleep(timeMs+(int)timerInterval);
             }
             timer.Stop();
-            data.RemoveRange(0, skip);
-
+            Thread.Sleep(100); // Give time to process last event
+            handle.Free();
+            timer.Dispose();
+            Console.WriteLine();
         }
         
         private static void TestThreadingTimer(int timerInterval = 100, int timeMs = -1) 
         {
-            data = new List<double>();
+            count = 0;
 
             Console.WriteLine("Console Startig Threading Timer");
             Console.WriteLine($"Timer interval: {timerInterval}ms.");
@@ -120,7 +138,6 @@ namespace MMTimerTest
                 timer.Elapsed += ((o, e) => {
 
                     double time = s.ElapsedTicks/10000.0;
-                    data.Add(time);
                     DoStats(time);
                     return;
                 });
@@ -137,62 +154,36 @@ namespace MMTimerTest
                     Console.WriteLine($"Running timer test for {timeMs/1000.0}s.");
                     Thread.Sleep(timeMs + timerInterval);
                 }
-
-                data.RemoveRange(0, skip);
             }
         }
 
+
+        static ulong eventCount = 0;
         private static void EventHandler(object sender,
             TimerEventArgs e) {
-
+            Console.Write($"Event #{++eventCount}\r");
             DoStats(e.Time);
-            data.Add(e.Time);
         }
 
+
+        private static void MyTymerProc(int timerID, ulong tickNumber, double timeMs)
+        {
+            Console.Write($"Event #{++eventCount}    {timeMs.ToString("F2")}ms\r ");
+
+            //DoStats(timeMs/1000.0);
+        }
 
         private static void DoStats(double time)
         {
             if (count < 1) {
-                previousTime = -1;
-                skipCount= 0;
-                count = 0;
-                accum = 0;
-                accum2 = 0;
-                min = double.MaxValue;
-                max = double.MinValue;
+                previousTime = time;
             }
             else {
-                skipCount++;
-                if (skipCount < skip) {
-
-                    previousTime = time;
-                }
-                else { 
-                    var delta = time - previousTime;
-                    previousTime = time;
-                    accum += delta;
-                    accum2 += Math.Pow(delta, 2);
-                    min = Math.Min(min, delta);
-                    max = Math.Max(max, delta);
-                    count++;
-                }                   
+ 
+                    statAccum.AddValue(time - previousTime);
+                    previousTime = time;                   
             }
-        }
-
-        private static void Report()
-        {
-            var average = accum / count;
-
-            var stdDev = Math.Sqrt((accum2 - Math.Pow(average, 2)*count)/(count-1));
-
-            Console.WriteLine($"Timer test report:\n" +
-                $"Count: {count}\n" +
-                $"Average: {average.ToString(format)}ms\n" +
-                $"StdDev: {stdDev.ToString(format)}ms\n" +
-                $"Min: {min.ToString(format)}ms\n" +
-                $"Max: {max.ToString(format)}ms\n" +
-                $"Variance: {(stdDev * stdDev).ToString(format)}ms^2");
-
+            count++;
         }
     } 
 }

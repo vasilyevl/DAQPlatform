@@ -24,7 +24,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SDAQFramework.MathUtilities
+namespace Grumpy.SDAQFramework.MathUtilities
 {
     /// <summary>
     /// Represents the result of statistical accumulation, including mean, min, max, and standard deviations.
@@ -107,18 +107,19 @@ namespace SDAQFramework.MathUtilities
             string Format(double value)
             {
                 if (System.Math.Abs(value) > 1000 ||
-                    (System.Math.Abs(value) < 0.1 && value != 0))
-                    return value.ToString("0.00E+0");
+                    (System.Math.Abs(value) < 1.0 && value != 0))
+                    return value.ToString("0.000E+00");
                 else
-                    return value.ToString("0.00");
+                    return value.ToString("0.000");
             }
 
-            return $"Count: {Count}\n" +
-                   $"Accumulated Value: {Format(AccumulatedValue)}\n" +
+            return $"Mean: {Format(Mean)}\n" +
                    $"Min: {Format(MinValue)}, Max: {Format(MaxValue)}\n" +
-                   $"Mean: {Format(Mean)}\n" +
-                   $"Population Stdev: {Format(PopulationStdev)}\n" +
-                   $"Sample Stdev: {Format(SampleSedev)}\n";
+                   $"Sample Stdev: {Format(SampleSedev)}\n" +
+            $"Count: {Count}\n" +
+                   $"Accumulated Value: {Format(AccumulatedValue)}\n" +
+                   $"Population Stdev: {Format(PopulationStdev)}\n";
+                   
         }
     }
 
@@ -146,7 +147,7 @@ namespace SDAQFramework.MathUtilities
         public StatAccumulator(int samplesToSkip = 0, bool autoStart = true, int maxCount = -1)
         {
             _lock = new object();
-            _Reset();
+            Reset();
             _maxCount = maxCount;
             _samplesToSkip = samplesToSkip;
             if (autoStart) {
@@ -160,7 +161,7 @@ namespace SDAQFramework.MathUtilities
         /// Resets the accumulator to its initial state.
         /// </summary>
         /// <param name="start">If true, the accumulator will be set to running after reset.</param>
-        private void _Reset(bool start = false)
+        public void Reset(bool start = false)
         {
             lock (_lock) {
                 _accumulatedValue = 0;
@@ -178,21 +179,27 @@ namespace SDAQFramework.MathUtilities
         /// <param name="value">The value to add.</param>
         public void AddValue(double value)
         {
-            lock (_lock) {
-                if (_isRunning) {
+            try {
+                lock (_lock) {
+                    if (_isRunning) {
 
-                    if (
-                        (_isRunning && (((_count - _samplesToSkip) > _maxCount) || _maxCount <= 0))
-                        || ((_samplesToSkip > 0 && _count >= _samplesToSkip) ||
-                                _samplesToSkip <= 0)) {
+                        if (_isRunning &&
+                            (_maxCount <= 0 || (_count - _samplesToSkip) >= _maxCount)) {
 
-                        _accumulatedValue += value;
-                        _accumulatedSquaredValue += value * value;
-                        _min = System.Math.Min(_min, value);
-                        _max = System.Math.Max(_max, value);
+                            if ((_samplesToSkip <= 0 || _count >= _samplesToSkip)) {
+
+                                _accumulatedValue += value;
+                                _accumulatedSquaredValue += value * value;
+                                _min = System.Math.Min(_min, value);
+                                _max = System.Math.Max(_max, value);
+                            }
+                            _count++;
+                        }
                     }
-                    _count++;
                 }
+            }
+            catch (Exception ex) {
+                Console.WriteLine($"Add Value Exception: {ex}");
             }
         }
 
@@ -202,7 +209,7 @@ namespace SDAQFramework.MathUtilities
         public void Start()
         {
             lock (_lock) {
-                _Reset(true);
+                Reset(true);
             }
         }
 

@@ -80,7 +80,7 @@ namespace Grumpy.StatePatternFramework
             int period = InfiniteTimeout, 
             ILogger? logger = null) {
 
-
+            _abortLock = new object();
             _stateResultLock = new object();
 
             Context = context;

@@ -39,7 +39,18 @@ namespace Grumpy.StatePatternFramework
 
         public int StateQueueRoomLeft => base.RoomLeft;
 
-        public void Append(StateBase state) => base.TryEnqueue(state);
+        public void Push(StateBase state) => base.TryEnqueue(state);
+
+        public bool TryPop(out StateBase? state)
+        {
+            if (base.TryDequeue(out var item))
+            {
+                state = item;
+                return true;
+            }
+            state = null;
+            return false;
+        }
     }
 
 }
