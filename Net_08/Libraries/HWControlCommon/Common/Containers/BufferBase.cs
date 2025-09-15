@@ -42,13 +42,16 @@ namespace Grumpy.SDAQFramework.Common
     /// </remarks>
     public class BufferBase<Titem> : DisposableBase, IBufferBase<Titem>
     {
+        #region Constants
         private const int _MinCapacity = 2;
         private const int _DefaultSize = 32;
         private const string _DefaultNamePreffix = "Buffer_";
         private const int _NoTheshold = -1;
+        #endregion Constants
 
         private static int _objectCounter = 0;
 
+        #region Private members
         private readonly int _id = 0;
         private readonly string _name;
 
@@ -59,14 +62,16 @@ namespace Grumpy.SDAQFramework.Common
         private int _maxCapacity;
         private int _lowerThreshold;
         private int _upperThreshold;
+        #endregion Private members
 
+        #region Events
         public event EventHandler? HasBecomeEmpty;
         public event EventHandler? HasReachedCapacity;
         public event EventHandler? AtLowerThreshold;
         public event EventHandler? AtUpperThreshold;
         public event EventHandler<int>? ItemAdded;
         public event EventHandler<int>? ItemsDiscarded;
-
+        #endregion Events
 
         #region Constructors
         /// <summary>
@@ -104,8 +109,7 @@ namespace Grumpy.SDAQFramework.Common
         /// <param name="upperThreshould">The upper threshold for notifications.</param>
         /// <param name="name">The optional name of the buffer.</param>
         public BufferBase(int maxCapacity, Titem initialValue, 
-            int lowerThreshould,  int upperThreshould, 
-            string? name = null) : this(maxCapacity, name) {
+            int lowerThreshould,  int upperThreshould, string? name = null) : this(maxCapacity, name) {
 
             try {
                 _collection.AddLast(initialValue);
@@ -119,9 +123,7 @@ namespace Grumpy.SDAQFramework.Common
                     $"Collection \"{name}\": {ex.Message}");
             }
         }
-
         #endregion Constructors
-
 
         #region Helpers
         /// <summary>
@@ -150,7 +152,6 @@ namespace Grumpy.SDAQFramework.Common
             error = string.Empty;
             return false;
         }
-
 
         /// <summary>
         /// Checks if the buffer is null or empty and sets an error message if so.
@@ -181,7 +182,8 @@ namespace Grumpy.SDAQFramework.Common
         /// <param name="node">The node at the specified index, if found.</param>
         /// <param name="error">Output error message if the operation fails.</param>
         /// <returns>True if the node was found; otherwise, false.</returns>
-        protected bool TryGetNodeAt(int index, out LinkedListNode<Titem>? node, out string error) {
+        protected bool TryGetNodeAt(int index, 
+            out LinkedListNode<Titem>? node, out string error) {
             node = _collection.First;
             for (int i = 0; i < index && node != null; i++)
                 node = node.Next;
@@ -193,7 +195,6 @@ namespace Grumpy.SDAQFramework.Common
             return true;
         }
 
-
         /// <summary>
         /// Raises buffer-related events asynchronously based on the buffer state.
         /// Protected inline helper method.  Not thread-safe.
@@ -204,10 +205,8 @@ namespace Grumpy.SDAQFramework.Common
         /// <param name="itemsAddedCount">The number of items added (default is 1).</param>
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected void RaiseAddItemEvents(
-            bool itemAdded,
-            bool capacityWillBeReached,
-            bool upperThresholdWillBeReached,
+        protected void RaiseAddItemEvents( bool itemAdded,
+            bool capacityWillBeReached, bool upperThresholdWillBeReached,
             int itemsAddedCount = 1) {
 
             if ((itemAdded && ItemAdded != null)
@@ -227,8 +226,6 @@ namespace Grumpy.SDAQFramework.Common
             }
         }
 
-
-
         /// <summary>
         /// Method to raise events after a successful pop operation.
         /// Protected helper method. Not thread-safe.
@@ -236,7 +233,9 @@ namespace Grumpy.SDAQFramework.Common
         /// <param name="popped">True if an item was popped.</param>
         /// <param name="aboutToBecomeEmpty">True if the buffer is about to become empty.</param>
         /// <param name="atLowerThreshold">True if the buffer is at the lower threshold.</param>
-        protected void RaisePopItemEvents(bool popped, bool aboutToBecomeEmpty, bool atLowerThreshold) {
+        protected void RaisePopItemEvents(bool popped, 
+            bool aboutToBecomeEmpty, bool atLowerThreshold) {
+
             if (popped) {
 
                 Task.Factory.StartNew(() => {
@@ -253,10 +252,6 @@ namespace Grumpy.SDAQFramework.Common
 
             }
         }
-
-
-
-
         #endregion Helpers
 
         #region Public Properties
@@ -405,7 +400,6 @@ namespace Grumpy.SDAQFramework.Common
             }
         }
 
-
         /// <summary>
         /// Checks whether the buffer has room for at least one more item in a thread-safe manner.
         /// True if there is room, otherwise, false.
@@ -421,12 +415,9 @@ namespace Grumpy.SDAQFramework.Common
                 }
             }
         }
-
         #endregion Public Properties
 
-
         #region Public Methods
-
         /// <summary>
         /// Attempts to add an item to the buffer. Thread-safe.
         /// </summary>
@@ -475,7 +466,8 @@ namespace Grumpy.SDAQFramework.Common
         /// <param name="items">The items to add.</param>
         /// <param name="error">Output error message if the operation fails.</param>
         /// <returns>True if the items were added; otherwise, false.</returns>
-        public bool TryAddItems(Titem[] items, out int itemsAdded, out string error) {
+        public bool TryAddItems(Titem[] items, out int itemsAdded, 
+            out string error) {
             _collectionLock.EnterWriteLock();
 
             itemsAdded = 0;
@@ -500,8 +492,10 @@ namespace Grumpy.SDAQFramework.Common
                             $"{items.Count()} added.";
                         return false;
                     }
-                    capacityWillBeReached = (_maxCapacity - _collection.Count) == 1 || capacityWillBeReached;
-                    upperThresholdWillBeReached = ((_collection.Count == _upperThreshold - 1) && (_upperThreshold >= 1) && (_upperThreshold != _NoTheshold)) || upperThresholdWillBeReached;
+                    capacityWillBeReached = 
+                        (_maxCapacity - _collection.Count) == 1 || capacityWillBeReached;
+                    upperThresholdWillBeReached = 
+                        ((_collection.Count == _upperThreshold - 1) && (_upperThreshold >= 1) && (_upperThreshold != _NoTheshold)) || upperThresholdWillBeReached;
                     _collection.AddLast(items[i]);
                     itemsAdded = i + 1;
                 }
@@ -515,7 +509,10 @@ namespace Grumpy.SDAQFramework.Common
             finally {
                 
                 _collectionLock.ExitWriteLock();
-                RaiseAddItemEvents(itemAdded, capacityWillBeReached, upperThresholdWillBeReached, itemsAdded);
+                RaiseAddItemEvents(itemAdded, 
+                    capacityWillBeReached, 
+                    upperThresholdWillBeReached, 
+                    itemsAdded);
             }
         }
 
@@ -649,7 +646,6 @@ namespace Grumpy.SDAQFramework.Common
             }
         }
 
-
         /// <summary>
         /// Returns all items in the buffer as an array. Does not remove items from the buffer. Thread-safe.
         /// </summary>
@@ -726,8 +722,7 @@ namespace Grumpy.SDAQFramework.Common
         /// <param name="removeFromFirst">If true, remove items from the front; otherwise, from the back.</param>
         /// <returns>True if enough room was made or already available; otherwise, false.</returns>
         public bool TryMakeRoom(int requiredCapacity, 
-            out int removedItemsCount, 
-            out string error,
+            out int removedItemsCount, out string error,
             bool removeFromFirst = true) {
             
             _collectionLock.EnterWriteLock();
@@ -923,7 +918,6 @@ namespace Grumpy.SDAQFramework.Common
             }
         }
 
-
         /// <summary>
         /// Attempts to peek at the item at the specified index in the buffer without removing it. Thread-safe.
         /// </summary>
@@ -1037,7 +1031,6 @@ namespace Grumpy.SDAQFramework.Common
                 RaisePopItemEvents(popped, aboutToBecomeEmpty, atLowerThreshold);
             }
         }
-
         #endregion Public Methods   
     }
 }

@@ -277,15 +277,18 @@ namespace Grumpy.SDAQFramework.Common
         /// <returns>True if an item was successfully dequeued; otherwise, false.</returns>
         protected bool TryDequeue(out TItem? item)
         {
-            try {
-                item = default(TItem);
-                return _queue?.TryDequeue(out item) ?? false;
-            }
-            catch (Exception ex) {
-                LastError = $"Failed to dequeue item from " +
-                    $"queue {Name}. Exception: {ex.Message}";
-                item = default;
-                return false;
+            lock (_queueLock) {
+
+                try {
+                    item = default(TItem);
+                    return _queue?.TryDequeue(out item) ?? false;
+                }
+                catch (Exception ex) {
+                    LastError = $"Failed to dequeue item from " +
+                        $"queue {Name}. Exception: {ex.Message}";
+                    item = default;
+                    return false;
+                }
             }
         }
 

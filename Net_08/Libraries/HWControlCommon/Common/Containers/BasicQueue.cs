@@ -78,17 +78,15 @@ namespace Grumpy.SDAQFramework.Common
 
         #region Constructors
         public BasicQueue(int maxDepth = DefaultQueueDepth, string? name = null,
+            bool syncEvents = true) : base(maxDepth, name) {
 
-            bool syncEvents = true) : base(maxDepth, name)
-        {
             LowerThreshould = DefalultLowThreshould;
             UpperThreshould = DefalultHighThreshould;
             _useAsyncEvents = !syncEvents;
             _lostItemsCount = 0;
         }
 
-        public BasicQueue(bool syncEvents) : this()
-        {
+        public BasicQueue(bool syncEvents) : this() {
             _useAsyncEvents = !syncEvents;
         }
 
@@ -129,7 +127,18 @@ namespace Grumpy.SDAQFramework.Common
         {
             lock (_queueLock) {
 
-                return _Push(obj, force);
+                  
+                bool result = _Push(obj, force);
+
+
+
+                // Optionally, you can also check for lower threshold here if needed
+                // if (LowerThreshould > 0 && Count < LowerThreshould)
+                // {
+                //     _RaiseStateChangeEvent(Events.BelowLowThreshould);
+                // }
+
+                return result;
             }
         }
 
@@ -140,7 +149,10 @@ namespace Grumpy.SDAQFramework.Common
                 return false;
             }
 
+            var currentCount = _queue.Count;
+
             if (force) {
+
                 if (_MakeRoom(1, out int itemsRemoved)) {
                     _queue.Enqueue(obj);
                     _lostItemsCount += itemsRemoved;
@@ -156,19 +168,59 @@ namespace Grumpy.SDAQFramework.Common
                 catch {
                     return false;
                 }
+                finally {
+
+                    if (UpperThreshould > 0 
+                        && currentCount >= UpperThreshould
+                        && _queue.Count > UpperThreshould) {
+
+                        _RaiseStateChangeEvent(Events.AboveHighThreshould);
+                    }
+                }
             }
         }
 
         public virtual bool Pop(out TObject item)
         {
+            lock (_queueLock) {
 
-            var r = base.TryDequeue(out item!);
+                if (_queue == null || _queue.IsEmpty) {
+                    item = default!;
+                    return false;
+                }
 
-            return r;
+                var currentCount = _queue.Count;
+                bool result = false;
+                try {
+                    result = _queue.TryDequeue(out item!);
+                    return result;
+                }
+                catch (Exception ex) {
+
+                    LastError = $"Pop exception: {ex.Message}";
+                    item = default!;
+                    return false;
+                }
+                finally {
+                    if (result) {
+
+                        if (LowerThreshould > 0
+                            && _queue.Count >= LowerThreshould
+                            && currentCount < LowerThreshould) {
+                            _RaiseStateChangeEvent(Events.BelowLowThreshould);
+                        }
+                    }
+                    if (_queue.IsEmpty) {
+                        _RaiseStateChangeEvent(Events.Empty);
+                    }
+                }
+            }
         }
+
         public override bool Purge()
         {
             if (base.Purge()) {
+
                 _RaiseStateChangeEvent(Events.Purged);
                 return true;
             }

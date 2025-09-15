@@ -43,13 +43,11 @@ namespace Grumpy.SDAQFramework.Common
         private CancellationTokenSource? _receiverTaskCts;
         private CancellationToken _processorTaskCt;
   
-
         public event EventHandler? ReceiverStartedOrResumed;
 
         public FIFOWReceiverBase(int capacity) : base(capacity) {
 
             _receiverTaskLock = new object();
-
         }
 
         public FIFOWReceiverBase() : base() {
