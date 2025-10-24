@@ -1,28 +1,15 @@
-﻿
+﻿using System;
+using System.IO;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Serilog;
-using Serilog.Sinks.File;
-
+using Serilog.Events;
 using System.Reflection;
 
 
 namespace Grumpy.SDAQFramework.Utilities
 {
 
-    public interface ILogger
-    {
-        bool IsConfigured { get; }
-        void AddLogRecord(LogLevel level, string message);
-    }
-
-
-    public enum LogLevel
-    {
-        Debug,
-        Info,
-        Warning,
-        Error,
-        Critical
-    }
 
     public static class Logger
     {
@@ -30,7 +17,7 @@ namespace Grumpy.SDAQFramework.Utilities
         private const long DefaultMaxLogFileSizeInBytes = 2097152;
 
         private static bool _configured = false;    
-        private static LogLevel _logLevel = LogLevel.Info;
+        private static LogLevel _logLevel = LogLevel.Information;
 
         public static LogLevel Level {
             get {
@@ -133,7 +120,7 @@ namespace Grumpy.SDAQFramework.Utilities
                         Log.Error(message); 
                         break;
 
-                    case LogLevel.Info:
+                    case LogLevel.Information:
                         Log.Information(message); 
                         break;
 

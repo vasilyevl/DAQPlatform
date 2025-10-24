@@ -1,67 +1,89 @@
-﻿using System;
+﻿using Grumpy.SDAQFramework.Common;
+using System;
+using System.Text;
 using System.Threading;
-using Grumpy.SDAQFramework.Common;
 
 namespace DormantWorkerConsoleTest
 {
     class Program
     {
-
         static int counter = 0; 
         static int iterations = 0;
+        static bool once = false;
+
         static void Main() {
             Console.WriteLine("DormantWorker Console Test\n");
 
-            TestSingleResume();
-            TestMultipleResume();
-            TestPauseResume();
-            TestDisposeStopsWorker();
+            //TestSingleResume();
+            //TestSingleResume( 5 );
+            //TestSingleResume( 10 );
+            TestMultipleResume(itrtns: 2, runs: 5, sleepTime: 100);
+            TestMultipleResume(itrtns: 1, runs: 15, sleepTime: 33);
+            //TestMultipleResume(itrtns: 5, runs: 25, sleepTime: 33);
+            //TestPauseResume();
+            //TestDisposeStopsWorker();
 
             Console.WriteLine("\nAll tests completed.");
         }
 
-        static void TestSingleResume() {
+        static void TestSingleResume(int itrtns = 1) {
 
             Console.WriteLine("TestSingleResume...");
             counter = 0;
-            iterations = 1; // Set to 1 for single run test
-
+            iterations = itrtns; // Set to 1 for single run test
 
             var worker = new DormantWorker(WorkAction);
            
-                Thread.Sleep(100);
-                AssertOrNotify(counter == 0, $"Should not run before Resume(). Ran {counter} times.");
+            Thread.Sleep(100);
+            AssertOrNotify(counter == 0, $"Should not run before WakeUp(). Ran {counter} times.");
 
-                counter= 0; // Reset counter for this test
-                worker.Resume();
-                Thread.Sleep(100);
-                AssertOrNotify(counter == 1, "Should run once after Resume()");
+            counter= 0; // Reset counter for this test
+            Console.WriteLine($"Waiking up worker. Counter value: {counter}");
+            worker.Trigger();
+            Thread.Sleep(200);
+            Console.WriteLine($"Delay executed. Counter value: {counter}");
 
-                Thread.Sleep(200);
-                AssertOrNotify(counter == 1, "Should not run again without Resume()");
+            AssertOrNotify(counter == itrtns, $"Should run #{itrtns} time(s) after WakeUp()");
 
-                worker.Resume();
-                Thread.Sleep(100);
-                AssertOrNotify(counter == 2, $"Should run once with 1 iteration after resume,  Ran {counter} times total.");
-            
+            Thread.Sleep(200);
+            AssertOrNotify(counter == itrtns, "Should not run again without WakeUp()");
+            once = true;
+
+            Console.WriteLine($"Waking up worker. Counter value: {counter}");
+            worker.Trigger();
+            Thread.Sleep(200);
+            Console.WriteLine($"Delay executed. Counter value: {counter}");
+            AssertOrNotify(counter == 2*itrtns, $"Should run #{itrtns} time(s) after resume,  Ran {counter} times total.");
+
+            Console.WriteLine($"Waking up worker. Counter value: {counter}");
             Console.WriteLine("Disposing worker.");
             worker.Dispose(); // Ensure worker is disposed after test
             
             Console.WriteLine("Single Resume Test complete.");
         }
 
-        static void TestMultipleResume() {
+        static void TestMultipleResume(int itrtns =  1, int runs = 5, int sleepTime = 100) {
+
             Console.WriteLine("TestMultipleResume...");
-            int counter = 0;
-            iterations = 1; // Set to 5 for multiple runs test
-            using (var worker = new DormantWorker(WorkAction)) {
-                for (int i = 0; i < 5; i++) {
-                    worker.Resume();
-                    Thread.Sleep(100);
+            
+            iterations = itrtns; // Set to runs for multiple runs test
+
+                var worker = new DormantWorker(WorkAction);                    
+                int startCounter = counter;
+
+                for (int i = 0; i < runs; i++) {
+                    Console.WriteLine($"Run #{i+1}.");
+                    worker.Trigger();
+                    Thread.Sleep(sleepTime);
                 }
-                Thread.Sleep(100);
-                AssertOrNotify(counter == 5, $"Should run 5 times after 5 Resume() calls. Ran {counter} times.");
-            }
+
+                Thread.Sleep(sleepTime*5);
+                AssertOrNotify((counter - startCounter) == runs,
+                    $"Expected to run #{runs*itrtns} times after #{runs} Resume() calls. " +
+                    $"Ran {counter - startCounter} times.");
+                
+                worker.Dispose();
+            
             Console.WriteLine();
         }
 
@@ -71,15 +93,15 @@ namespace DormantWorkerConsoleTest
             iterations = 1; // Set to 1 for single run test
 
             using (var worker = new DormantWorker(WorkAction)) {
-                worker.Resume();
+                worker.Trigger();
                 Thread.Sleep(100);
                 AssertOrNotify(counter == 1, "Should run once after Resume()");
 
-                worker.Pause();
+                worker.IsPaused = true;
                 Thread.Sleep(100);
                 AssertOrNotify(counter == 1, "Should not run again after Pause() without Resume()");
 
-                worker.Resume();
+                worker.Trigger();
                 Thread.Sleep(100);
                 AssertOrNotify(counter == 2, "Should run again after Resume()");
             }
@@ -90,7 +112,7 @@ namespace DormantWorkerConsoleTest
             Console.WriteLine("TestDisposeStopsWorker...");
             int counter = 0;
             var worker = new DormantWorker(WorkAction);
-            worker.Resume();
+            worker.Trigger();
             Thread.Sleep(100);
             worker.Dispose();
 
@@ -115,16 +137,15 @@ namespace DormantWorkerConsoleTest
             Console.ResetColor();
         }
 
-
-
         static void WorkAction() {
 
-            Console.WriteLine("Worker started.");
+            Console.WriteLine($"Worker started. #{iterations} requested.");
 
             for (int i = 0; i < iterations; i++) {
 
-                Console.WriteLine($"Working... {i+1}");
-                Interlocked.Increment(ref counter);
+                Console.WriteLine($"Working... {i+1}, counter value is {++counter}");
+                ;
+                // Interlocked.Increment(ref counter);
                 //Thread.Sleep(50); // Simulate work
             }
 

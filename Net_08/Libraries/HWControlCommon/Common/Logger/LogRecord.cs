@@ -20,23 +20,18 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 
+using Microsoft.Extensions.Logging;
 using System.Text;
 
 namespace Grumpy.SDAQFramework.Common
 {
-    public enum LogLevel {
-        Debug, 
-        Info,
-        Warning,
-        Error, 
-        Critical
-    }
+
 
     public interface ILogRecord
     {
         public string MethodName { get; }
         public DateTime Time { get; }
-        public LogLevel Level { get; }
+        public Microsoft.Extensions.Logging.LogLevel Level { get; }
         public int ErrorCode { get; }
         public string Details { get; }
         public bool IsError { get; }
@@ -115,7 +110,7 @@ namespace Grumpy.SDAQFramework.Common
         public int ErrorCode { get; private set; }
         public string Details { get; private set; }
         public bool IsError => Level == LogLevel.Error || Level == LogLevel.Critical;
-        public bool IsInfo => Level == LogLevel.Info;
+        public bool IsInfo => Level == LogLevel.Information;
         public bool IsWarning => Level == LogLevel.Warning;
         public bool IsDebugInfo => Level == LogLevel.Debug;
 
