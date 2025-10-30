@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using SDAQFramework.MathUtilities; 
+using Grumpy.SDAQFramework.MathUtilities; 
 
 // See https://aka.ms/new-console-template for more information
 Console.WriteLine("Stat adder!");

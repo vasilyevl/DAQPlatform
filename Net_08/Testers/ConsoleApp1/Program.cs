@@ -20,7 +20,7 @@ OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 using Grumpy.SDAQFramework.Drivers.MMTimer;
 using Grumpy.SDAQFramework.Utilities.Testing;
-using SDAQFramework.MathUtilities;
+using Grumpy.SDAQFramework.MathUtilities;
 using System;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;

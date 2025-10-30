@@ -33,14 +33,14 @@ namespace DormantWorkerConsoleTest
                 AssertOrNotify(counter == 0, $"Should not run before Resume(). Ran {counter} times.");
 
                 counter= 0; // Reset counter for this test
-                worker.Resume();
+                worker.WakeUp();
                 Thread.Sleep(100);
                 AssertOrNotify(counter == 1, "Should run once after Resume()");
 
                 Thread.Sleep(200);
                 AssertOrNotify(counter == 1, "Should not run again without Resume()");
 
-                worker.Resume();
+                worker.WakeUp();
                 Thread.Sleep(100);
                 AssertOrNotify(counter == 2, $"Should run once with 1 iteration after resume,  Ran {counter} times total.");
             
@@ -56,7 +56,7 @@ namespace DormantWorkerConsoleTest
             iterations = 1; // Set to 5 for multiple runs test
             using (var worker = new DormantWorker(WorkAction)) {
                 for (int i = 0; i < 5; i++) {
-                    worker.Resume();
+                    worker.WakeUp();
                     Thread.Sleep(100);
                 }
                 Thread.Sleep(100);
@@ -71,15 +71,15 @@ namespace DormantWorkerConsoleTest
             iterations = 1; // Set to 1 for single run test
 
             using (var worker = new DormantWorker(WorkAction)) {
-                worker.Resume();
+                worker.WakeUp();
                 Thread.Sleep(100);
                 AssertOrNotify(counter == 1, "Should run once after Resume()");
 
-                worker.Pause();
+                worker.WakeUp();
                 Thread.Sleep(100);
                 AssertOrNotify(counter == 1, "Should not run again after Pause() without Resume()");
 
-                worker.Resume();
+                worker.WakeUp();
                 Thread.Sleep(100);
                 AssertOrNotify(counter == 2, "Should run again after Resume()");
             }
@@ -90,7 +90,7 @@ namespace DormantWorkerConsoleTest
             Console.WriteLine("TestDisposeStopsWorker...");
             int counter = 0;
             var worker = new DormantWorker(WorkAction);
-            worker.Resume();
+            worker.WakeUp();
             Thread.Sleep(100);
             worker.Dispose();
 
