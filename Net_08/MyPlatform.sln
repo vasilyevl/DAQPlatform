@@ -70,6 +70,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StatePatternFramework", "Li
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleMMTimer", "Testers\SimpleMMTimer\SimpleMMTimer.csproj", "{4E22A349-8794-8D19-2383-63D6E1320FDB}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scripts", "Scripts", "{D5BEC77C-4128-49ED-865C-028EE0D061E6}"
+EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "Scripts", "Scripts\Scripts.pyproj", "{7E0D23B4-9766-4ABB-A97D-CAF21BB2D8AC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -166,6 +170,8 @@ Global
 		{4E22A349-8794-8D19-2383-63D6E1320FDB}.Debug|x64.Build.0 = Debug|x64
 		{4E22A349-8794-8D19-2383-63D6E1320FDB}.Release|x64.ActiveCfg = Release|x64
 		{4E22A349-8794-8D19-2383-63D6E1320FDB}.Release|x64.Build.0 = Release|x64
+		{7E0D23B4-9766-4ABB-A97D-CAF21BB2D8AC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7E0D23B4-9766-4ABB-A97D-CAF21BB2D8AC}.Release|x64.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -199,6 +205,7 @@ Global
 		{DF32D42C-2998-44C3-8D4D-0B4061F67F25} = {F91BC500-884B-4444-88A8-22A2FC0DCF53}
 		{DB0086BA-902F-C398-CE3E-C8080A989848} = {2DCBC4EF-D103-4E32-A49B-C76B30D4EC30}
 		{4E22A349-8794-8D19-2383-63D6E1320FDB} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{7E0D23B4-9766-4ABB-A97D-CAF21BB2D8AC} = {D5BEC77C-4128-49ED-865C-028EE0D061E6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B1BB9CAA-C714-4F68-B8D1-47CAD9A90738}
