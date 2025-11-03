@@ -57,5 +57,89 @@
       <Name>HWControlCommon</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="DAQmxCLI\app.ico" />
+    <Content Include="DAQmxCLI\app.rc" />
+    <Content Include="DAQmxCLI\AssemblyInfo.cpp" />
+    <Content Include="DAQmxCLI\CallbackHandle.cpp" />
+    <Content Include="DAQmxCLI\CallbackHandle.h" />
+    <Content Include="DAQmxCLI\CallbackService.cpp" />
+    <Content Include="DAQmxCLI\CallbackService.h" />
+    <Content Include="DAQmxCLI\DAQmxCLIWrapper.cpp" />
+    <Content Include="DAQmxCLI\DAQmxCLIWrapper.h" />
+    <Content Include="DAQmxCLI\DAQmxNETDriver.vcxproj.filters" />
+    <Content Include="DAQmxCLI\DAQmxNETDriver.vcxproj.user" />
+    <Content Include="DAQmxCLI\DAQmx\include\NIDAQmx.h" />
+    <Content Include="DAQmxCLI\DAQmx\include\nisyscfg.h" />
+    <Content Include="DAQmxCLI\DAQmx\include\nisyscfg_errors.h" />
+    <Content Include="DAQmxCLI\DAQmx\include\nisyscfg_wide.h" />
+    <Content Include="DAQmxCLI\Resource.h" />
+    <Content Include="DAQmxCLI\x64\Debug\.NETCoreApp,Version=v8.0.AssemblyAttributes.cpp" />
+    <Content Include="DAQmxCLI\x64\Debug\app.res" />
+    <Content Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.vcxproj.FileListAbsolute.txt" />
+    <Content Include="DAQmxCLI\x64\Debug\vc143.pdb" />
+    <Content Include="DAQmxCLI\x64\Release\.NETCoreApp,Version=v8.0.AssemblyAttributes.cpp" />
+    <Content Include="DAQmxCLI\x64\Release\app.res" />
+    <Content Include="DAQmxCLI\x64\Release\DAQmxNETDriver.vcxproj.FileListAbsolute.txt" />
+    <Content Include="DAQmxCLI\x64\Release\vc143.pdb" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="DAQmxCLI\DAQmxNETDriver.vcxproj" />
+    <None Include="DAQmxCLI\DAQmx\lib64\gcc\libnidaqmx.so" />
+    <None Include="DAQmxCLI\DAQmx\lib64\gcc\libnisyscfg.so" />
+    <None Include="DAQmxCLI\DAQmx\lib64\msvc\NIDAQmx.lib" />
+    <None Include="DAQmxCLI\DAQmx\lib64\msvc\nisyscfg.lib" />
+    <None Include="DAQmxCLI\obj\DAQmxNETDriver.vcxproj.nuget.dgspec.json" />
+    <None Include="DAQmxCLI\obj\DAQmxNETDriver.vcxproj.nuget.g.props" />
+    <None Include="DAQmxCLI\obj\DAQmxNETDriver.vcxproj.nuget.g.targets" />
+    <None Include="DAQmxCLI\obj\project.assets.json" />
+    <None Include="DAQmxCLI\obj\project.nuget.cache" />
+    <None Include="DAQmxCLI\x64\Debug\.NETCoreApp,Version=v8.0.AssemblyAttributes.obj" />
+    <None Include="DAQmxCLI\x64\Debug\AssemblyInfo.obj" />
+    <None Include="DAQmxCLI\x64\Debug\CallbackHandle.obj" />
+    <None Include="DAQmxCLI\x64\Debug\CallbackService.obj" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxCLIWrapper.obj" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.assets.cache" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.Build.CppClean.log" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.dll.recipe" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.genruntimeconfig.cache" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.log" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.sourcelink.json" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.tlog\CL.command.1.tlog" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.tlog\Cl.items.tlog" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.tlog\CL.read.1.tlog" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.tlog\CL.write.1.tlog" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.tlog\DAQmxNETDriver.lastbuildstate" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.tlog\link.command.1.tlog" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.tlog\link.read.1.tlog" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.tlog\link.secondary.1.tlog" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.tlog\link.write.1.tlog" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.tlog\rc.command.1.tlog" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.tlog\rc.read.1.tlog" />
+    <None Include="DAQmxCLI\x64\Debug\DAQmxNETDriver.tlog\rc.write.1.tlog" />
+    <None Include="DAQmxCLI\x64\Release\.NETCoreApp,Version=v8.0.AssemblyAttributes.obj" />
+    <None Include="DAQmxCLI\x64\Release\AssemblyInfo.obj" />
+    <None Include="DAQmxCLI\x64\Release\CallbackHandle.obj" />
+    <None Include="DAQmxCLI\x64\Release\CallbackService.obj" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxCLIWrapper.obj" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxNETDriver.assets.cache" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxNETDriver.Build.CppClean.log" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxNETDriver.dll.recipe" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxNETDriver.genruntimeconfig.cache" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxNETDriver.log" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxNETDriver.sourcelink.json" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxNETDriver.tlog\CL.command.1.tlog" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxNETDriver.tlog\Cl.items.tlog" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxNETDriver.tlog\CL.read.1.tlog" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxNETDriver.tlog\CL.write.1.tlog" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxNETDriver.tlog\DAQmxNETDriver.lastbuildstate" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxNETDriver.tlog\link.command.1.tlog" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxNETDriver.tlog\link.read.1.tlog" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxNETDriver.tlog\link.secondary.1.tlog" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxNETDriver.tlog\link.write.1.tlog" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxNETDriver.tlog\rc.command.1.tlog" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxNETDriver.tlog\rc.read.1.tlog" />
+    <None Include="DAQmxCLI\x64\Release\DAQmxNETDriver.tlog\rc.write.1.tlog" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
