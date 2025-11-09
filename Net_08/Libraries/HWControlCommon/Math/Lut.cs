@@ -159,8 +159,15 @@ namespace SDAQFramework.Math
                 else if (item.Type == JTokenType.Object) {
                     var o = (JObject)item;
 
-                    if (!o.TryGetValue("x", StringComparison.OrdinalIgnoreCase, out var xt) ||
-                        !o.TryGetValue("y", StringComparison.OrdinalIgnoreCase, out var yt)) {
+                    if (!o.TryGetValue(
+                        "x", 
+                        StringComparison.OrdinalIgnoreCase, 
+                        out var xt) 
+                        || !o.TryGetValue(
+                            "y", 
+                            StringComparison.OrdinalIgnoreCase, 
+                            out var yt)) {
+
                         throw new FormatException(
                             "Point object must contain 'x' and 'y' properties.");
                     }
@@ -178,41 +185,54 @@ namespace SDAQFramework.Math
             return list;
         }
 
-  
-
         public override double Evaluate(double x) {
             if (_xs.Length == 1) {
+
                 return _ys[0];
             }
 
             int idx = Array.BinarySearch(_xs, x);
             if (idx >= 0) {
+
                 return _ys[idx];
             }
 
             idx = ~idx;
             if (idx == 0) {
+
                 if (!AllowExtrapolation) {
                     return _ys[0];
                 }
 
-                return LinearInterp(_xs[0], _ys[0], _xs[1], _ys[1], x);
+                return LinearInterp(_xs[0], _ys[0], 
+                    _xs[1], _ys[1], 
+                    x);
             }
 
             if (idx >= _xs.Length) {
+
                 if (!AllowExtrapolation) {
+
                     return _ys[_ys.Length - 1];
                 }
 
                 int n = _xs.Length;
-                return LinearInterp(_xs[n - 2], _ys[n - 2], _xs[n - 1], _ys[n - 1], x);
+                return LinearInterp(_xs[n - 2], _ys[n - 2],
+                    _xs[n - 1], _ys[n - 1], 
+                    x);
             }
 
-            return LinearInterp(_xs[idx - 1], _ys[idx - 1], _xs[idx], _ys[idx], x);
+            return LinearInterp(_xs[idx - 1], _ys[idx - 1], 
+                _xs[idx], _ys[idx], 
+                x);
         }
 
-        private static double LinearInterp(double x0, double y0, double x1, double y1, double x) {
+        private static double LinearInterp(double x0, double y0, 
+            double x1, double y1, 
+            double x) {
+            
             if (x1 == x0) {
+               
                 return y0;
             }
 
