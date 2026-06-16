@@ -100,17 +100,4 @@ namespace Grumpy.SDAQFramework.Common
 
     }
 
-    public interface IActiveFifo<TObject> : IFIFOBase<TObject>
-    {
-        bool ReceiverIsSet { get; }
-        bool ReceiverIsOn { get; }
-        bool ReceiverIsInternallyPaused { get; }
-        bool ReceiverIsPaused { get; }
-        bool UsePause { get; }
-        bool ReceiverThreadAlive { get; }
-
-        bool SetReceiver(DataReceiver<TObject> processor);
-        bool PauseReceiver();
-        bool ResumeReceiver();
-    }
 }

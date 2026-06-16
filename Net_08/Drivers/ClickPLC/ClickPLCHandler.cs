@@ -494,10 +494,11 @@ namespace Grumpy.ClickPLCDriver
 
         public bool WriteFloat32Register(string name, float value) {
 
-            if (_DecodeControlName(name, out IOType ioType, out int address, write: true)) {
+            if (_CanReadWrite(nameof(WriteFloat32Register)) &&
+                _DecodeControlName(name, out IOType ioType, out int address, write: true)) {
                 try {
                     var res = ModBus.Utilities.ConvertFloatToRegisters(value);
-                    _mbClient?.WriteMultipleRegisters(address, res);
+                    _mbClient!.WriteMultipleRegisters(address, res);
                     return true;
                 }
                 catch (Exception ex) {
@@ -512,7 +513,8 @@ namespace Grumpy.ClickPLCDriver
 
         public bool ReadFloat32Register(string name, out float value) {
 
-            if (_DecodeControlName(name, out IOType ioType, out int address, write: false)) {
+            if (_CanReadWrite(nameof(ReadFloat32Register)) &&
+                _DecodeControlName(name, out IOType ioType, out int address, write: false)) {
                 try {
 
                     int[]? data = null;

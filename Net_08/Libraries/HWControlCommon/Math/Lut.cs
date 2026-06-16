@@ -16,6 +16,7 @@ namespace SDAQFramework.Math
         private readonly double[] _ys;
 
         public int Count => _xs.Length;
+
         /// <summary>
         /// When true (default) the LUT will linearly extrapolate outside
         /// the first/last sample segment. When false out-of-range inputs
@@ -23,26 +24,21 @@ namespace SDAQFramework.Math
         /// </summary>
         public bool AllowExtrapolation { get; } = true;
 
-
-        public Lut(string? name, IEnumerable<(double x, double y)> samples, bool allowExtrapolation) : base(name) {
-
+        public Lut(string? name, IEnumerable<(double x, double y)> samples, bool allowExtrapolation = true) : base(name) {
             AllowExtrapolation = allowExtrapolation;
 
             if (samples == null) {
-
                 throw new ArgumentNullException(nameof(samples));
             }
 
             var dict = new SortedDictionary<double, double>();
             foreach (var (x, y) in samples) {
-
                 dict[x] = y;
             }
 
             if (dict.Count == 0) {
-
                 throw new ArgumentException(
-                    "At least one sample is required.", 
+                    "At least one sample is required.",
                     nameof(samples));
             }
 
@@ -50,8 +46,7 @@ namespace SDAQFramework.Math
             _ys = dict.Values.ToArray();
         }
 
-        public Lut(string? name, double[] xs, double[] ys, bool allowExtrapolation) : base(name) {
-
+        public Lut(string? name, double[] xs, double[] ys, bool allowExtrapolation = true) : base(name) {
             AllowExtrapolation = allowExtrapolation;
 
             if (xs == null) {
@@ -79,7 +74,7 @@ namespace SDAQFramework.Math
             _ys = dict.Values.ToArray();
         }
 
-        override public ICorrector FromJson(string json) {
+        public override ICorrector FromJson(string json) {
             if (string.IsNullOrWhiteSpace(json)) {
                 throw new ArgumentException(
                     "JSON must be provided.",
@@ -126,9 +121,24 @@ namespace SDAQFramework.Math
                     throw new FormatException(
                         "Object JSON must contain 'points' array or parallel 'xs' and 'ys' arrays.");
                 }
+
+                // optional clip range as [min,max] array
+                if (obj.TryGetValue("clipRange", StringComparison.OrdinalIgnoreCase, out var crToken) && crToken.Type == JTokenType.Array) {
+                    var arr = (JArray)crToken;
+                    if (arr.Count >= 2) {
+                        double min = ParseNumberToken(arr[0]);
+                        double max = ParseNumberToken(arr[1]);
+                        // Created instance below will receive this setting
+                        // we'll pass via constructor then set property
+                        var lut = new Lut(name, samples, allowExtrapolation)
+                        {
+                            ClipRange = (min, max)
+                        };
+                        return lut;
+                    }
+                }
             }
             else if (root.Type == JTokenType.Array) {
-                // array root -> samples only, keep default allowExtrapolation
                 samples = ParsePointsArray((JArray) root);
             }
             else {
@@ -139,7 +149,6 @@ namespace SDAQFramework.Math
             return new Lut(name, samples, allowExtrapolation);
         }
 
-     
         private static IEnumerable<(double x, double y)> ParsePointsArray(JArray arr) {
             var list = new List<(double x, double y)>(arr.Count);
 
@@ -159,15 +168,8 @@ namespace SDAQFramework.Math
                 else if (item.Type == JTokenType.Object) {
                     var o = (JObject)item;
 
-                    if (!o.TryGetValue(
-                        "x", 
-                        StringComparison.OrdinalIgnoreCase, 
-                        out var xt) 
-                        || !o.TryGetValue(
-                            "y", 
-                            StringComparison.OrdinalIgnoreCase, 
-                            out var yt)) {
-
+                    if (!o.TryGetValue("x", StringComparison.OrdinalIgnoreCase, out var xt) ||
+                        !o.TryGetValue("y", StringComparison.OrdinalIgnoreCase, out var yt)) {
                         throw new FormatException(
                             "Point object must contain 'x' and 'y' properties.");
                     }
@@ -185,54 +187,42 @@ namespace SDAQFramework.Math
             return list;
         }
 
-        public override double Evaluate(double x) {
+        protected override Double EvaluateCore(Double x) {
             if (_xs.Length == 1) {
-
                 return _ys[0];
             }
 
             int idx = Array.BinarySearch(_xs, x);
             if (idx >= 0) {
-
                 return _ys[idx];
             }
 
             idx = ~idx;
             if (idx == 0) {
-
                 if (!AllowExtrapolation) {
                     return _ys[0];
                 }
 
-                return LinearInterp(_xs[0], _ys[0], 
-                    _xs[1], _ys[1], 
-                    x);
+                return LinearInterp(_xs[0], _ys[0], _xs[1], _ys[1], x);
             }
 
             if (idx >= _xs.Length) {
-
                 if (!AllowExtrapolation) {
-
                     return _ys[_ys.Length - 1];
                 }
 
                 int n = _xs.Length;
-                return LinearInterp(_xs[n - 2], _ys[n - 2],
-                    _xs[n - 1], _ys[n - 1], 
-                    x);
+                return LinearInterp(_xs[n - 2], _ys[n - 2], _xs[n - 1], _ys[n - 1], x);
             }
 
-            return LinearInterp(_xs[idx - 1], _ys[idx - 1], 
-                _xs[idx], _ys[idx], 
-                x);
+            return LinearInterp(_xs[idx - 1], _ys[idx - 1], _xs[idx], _ys[idx], x);
+
+
+
         }
 
-        private static double LinearInterp(double x0, double y0, 
-            double x1, double y1, 
-            double x) {
-            
+        private static double LinearInterp(double x0, double y0, double x1, double y1, double x) {
             if (x1 == x0) {
-               
                 return y0;
             }
 
@@ -240,8 +230,7 @@ namespace SDAQFramework.Math
             return y0 + t * (y1 - y0);
         }
 
-        // Evaluate(double[]) is inherited from CorrectorBase.
-
-        public override string ToString() => $"{Name} (Id={Id}, Count={Count})";
+        // Evaluate(double[]) inherited from CorrectorBase (uses base.Evaluate which clips inputs).
+        public override string ToString() => $"{Name} (Id={Id}, Count={Count}, AllowExtrapolation={AllowExtrapolation})";
     }
 }
