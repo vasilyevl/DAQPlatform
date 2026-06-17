@@ -69,6 +69,7 @@ namespace Grumpy {
 			inline void* _GetFunctionPointer();
 
 		private:
+			void _Unregister();
 			void _FreeResources();
 		};
 	}

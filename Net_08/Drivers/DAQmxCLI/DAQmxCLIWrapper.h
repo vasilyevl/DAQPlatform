@@ -1255,7 +1255,7 @@ namespace Grumpy{
 			*
 			* @see DAQmxLoadTask
 			*/
-			static int LoadTask(IntPtr taskHandle, String^ taskName);
+			static int LoadTask([Out] IntPtr% taskHandle, String^ taskName);
 		
 
 			/**
@@ -1703,7 +1703,7 @@ namespace Grumpy{
 			* @see DAQmxGetWriteTotalSampPerChanGenerated
 			*/
 			static int TotalSamplesGenerated(IntPtr taskHandle, 
-				[Out] UInt64 data);
+				[Out] UInt64% data);
 
 			/**
 			* @brief Retrieves the total number of samples read from the task.
@@ -1724,7 +1724,7 @@ namespace Grumpy{
 			* @see DAQmxGetReadTotalSampPerChanAcquired
 			*/
 			static int TotalSamplesRead(IntPtr taskHandle,
-				[Out] UInt64 data);
+				[Out] UInt64% data);
 
 
 			/**

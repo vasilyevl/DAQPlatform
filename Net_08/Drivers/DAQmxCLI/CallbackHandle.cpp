@@ -42,7 +42,15 @@ namespace Grumpy {
 			_lastError = String::Empty;
 
 			try {
-				_gcCallbackHandle = GCHandle::Alloc(_managedDoneDelegate);
+				Object^ callbackDelegate =
+					_eventType == EventType::Done ?
+					(Object^)_managedDoneDelegate :
+					(Object^)_managedEveryNSamplesDelegate;
+
+				if (callbackDelegate != nullptr) {
+					_gcCallbackHandle = GCHandle::Alloc(callbackDelegate);
+				}
+
 				if (data != nullptr) {
 					_managedDataPointer = data;
 					_gcDataHandle = GCHandle::Alloc(_managedDataPointer);
@@ -74,7 +82,6 @@ namespace Grumpy {
 			catch (Exception^ ex) {
 				_FreeResources();
 				_lastError = gcnew String(ex->Message);
-				delete(ex);
 				_registered = false;
 			}
 		}
@@ -163,8 +170,10 @@ namespace Grumpy {
 
 
 		void CallbackHandle::_FreeResources() {
+			_Unregister();
+
 			_managedDoneDelegate = nullptr;
-			_managedDoneDelegate = nullptr;
+			_managedEveryNSamplesDelegate = nullptr;
 			_lastError = nullptr;
 
 			if (_gcCallbackHandle.IsAllocated) {
@@ -173,7 +182,47 @@ namespace Grumpy {
 			if (_gcDataHandle.IsAllocated) {
 				_gcDataHandle.Free();
 			}
-			GC::Collect();
+		}
+
+
+		void CallbackHandle::_Unregister() {
+			if (!_registered || _taskHandle == IntPtr::Zero) {
+				_registered = false;
+				return;
+			}
+
+			switch (_eventType)
+			{
+			case EventType::Done:
+				DAQmxRegisterDoneEvent(
+					(TaskHandle)_taskHandle,
+					0,
+					NULL,
+					NULL);
+				break;
+			case EventType::EveryNSamplesReceived:
+				DAQmxRegisterEveryNSamplesEvent(
+					(TaskHandle)_taskHandle,
+					DAQmx_Val_Acquired_Into_Buffer,
+					_nSamples,
+					0,
+					NULL,
+					NULL);
+				break;
+			case EventType::EveryNSamplesTransferred:
+				DAQmxRegisterEveryNSamplesEvent(
+					(TaskHandle)_taskHandle,
+					DAQmx_Val_Transferred_From_Buffer,
+					_nSamples,
+					0,
+					NULL,
+					NULL);
+				break;
+			default:
+				break;
+			}
+
+			_registered = false;
 		}
 	}
 }

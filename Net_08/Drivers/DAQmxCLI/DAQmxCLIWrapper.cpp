@@ -292,10 +292,15 @@ namespace Grumpy{
 		int  DAQmxCLIWrapper::ConfigureTiming(long long taskHandle,
 			String^ source, double rate, ActiveEdge activeEdge,
 			SamplingMode sampleMode, long long sampsPerChan) {
-		
-			return DAQmxCfgSampClkTiming((TaskHandle)taskHandle,
-				StringToCharz(source), rate, (int)activeEdge,
+
+			char* sourceChar = StringToCharz(source);
+
+			int result = DAQmxCfgSampClkTiming((TaskHandle)taskHandle,
+				sourceChar, rate, (int)activeEdge,
 				(int)sampleMode, sampsPerChan);
+
+			FreeCharz(sourceChar);
+			return result;
 		}
 
 		int DAQmxCLIWrapper::ReadAnalogLines(IntPtr taskHandle,
@@ -604,7 +609,7 @@ namespace Grumpy{
 			return result;
 		};
 
-		int DAQmxCLIWrapper::LoadTask(IntPtr taskHandle, 
+		int DAQmxCLIWrapper::LoadTask([Out] IntPtr% taskHandle, 
 									  String^ taskName) {
 			
 			char* taskNameChar = StringToCharz(taskName);
@@ -665,17 +670,23 @@ namespace Grumpy{
 		}
 
 		int DAQmxCLIWrapper::TotalSamplesGenerated(IntPtr taskHandle,
-												   [Out] UInt64 data) {
+												   [Out] UInt64% data) {
 
-			return DAQmxGetWriteTotalSampPerChanGenerated(
-									    (TaskHandle)taskHandle, &data);
+			uInt64 dataLocal;
+			int result = DAQmxGetWriteTotalSampPerChanGenerated(
+									    (TaskHandle)taskHandle, &dataLocal);
+			data = dataLocal;
+			return result;
 		}
 
 		int DAQmxCLIWrapper::TotalSamplesRead(IntPtr taskHandle, 
-											  [Out] UInt64 data) {
+											  [Out] UInt64% data) {
 
-			return DAQmxGetReadTotalSampPerChanAcquired(
-										(TaskHandle)taskHandle, &data);
+			uInt64 dataLocal;
+			int result = DAQmxGetReadTotalSampPerChanAcquired(
+										(TaskHandle)taskHandle, &dataLocal);
+			data = dataLocal;
+			return result;
 		}	
 
 
@@ -826,6 +837,7 @@ namespace Grumpy{
 				channelChar, &dataUnmanaged);
 			data = dataUnmanaged != 0;
 
+			FreeCharz(channelChar);
 			return result;
 		}
 
@@ -840,6 +852,7 @@ namespace Grumpy{
 				channelChar, &dataUnmanaged);
 			data = dataUnmanaged;
 
+			FreeCharz(channelChar);
 			return result;
 		}
 
@@ -849,8 +862,10 @@ namespace Grumpy{
 			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 			char* channelChar = StringToCharz(channel);
 
-			return DAQmxSetCICtrTimebaseMasterTimebaseDiv(taskHandleLocal, 
+			int32 result = DAQmxSetCICtrTimebaseMasterTimebaseDiv(taskHandleLocal, 
 				channelChar, data);
+			FreeCharz(channelChar);
+			return result;
 		}
 
 		int DAQmxCLIWrapper::ResetCICtrTimebaseMasterTimebaseDiv(IntPtr taskHandle, 
@@ -859,8 +874,10 @@ namespace Grumpy{
 			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 			char* channelChar = StringToCharz(channel);
 
-			return DAQmxResetCICtrTimebaseMasterTimebaseDiv(taskHandleLocal, 
+			int32 result = DAQmxResetCICtrTimebaseMasterTimebaseDiv(taskHandleLocal, 
 				channelChar);
+			FreeCharz(channelChar);
+			return result;
 		}
 
 		int DAQmxCLIWrapper::GetCIPulseTimeTerm(IntPtr taskHandle, String^ channel, 
@@ -874,6 +891,7 @@ namespace Grumpy{
 				channelChar, dataUnmanaged, bufferSize);
 			data = gcnew String(dataUnmanaged);
 
+			FreeCharz(channelChar);
 			delete[] dataUnmanaged;
 			return result;
 		}
@@ -929,8 +947,10 @@ namespace Grumpy{
 			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 			char* channelChar = StringToCharz(channel);
 
-			return DAQmxSetCIPulseTimeTermCfg(taskHandleLocal, 
+			int32 result = DAQmxSetCIPulseTimeTermCfg(taskHandleLocal, 
 				channelChar, data);
+			FreeCharz(channelChar);
+			return result;
 		}
 
 		int DAQmxCLIWrapper::ResetCIPulseTimeTermCfg(IntPtr taskHandle, 
@@ -939,7 +959,9 @@ namespace Grumpy{
 			TaskHandle taskHandleLocal = (TaskHandle)taskHandle;
 			char* channelChar = StringToCharz(channel);
 
-			return DAQmxResetCIPulseTimeTermCfg(taskHandleLocal, channelChar);
+			int32 result = DAQmxResetCIPulseTimeTermCfg(taskHandleLocal, channelChar);
+			FreeCharz(channelChar);
+			return result;
 		}
 
 		int DAQmxCLIWrapper::GetCIPulseFreqTerm(IntPtr taskHandle, 
@@ -953,6 +975,7 @@ namespace Grumpy{
 				channelChar, dataUnmanaged, bufferSize);
 			data = gcnew String(dataUnmanaged);
 
+			FreeCharz(channelChar);
 			delete[] dataUnmanaged;
 			return result;
 		}
